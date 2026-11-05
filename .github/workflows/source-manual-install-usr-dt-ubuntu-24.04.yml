@@ -220,16 +220,16 @@ jobs:
 
           echo
           echo '=== linker ==='
-          ld --version | head -n 2
+          ld --version | sed -n '1,2p'
 
           echo
           echo '=== build tools ==='
-          make --version | head -n 2
-          autoconf --version | head -n 2
-          automake --version | head -n 2
-          libtoolize --version | head -n 2
-          bison --version | head -n 2
-          flex --version | head -n 2
+          make --version | sed -n '1,2p'
+          autoconf --version | sed -n '1,2p'
+          automake --version | sed -n '1,2p'
+          libtoolize --version | sed -n '1,2p'
+          bison --version | sed -n '1,2p'
+          flex --version | sed -n '1,2p'
           python3 --version
 
           echo
@@ -726,9 +726,9 @@ jobs:
               dpkg --print-architecture || true
 
               echo '=== toolchain ==='
-              gcc --version | head -n 1 || true
-              ld --version | head -n 1 || true
-              make --version | head -n 1 || true
+              gcc --version | sed -n '1,1p' || true
+              ld --version | sed -n '1,1p' || true
+              make --version | sed -n '1,1p' || true
               python3 --version || true
 
               echo '=== Motif packages ==='

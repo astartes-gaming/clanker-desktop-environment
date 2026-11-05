@@ -112,14 +112,14 @@ jobs:
           gcc -v 2>&1
           g++ --version
           echo '=== linker ==='
-          ld --version | head -n 2
+          ld --version | sed -n '1,2p'
           echo '=== build tools ==='
-          make --version | head -n 2
-          autoconf --version | head -n 2
-          automake --version | head -n 2
-          libtool --version | head -n 2
-          bison --version | head -n 2
-          flex --version | head -n 2
+          make --version | sed -n '1,2p'
+          autoconf --version | sed -n '1,2p'
+          automake --version | sed -n '1,2p'
+          libtool --version | sed -n '1,2p'
+          bison --version | sed -n '1,2p'
+          flex --version | sed -n '1,2p'
           python3 --version
           echo '=== exact RPM versions ==='
           rpm -q gcc gcc-c++ glibc glibc-devel binutils make autoconf automake libtool bison flex python3
@@ -150,7 +150,7 @@ jobs:
           echo '=== Motif version declarations ==='
           grep -nE 'Xm(VERSION|REVISION|UPDATE_LEVEL|VERSION_STRING)' /usr/include/Xm/Xm.h || true
           echo '=== sample installed Xm headers ==='
-          rpm -ql motif-devel | grep '/Xm/.*[.]h$' | LC_ALL=C sort | head -n 100 || true
+          rpm -ql motif-devel | grep '/Xm/.*[.]h$' | LC_ALL=C sort | sed -n '1,100p' || true
           echo '=== dynamic linker view of libXm ==='
           ldconfig -p | grep -E 'libXm[.]so'
           libxm="$(ldconfig -p | awk '/libXm[.]so[.]4 .*x86-64/ {print $NF; exit} /libXm[.]so/ {candidate=$NF} END {if (candidate) print candidate}')"
