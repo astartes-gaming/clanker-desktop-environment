@@ -122,6 +122,11 @@ int _DtSvcPamAuthenticate(const char *service_name, const char *user,
  *
  * @return See pam_open_session.
  */
+char **_DtSvcPamGetEnvList(void)
+{
+    return pamh ? pam_getenvlist(pamh) : NULL;
+}
+
 int _DtSvcPamOpenSession(const char *service_name, const char *user,
 			 const char *display_name)
 {

@@ -127,6 +127,9 @@
 #define WmNuseWindowOutline		"useWindowOutline"
 #define WmNdtLite			"useDtLite"
 #define WmNmoveOpaque                   "moveOpaque"
+#define WmNsnapDistance                 "snapDistance"
+#define WmNsnapToWindows                "snapToWindows"
+#define WmNedgeTiling                   "edgeTiling"
 #define WmNframeStyle			"frameStyle"
 
 /* conponent appearance resources: */
@@ -292,6 +295,9 @@
 #define WmCUseWindowOutline		"UseWindowOutline"
 #define WmCDtLite			"UseDtLite"
 #define WmCMoveOpaque                   "MoveOpaque"
+#define WmCSnapDistance                 "SnapDistance"
+#define WmCSnapToWindows                "SnapToWindows"
+#define WmCEdgeTiling                   "EdgeTiling"
 #define WmCFrameStyle			"FrameStyle"
 #define WmCWorkspaceList	        "WorkspaceList"
 #define WmCWorkspaceCount	        "WorkspaceCount"

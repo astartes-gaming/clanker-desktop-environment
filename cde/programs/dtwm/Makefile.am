@@ -30,6 +30,7 @@ dtwm_SOURCES = WmCDInfo.c      WmCDecor.c      WmCEvent.c \
                WmManage.c      WmMenu.c        WmProperty.c \
                WmProtocol.c    WmResCvt.c      WmResParse.c \
                WmResource.c    WmSignal.c      WmWinConf.c \
+               WmSnap.c        WmSnap.h \
                WmWinInfo.c     WmWinList.c     WmWinState.c \
                WmMultiHead.c   Button.c        Callback.c \
                Clock.c         DataBaseLoad.c  PanelS.c \

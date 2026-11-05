@@ -1,0 +1,109 @@
+#!/bin/ksh
+#####################################################################
+##  File:        0070.dtmodern
+##
+##  Location:    CDE_DATA_TOP/config/Xsession.d/
+##
+##  Purpose:     Integrate CDE sessions with modern desktop plumbing:
+##               freedesktop.org session variables, the D-Bus session
+##               bus, systemd --user / D-Bus activation environment,
+##               XDG autostart, and dtstyle's GTK/Qt theming.
+##
+##  Sourced by:  CDE_INSTALLATION_TOP/bin/Xsession (after .dtprofile)
+##
+##  Every step is detected at runtime and skipped when the facility is
+##  missing, so on older or non-Linux systems this file does nothing
+##  harmful.  It uses only Bourne/ksh88 syntax.
+##
+##  Per-user opt-outs (set in $HOME/.dtprofile):
+##      DT_NO_DBUS=1            don't start a D-Bus session bus
+##      DT_NO_XDG_AUTOSTART=1   don't run ~/.config/autostart etc.
+##
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+_dtm_have() { type "$1" >/dev/null 2>&1; }
+
+#
+# 1. Identify the desktop, as freedesktop.org specs and portals expect.
+#
+: ${XDG_CURRENT_DESKTOP:=CDE}
+: ${XDG_SESSION_DESKTOP:=CDE}
+: ${DESKTOP_SESSION:=cde}
+: ${XDG_SESSION_TYPE:=x11}
+export XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP DESKTOP_SESSION XDG_SESSION_TYPE
+
+#
+# 2. GTK/Qt theming written by Style Manager > Color
+#    ("Apply colors to GTK and Qt applications").
+#
+if [ -r "$HOME/.dt/theming/env" ]; then
+  . "$HOME/.dt/theming/env"
+fi
+
+#
+# 3. D-Bus session bus.  Prefer the per-user bus that logind/systemd
+#    provides; otherwise start a private one that ends with the X session.
+#
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ] && [ -z "$DT_NO_DBUS" ]; then
+  if [ -n "$XDG_RUNTIME_DIR" ] && [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+    export DBUS_SESSION_BUS_ADDRESS
+  elif _dtm_have dbus-launch; then
+    eval `dbus-launch --sh-syntax --exit-with-x11`
+  fi
+fi
+
+#
+# 4. Share the session environment with D-Bus-activated services and,
+#    where present, systemd --user units (portals, notification daemons,
+#    keyrings...) so they find this display and use the same theme.
+#
+if [ -n "$DBUS_SESSION_BUS_ADDRESS" ] &&
+   _dtm_have dbus-update-activation-environment; then
+  _dtm_vars="DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP"
+  _dtm_vars="$_dtm_vars XDG_SESSION_TYPE DESKTOP_SESSION"
+  _dtm_vars="$_dtm_vars GTK_THEME GTK2_RC_FILES GTK_OVERLAY_SCROLLING"
+  _dtm_vars="$_dtm_vars QT_QPA_PLATFORMTHEME"
+  if _dtm_have systemctl && systemctl --user show-environment >/dev/null 2>&1
+  then
+    dbus-update-activation-environment --systemd $_dtm_vars >/dev/null 2>&1
+  else
+    dbus-update-activation-environment $_dtm_vars >/dev/null 2>&1
+  fi
+  unset _dtm_vars
+fi
+
+#
+# 5. XDG autostart (~/.config/autostart, /etc/xdg/autostart), honoring
+#    OnlyShowIn/NotShowIn for "CDE".  Runs in the background once the
+#    window manager is up, so started applications get decorated.
+#
+if [ -z "$DT_NO_XDG_AUTOSTART" ]; then
+  if _dtm_have dex; then
+    _dtm_autostart="dex -a -e CDE"
+  elif _dtm_have systemctl &&
+       systemctl --user cat xdg-desktop-autostart.target >/dev/null 2>&1; then
+    _dtm_autostart="systemctl --user start xdg-desktop-autostart.target"
+  else
+    _dtm_autostart=""
+  fi
+  if [ -n "$_dtm_autostart" ]; then
+    (
+      # Wait (max ~30s) for dtwm to announce itself on the root window.
+      _dtm_n=0
+      if _dtm_have xprop; then
+        while [ $_dtm_n -lt 30 ] &&
+              ! xprop -root _MOTIF_WM_INFO 2>/dev/null | grep window >/dev/null; do
+          sleep 1; _dtm_n=`expr $_dtm_n + 1`
+        done
+      else
+        sleep 10
+      fi
+      $_dtm_autostart >/dev/null 2>&1
+    ) &
+  fi
+  unset _dtm_autostart
+fi
+
+unset -f _dtm_have 2>/dev/null

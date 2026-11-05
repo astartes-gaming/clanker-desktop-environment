@@ -56,6 +56,7 @@
  * include extern functions
  */
 #include "WmFunction.h"
+#include "WmSnap.h"
 #include "WmCEvent.h"
 #include "WmHelp.h"
 #include "WmCDInfo.h"
@@ -2212,6 +2213,43 @@ Boolean F_Maximize (String args, ClientData *pCD, XEvent *event)
     return (False);
 
 } /* END OF FUNCTION F_Maximize */
+
+
+/*
+ * F_Tile_Left / F_Tile_Right / F_Untile / F_Toggle_Maximize
+ *
+ * Tile a window to the left or right half of its monitor, restore it,
+ * or toggle maximize (for title-bar double-click).  See WmSnap.c.
+ */
+Boolean F_Tile_Left (String args, ClientData *pCD, XEvent *event)
+{
+    if (pCD)
+	SnapTile (pCD, SNAP_ZONE_LEFT, -1, -1,
+		  GetFunctionTimestamp ((XButtonEvent *)event));
+    return (False);
+}
+
+Boolean F_Tile_Right (String args, ClientData *pCD, XEvent *event)
+{
+    if (pCD)
+	SnapTile (pCD, SNAP_ZONE_RIGHT, -1, -1,
+		  GetFunctionTimestamp ((XButtonEvent *)event));
+    return (False);
+}
+
+Boolean F_Untile (String args, ClientData *pCD, XEvent *event)
+{
+    if (pCD)
+	SnapUntile (pCD, GetFunctionTimestamp ((XButtonEvent *)event));
+    return (False);
+}
+
+Boolean F_Toggle_Maximize (String args, ClientData *pCD, XEvent *event)
+{
+    if (pCD && pCD->clientState == MAXIMIZED_STATE)
+	return (F_Normalize (args, pCD, event));
+    return (F_Maximize (args, pCD, event));
+}
 
 
 

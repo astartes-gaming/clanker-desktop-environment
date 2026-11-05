@@ -148,6 +148,9 @@ GetClientInfo (WmScreenData *pSD, Window clientWindow, long manageFlags)
     pCD->pPRCD = NULL;
     pCD->pSOR = NULL;
     pCD->wmUnmapCount = 0;
+    pCD->snapTiled = False;
+    pCD->snapRestoreWidth = 0;
+    pCD->snapRestoreHeight = 0;
     pCD->transientFor = (Window)0L;
     pCD->transientLeader = NULL;
     pCD->transientChildren = NULL;

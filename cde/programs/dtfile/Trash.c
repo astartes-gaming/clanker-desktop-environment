@@ -91,6 +91,7 @@
 
 #include <EUSCompat.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -3156,7 +3157,7 @@ MoveToTrashPipeCB(
      else
      {
        buf = XtRealloc(buf,strlen(buf)+strlen(file_error)+3);
-       sprintf(buf,"%s%s\n",buf,file_error);
+       sprintf(buf + strlen(buf), "%s\n", file_error);  /* append; sprintf onto itself is UB */
      }
      XtFree(file_error);
    }
@@ -3170,7 +3171,7 @@ MoveToTrashPipeCB(
      else
      {
        buf = XtRealloc(buf,strlen(buf)+strlen(no_file_error)+3);
-       sprintf(buf,"%s%s\n",buf,no_file_error);
+       sprintf(buf + strlen(buf), "%s\n", no_file_error);  /* append; sprintf onto itself is UB */
      }
      XtFree(no_file_error);
    }
@@ -3184,7 +3185,7 @@ MoveToTrashPipeCB(
      else
      {
        buf = XtRealloc(buf,strlen(buf)+strlen(sacred_error)+3);
-       sprintf(buf,"%s%s\n",buf,sacred_error);
+       sprintf(buf + strlen(buf), "%s\n", sacred_error);  /* append; sprintf onto itself is UB */
      }
      XtFree(sacred_error);
    }
@@ -4175,10 +4176,14 @@ CheckDeletePermission(
     {
        int fd = -1;
        char *tmpfile;
-       tmpfile = tempnam(parentdir,"dtfile");
+       {
+           size_t len = strlen(parentdir) + sizeof("/dtfileXXXXXX");
+           if ((tmpfile = malloc(len)) != NULL)
+               snprintf(tmpfile, len, "%s/dtfileXXXXXX", parentdir);
+       }
        if (!tmpfile)
            return -1;
-       if ((fd = creat(tmpfile,O_RDONLY)) < 0)  /* Create a temporary file */
+       if ((fd = mkstemp(tmpfile)) < 0)  /* atomic; no symlink race */
        {
            free(tmpfile);
            return -1;

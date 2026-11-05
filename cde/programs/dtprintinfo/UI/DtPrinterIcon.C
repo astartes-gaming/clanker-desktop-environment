@@ -380,7 +380,7 @@ void DtPrinterIcon::DndCB(BaseUI *obj, char **value, int * /*len*/,
        {
 	 sprintf(buf, "LPDEST=%s", old_LPDEST);
 	 putenv(buf);
-	 delete old_LPDEST;
+	 free(old_LPDEST);  /* from strdup() */
        }
       break;
    case CONVERT_DATA: // Dragging a printer to an object

@@ -1103,7 +1103,7 @@ static int	load_stop_list (DBLK *dblk, DBLK *dblist)
 static void	free_paice_rules (PRULE ***rules_table_ptr)
 {
     int		i;
-    PRULE	*p, **linkp;
+    PRULE	*p, *next;
     PRULE	**rules_table;
 
     if (*rules_table_ptr == NULL)
@@ -1114,12 +1114,12 @@ static void	free_paice_rules (PRULE ***rules_table_ptr)
 	    continue;
 	p = rules_table[i];
 	while (p) {
-	    linkp = &p->link;
+	    next = p->link;	/* read before free(p): was a use-after-free */
 	    free (p->suffix);
 	    if (p->apndstr)
 		free (p->apndstr);
 	    free (p);
-	    p = *linkp;
+	    p = next;
 	}
     }
     free (rules_table);

@@ -26,6 +26,9 @@
 
 int _DtSvcPamAuthenticate(const char *service_name, const char *user,
 			  const char *display_name, const char *user_passwd);
+/* Environment set by PAM modules (e.g. XDG_RUNTIME_DIR from pam_systemd),
+ * as a NULL-terminated "NAME=value" array the caller frees, or NULL. */
+char **_DtSvcPamGetEnvList(void);
 int _DtSvcPamOpenSession(const char *service_name, const char *user,
 			 const char *display_name);
 int _DtSvcPamCloseSession(const char *service_name, const char *user,

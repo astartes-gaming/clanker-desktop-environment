@@ -1278,6 +1278,9 @@ typedef struct _WmScreenData
     String      subpanelResources;              /*to restore subpanels */
     Boolean	iconBoxControl;			/* FP control for icon box */
     Boolean     moveOpaque;                     /* move window not outlines */
+    int         snapDistance;                   /* magnetic snap px, 0=off */
+    Boolean     snapToWindows;                  /* snap to other frames too */
+    Boolean     edgeTiling;                     /* drag to edge tiles window */
 
     /* pixel set info (from color object) */
     XmPixelSet	*pPixelData;		/* all pixel data */
@@ -1657,6 +1660,9 @@ struct _ClientData
     int		maxHeightLimit;
     int		maxHeight;			/* WM_NORMAL_HINTS field */
     int		oldMaxWidth;			/* for good HPterm behavior */
+    Boolean	snapTiled;			/* tiled by f.tile_* / edge drag */
+    int		snapRestoreWidth;		/* client size before tiling */
+    int		snapRestoreHeight;
     int		oldMaxHeight;			/* for good HPterm behavior */
     int		widthInc;			/* WM_NORMAL_HINTS field */
     int		heightInc;			/* WM_NORMAL_HINTS field */

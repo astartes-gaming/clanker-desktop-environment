@@ -2392,6 +2392,7 @@ CatchNonFatalFontError(
 
 {
    invalidFont = True;
+   return 0;
 }
 
 static int
@@ -2963,7 +2964,7 @@ do_XDrawArc(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(DRAW_ARC, argc, argv);
+   return invokeXDrawFunction(DRAW_ARC, argc, argv);
 }
 
 int
@@ -2971,7 +2972,7 @@ do_XDrawImageString(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(DRAW_IMAGE_STRING, argc, argv);
+   return invokeXDrawFunction(DRAW_IMAGE_STRING, argc, argv);
 }
 
 int
@@ -2979,7 +2980,7 @@ do_XDrawLine(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(DRAW_LINE, argc, argv);
+   return invokeXDrawFunction(DRAW_LINE, argc, argv);
 }
 
 int
@@ -2987,7 +2988,7 @@ do_XDrawLines(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(DRAW_LINES, argc, argv);
+   return invokeXDrawFunction(DRAW_LINES, argc, argv);
 }
 
 int
@@ -2995,7 +2996,7 @@ do_XDrawPoint(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(DRAW_POINT, argc, argv);
+   return invokeXDrawFunction(DRAW_POINT, argc, argv);
 }
 
 int
@@ -3003,7 +3004,7 @@ do_XDrawPoints(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(DRAW_POINTS, argc, argv);
+   return invokeXDrawFunction(DRAW_POINTS, argc, argv);
 }
 
 int
@@ -3011,7 +3012,7 @@ do_XDrawRectangle(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(DRAW_RECTANGLE, argc, argv);
+   return invokeXDrawFunction(DRAW_RECTANGLE, argc, argv);
 }
 
 int
@@ -3030,7 +3031,7 @@ do_XCopyArea(
       return(1);
    }
 
-   invokeXDrawFunction(COPY_AREA, argc, argv);
+   return invokeXDrawFunction(COPY_AREA, argc, argv);
 }
 
 int
@@ -3038,7 +3039,7 @@ do_XDrawSegments(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(DRAW_SEGMENTS, argc, argv);
+   return invokeXDrawFunction(DRAW_SEGMENTS, argc, argv);
 }
 
 int
@@ -3046,7 +3047,7 @@ do_XDrawString(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(DRAW_STRING, argc, argv);
+   return invokeXDrawFunction(DRAW_STRING, argc, argv);
 }
 
 int
@@ -3054,7 +3055,7 @@ do_XFillArc(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(FILL_ARC, argc, argv);
+   return invokeXDrawFunction(FILL_ARC, argc, argv);
 }
 
 int
@@ -3062,7 +3063,7 @@ do_XFillPolygon(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(FILL_POLYGON, argc, argv);
+   return invokeXDrawFunction(FILL_POLYGON, argc, argv);
 }
 
 int
@@ -3070,7 +3071,7 @@ do_XFillRectangle(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(FILL_RECTANGLE, argc, argv);
+   return invokeXDrawFunction(FILL_RECTANGLE, argc, argv);
 }
 
 int
@@ -3078,7 +3079,7 @@ do_XClearArea(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(CLEAR_AREA, argc, argv);
+   return invokeXDrawFunction(CLEAR_AREA, argc, argv);
 }
 
 int
@@ -3086,7 +3087,7 @@ do_XClearWindow(
         int argc,
         char *argv[] )
 {
-   invokeXDrawFunction(CLEAR_WINDOW, argc, argv);
+   return invokeXDrawFunction(CLEAR_WINDOW, argc, argv);
 }
 
 int

@@ -37,6 +37,9 @@
 #include <bms/sbport.h> /* NOTE: sbport.h must be the first include. */
 #include <errno.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include <SPC/spcP.h>
 #include <bms/MemoryMgr.h> /* NOTE: sbport.h must be the first include. */
@@ -251,32 +254,38 @@ SPC_Make_Log_Filename(XeString name,
 /*----------------------------------------------------------------------+*/
 {
   /* Make a log filename based on the passed name (and perhaps process id) */
-  XeString cp;
   XeString log_file_path = NULL;
+  XeString base;
 
   _DtSvcProcessLock();
   /* first build the log file path */
   if (!name || !*name) {
     log_file_path = XeSBTempPath((XeString)"DTSPCD_log");
-    strcpy(spc_logfile, log_file_path);
+    base = log_file_path;
   }
   else {
     if (strlen(name) > MAXPATHLEN)
-	_DtSimpleError(XeProgName, XeInternalError, XeString_NULL, 
+	_DtSimpleError(XeProgName, XeInternalError, XeString_NULL,
 		      (XeString)"String too long in DTSPCD_Make_Log_Filename()");
-    
-    strcpy(spc_logfile, name);
+    base = name;
   }
+  /* Bounded copy: the old strcpy() overflowed on over-long names */
+  snprintf(spc_logfile, sizeof(spc_logfile), "%s", base);
 
   if (unique) {
-    /* Add the extension.  No strlen checking is done */
-    strcat(spc_logfile, TEMPLATE_EXTENSION);
+    int fd = -1;
 
-    cp = (XeString) mktemp(spc_logfile);
-    if (!cp || !*cp) {
-      /* Sorry, but this is the best we can do */
-      strcpy(spc_logfile, (log_file_path) ? log_file_path : name);
+    if (strlen(spc_logfile) + strlen(TEMPLATE_EXTENSION) < sizeof(spc_logfile)) {
+      strcat(spc_logfile, TEMPLATE_EXTENSION);
+      /* mkstemp() creates the file atomically; mktemp() only raced for a name */
+      fd = mkstemp(spc_logfile);
     }
+    if (fd < 0) {
+      /* Sorry, but this is the best we can do */
+      snprintf(spc_logfile, sizeof(spc_logfile), "%s", base);
+    }
+    else
+      close(fd);
   }
 
   /* free the strings allocated for the path */

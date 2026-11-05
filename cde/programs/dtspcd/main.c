@@ -751,26 +751,36 @@ int Client_Register(protocol_request_ptr prot)
    * Need to initialize the group access list if a username
    * was supplied in the request.
    */
-  if ((initgroups(username, pwent->pw_gid)) == -1) {
-        SPC_Format_Log("+++> FAILURE: initgroups ('%s', '%s')",
-		       username, 
-		       pwent->pw_gid);
+  /* We have authenticated ourselves.  Drop to the looked up identity.
+   * Every step must succeed: continuing after a failed initgroups(),
+   * setgid() or setuid() would run the client's commands with root's
+   * groups or as root itself. */
+  if (initgroups(username, pwent->pw_gid) == -1 ||
+      setgid(pwent->pw_gid) == -1 ||
+      setuid(pwent->pw_uid) == -1 ||
+      (pwent->pw_uid != 0 && (setuid(0) != -1 || geteuid() == 0))) {
+      SPC_Format_Log("+++> FAILURE: cannot drop privileges to '%s' (uid %ld, gid %ld): %s",
+		     username,
+		     (long) pwent->pw_uid,
+		     (long) pwent->pw_gid,
+		     strerror(errno));
+      SPC_Write_Protocol_Request(client_connection, NULL, LOGFILE_REPLY,
+				 FAILED_FILE_NAME, NULL, NULL);
+      SPC_Error(SPC_Bad_Password);
+      if (free_netfile)
+	tt_free(netfile);
+      exit(1);
   }
 
-  /* We have authenticated ourselves.  Set the process identifiers of
-     this process to the looked up ones. */
-  setgid(pwent->pw_gid);
-  setuid(pwent->pw_uid);
-
   Xechdir(pwent->pw_dir);
-  sprintf(HomeDir,  (XeString)"HOME=%s",  pwent->pw_dir);
-  sprintf(ShellDir, (XeString)"SHELL=%s", pwent->pw_shell);
+  snprintf(HomeDir,  sizeof(HomeDir),  (XeString)"HOME=%s",  pwent->pw_dir);
+  snprintf(ShellDir, sizeof(ShellDir), (XeString)"SHELL=%s", pwent->pw_shell);
   putenv(HomeDir);
   putenv(ShellDir);
 
   spc_user_environment_file=(XeString)XeMalloc(MAXPATHLEN);
-  sprintf(spc_user_environment_file, (XeString)"%s/%s/%s", pwent->pw_dir, 
-	  SPCD_ENV_HOME_DIRECTORY, SPCD_ENV_FILE);
+  snprintf(spc_user_environment_file, MAXPATHLEN, (XeString)"%s/%s/%s",
+	  pwent->pw_dir, SPCD_ENV_HOME_DIRECTORY, SPCD_ENV_FILE);
   default_environment=
     SPC_Add_Env_File(spc_user_environment_file, default_environment);
 

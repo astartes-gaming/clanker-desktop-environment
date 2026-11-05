@@ -3,6 +3,6 @@ Name=CDE
 DesktopNames=CDE
 Comment=Use this session to boot into the Common Desktop Environment
 Keywords=Common Desktop Environment
-Exec=@bindir@/Xsession
+Exec=@CDE_BINDIR@/Xsession
 Icon=Dtlogo.pm
 Type=Application

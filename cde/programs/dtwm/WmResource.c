@@ -1385,6 +1385,36 @@ XtResource wmScreenResources[] =
     },
 
     {
+	WmNsnapDistance,
+	WmCSnapDistance,
+	XtRInt,
+	sizeof (int),
+	XtOffsetOf (WmScreenData, snapDistance),
+	XtRImmediate,
+	(XtPointer)10
+    },
+
+    {
+	WmNsnapToWindows,
+	WmCSnapToWindows,
+	XtRBoolean,
+	sizeof (Boolean),
+	XtOffsetOf (WmScreenData, snapToWindows),
+	XtRImmediate,
+	(XtPointer)True
+    },
+
+    {
+	WmNedgeTiling,
+	WmCEdgeTiling,
+	XtRBoolean,
+	sizeof (Boolean),
+	XtOffsetOf (WmScreenData, edgeTiling),
+	XtRImmediate,
+	(XtPointer)True
+    },
+
+    {
 	WmNhelpResources,
 	WmCHelpResources,
 	XtRString,
@@ -5594,6 +5624,9 @@ SetStdScreenResourceValues (WmScreenData *pSD)
 
     pSD->feedbackGeometry = NULL;
     pSD->moveOpaque = False;
+    pSD->snapDistance = 10;
+    pSD->snapToWindows = True;
+    pSD->edgeTiling = True;
 
 } /* END OF FUNCTION SetStdScreenResourceValues */
 

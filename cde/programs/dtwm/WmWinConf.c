@@ -77,6 +77,7 @@
  * include extern functions
  */
 #include "WmWinConf.h"
+#include "WmSnap.h"
 #include "WmCDInfo.h"
 #include "WmCDecor.h"
 #include "WmCPlace.h"
@@ -213,6 +214,36 @@ void GetClipDimensions (ClientData *pCD, Boolean fromRoot)
  *  Comments:
  *  --------
  *************************************<->***********************************/
+/*
+ * Snapping (WmSnap.c) is applied to moveX/moveY as a removable offset so
+ * the raw, pointer-tracking position never sticks to an edge.
+ */
+static int snapDX = 0, snapDY = 0;
+static int snapZone = SNAP_ZONE_NONE;
+
+static void
+UnapplyMoveSnap (void)
+{
+    moveX -= snapDX;
+    moveY -= snapDY;
+    snapDX = snapDY = 0;
+}
+
+static void
+ApplyMoveSnap (ClientData *pcd)
+{
+    int sx, sy;
+
+    UnapplyMoveSnap ();
+    sx = moveX;
+    sy = moveY;
+    SnapFramePosition (pcd, &sx, &sy, moveWidth, moveHeight);
+    snapDX = sx - moveX;
+    snapDY = sy - moveY;
+    moveX = sx;
+    moveY = sy;
+}
+
 void HandleClientFrameMove (ClientData *pcd, XEvent *pev)
 {
     int tmpX, tmpY, warpX, warpY;
@@ -238,11 +269,19 @@ void HandleClientFrameMove (ClientData *pcd, XEvent *pev)
      *	Do our grabs and initial setup if we're just starting out
      */
     if (!configGrab) {
+	/* Dragging a tiled window by its title restores its size. */
+	if (pev && pev->type == MotionNotify && pcd->snapTiled &&
+	    !wmGD.movingIcon)
+	{
+	    SnapPrepareDrag (pcd, pev->xmotion.x_root, pev->xmotion.y_root);
+	}
 	if (!StartClientMove (pcd, pev))
 	{
 	    /* configuration was not initiated */
 	    return;
 	}
+	snapDX = snapDY = 0;
+	snapZone = SNAP_ZONE_NONE;
     }
 
     grab_win = GrabWin (pcd, pev);
@@ -269,6 +308,9 @@ void HandleClientFrameMove (ClientData *pcd, XEvent *pev)
 		moveLastPointerX, moveLastPointerY, moveX, moveY,
 		moveWidth, moveHeight, &event);
 	}
+
+	/* work on the raw position; snapping is re-applied below */
+	UnapplyMoveSnap ();
 
 	if (pev->type == KeyPress) 
 	{
@@ -302,6 +344,7 @@ void HandleClientFrameMove (ClientData *pcd, XEvent *pev)
 		    break;
 
 		case XK_Return:
+		    ApplyMoveSnap (pcd);
 		    CompleteFrameConfig (pcd, pev);
 		    return;
 
@@ -348,9 +391,20 @@ void HandleClientFrameMove (ClientData *pcd, XEvent *pev)
 	     */
 	    moveX += pev->xbutton.x_root - moveLastPointerX;
 	    moveY += pev->xbutton.y_root - moveLastPointerY;
+	    ApplyMoveSnap (pcd);
+	    snapZone = SnapEdgeZone (pcd, pev->xbutton.x_root,
+				     pev->xbutton.y_root);
 
 	    CompleteFrameConfig (pcd, pev);
 	    moveDone = True;
+
+	    /* Released on a monitor edge: tile (or maximize at the top). */
+	    if (snapZone != SNAP_ZONE_NONE)
+	    {
+		SnapTile (pcd, snapZone, pev->xbutton.x_root,
+			  pev->xbutton.y_root, pev->xbutton.time);
+	    }
+	    snapZone = SNAP_ZONE_NONE;
 	}
 	else if (pev->type == MotionNotify) 
 	{	
@@ -367,9 +421,21 @@ void HandleClientFrameMove (ClientData *pcd, XEvent *pev)
 	if (tmpX || tmpY) {
 	    FixFrameValues (pcd, &moveX, &moveY, &moveWidth, &moveHeight,
 			    FALSE /* no size checks */);
+	    ApplyMoveSnap (pcd);
+	    snapZone = SnapEdgeZone (pcd, moveLastPointerX, moveLastPointerY);
 	    if (pcd->pSD->moveOpaque)
 	    {
 		MoveOpaque (pcd, moveX, moveY, moveWidth, moveHeight);
+	    }
+	    else if (snapZone != SNAP_ZONE_NONE)
+	    {
+		/* preview the tile the window will get on release */
+		int zx, zy;
+		unsigned int zw, zh;
+
+		SnapZoneRect (pcd, snapZone, moveLastPointerX,
+			      moveLastPointerY, &zx, &zy, &zw, &zh);
+		MoveOutline (zx, zy, zw, zh);
 	    }
 	    else
 	    {
