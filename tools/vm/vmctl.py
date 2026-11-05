@@ -213,8 +213,10 @@ def main():
             monitor("quit")
         except Exception:
             pass
-        if os.path.exists(PIDFILE):
-            os.unlink(PIDFILE)
+        try:
+            os.unlink(PIDFILE)      # QEMU usually removes it itself
+        except FileNotFoundError:
+            pass
 
 
 if __name__ == "__main__":

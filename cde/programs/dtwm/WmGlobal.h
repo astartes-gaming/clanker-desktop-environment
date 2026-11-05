@@ -1661,6 +1661,7 @@ struct _ClientData
     int		maxHeight;			/* WM_NORMAL_HINTS field */
     int		oldMaxWidth;			/* for good HPterm behavior */
     Boolean	snapTiled;			/* tiled by f.tile_* / edge drag */
+    int		snapZone;			/* SNAP_ZONE_* it is tiled to */
     int		snapRestoreWidth;		/* client size before tiling */
     int		snapRestoreHeight;
     int		oldMaxHeight;			/* for good HPterm behavior */

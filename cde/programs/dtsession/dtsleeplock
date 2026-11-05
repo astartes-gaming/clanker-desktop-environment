@@ -1,0 +1,100 @@
+#!/bin/sh
+#####################################################################
+##  dtsleeplock - lock the CDE session before the computer sleeps.
+##
+##  Listens to systemd-logind (or elogind) on the system D-Bus and
+##  runs the LockDisplay action:
+##    - before suspend/hibernate (lid closed, sleep key, menu...),
+##      holding a short "delay" inhibitor so the screen is locked
+##      before the machine goes down, not after it wakes up;
+##    - when logind asks the session to lock ("loginctl lock-session",
+##      IdleAction=lock).
+##
+##  Started by Xsession.d/0070.dtmodern; ends with the X display.
+##  Exits quietly when logind, dbus-monitor or xprop are missing, so
+##  it does nothing on systems without them.  Opt out with
+##  DT_NO_LOCK_ON_SLEEP=1 in ~/.dtprofile.
+##
+##  Bourne shell only (no $(...)).
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+have() { type "$1" >/dev/null 2>&1; }
+
+have dbus-monitor && have dbus-send && have xprop && have dtaction || exit 0
+[ -n "$DISPLAY" ] && [ -d "${XDG_RUNTIME_DIR:-/nonexistent}" ] || exit 0
+
+LOGIND=org.freedesktop.login1
+
+# Our logind session object (for its Lock signal).
+if [ -n "$XDG_SESSION_ID" ]; then
+    session=`dbus-send --system --print-reply=literal --dest=$LOGIND \
+        /org/freedesktop/login1 org.freedesktop.login1.Manager.GetSession \
+        string:"$XDG_SESSION_ID" 2>/dev/null | sed -n 's/^ *\(\/[^ ]*\).*/\1/p'`
+else
+    session=""
+fi
+[ -n "`dbus-send --system --print-reply --dest=$LOGIND /org/freedesktop/login1 \
+        org.freedesktop.DBus.Peer.Ping 2>/dev/null`" ] || exit 0
+
+if have systemd-inhibit; then
+    INHIBIT=systemd-inhibit
+elif have elogind-inhibit; then
+    INHIBIT=elogind-inhibit
+else
+    INHIBIT=""
+fi
+
+inhibitor=""
+inhibit() {
+    [ -n "$INHIBIT" ] && [ -z "$inhibitor" ] || return 0
+    $INHIBIT --what=sleep --mode=delay --who="CDE" \
+        --why="Lock the screen before sleeping" \
+        sleep 2147483647 >/dev/null 2>&1 &
+    inhibitor=$!
+}
+release() {
+    [ -n "$inhibitor" ] && kill $inhibitor 2>/dev/null
+    inhibitor=""
+}
+lock() {
+    dtaction LockDisplay >/dev/null 2>&1 &
+    sleep 1         # give dtsession time to cover the screen
+}
+
+fifo=$XDG_RUNTIME_DIR/dtsleeplock.$$
+rm -f "$fifo"
+mkfifo "$fifo" 2>/dev/null || exit 0
+trap 'release; rm -f "$fifo"; exit 0' 1 2 15
+
+match_sleep="type='signal',sender='$LOGIND',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'"
+match_lock="type='signal',sender='$LOGIND',interface='org.freedesktop.login1.Session',member='Lock'"
+dbus-monitor --system "$match_sleep" "$match_lock" >"$fifo" 2>/dev/null &
+monitor=$!
+
+# When the X display goes away, stop listening (ends the loop below).
+( xprop -root -spy _DT_SM_WINDOW_INFO >/dev/null 2>&1; kill $monitor 2>/dev/null ) &
+
+inhibit
+event=""
+while read line; do
+    case $line in
+    *member=PrepareForSleep*)
+        event=sleep ;;
+    *member=Lock*)
+        case $line in
+        *"path=$session;"*) lock ;;
+        esac
+        event="" ;;
+    *"boolean true"*)
+        if [ "$event" = sleep ]; then lock; release; fi
+        event="" ;;
+    *"boolean false"*)
+        if [ "$event" = sleep ]; then inhibit; fi   # woke up
+        event="" ;;
+    esac
+done <"$fifo"
+
+release
+rm -f "$fifo"
+exit 0

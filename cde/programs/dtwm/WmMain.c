@@ -49,6 +49,7 @@
 #include "WmError.h"
 #include "WmIPC.h"
 #include "WmBackdrop.h"
+#include "WmMultiHead.h"
 
 
 /*
@@ -127,6 +128,7 @@ main (int argc, char *argv [], char *environ [])
      */
 
     InitWmGlobal (argc, argv, environ);
+    InitScreenChangeEvents ();
 
     /*
      * Set up PATH variable if it must run as standalone command
@@ -183,6 +185,11 @@ main (int argc, char *argv [], char *environ [])
 	    {
 	        dispatchEvent = WmDispatchMenuEvent ((XButtonEvent *) &event);
 	    }
+	}
+
+	if (dispatchEvent && HandleScreenChangeEvent (&event))
+	{
+	    dispatchEvent = False;	/* RandR: monitors changed */
 	}
 
 	if (dispatchEvent)

@@ -282,6 +282,7 @@ SnapTile (ClientData *pcd, int zone, int ptrX, int ptrY, Time time)
     /* Frame position, client size (as an interactive configure does). */
     ProcessNewConfiguration (pcd, x, y, w - 2 * bx, h - bx - by, False);
     pcd->snapTiled = True;
+    pcd->snapZone = zone;
 }
 
 void
@@ -340,4 +341,126 @@ SnapPrepareDrag (ClientData *pcd, int ptrX, int ptrY)
     ProcessNewConfiguration (pcd, x, y,
 			     (unsigned int) pcd->snapRestoreWidth,
 			     (unsigned int) pcd->snapRestoreHeight, False);
+}
+
+/* ------------------------------------------------------------------ */
+
+/*
+ * Keep 'v..v+len' anchored when the screen grows or shrinks along one
+ * axis: windows touching the far edge stay there, centered ones stay
+ * centered (the front panel, for one), the rest keep their position.
+ */
+static int
+Reanchor (int v, int len, int oldSize, int newSize)
+{
+    if (oldSize == newSize || oldSize <= 0)
+	return v;
+    /* Centered (give or take a border) wins over touching an edge,
+     * so a panel that spans the screen stays centered. */
+    if (Abs (v + len / 2 - oldSize / 2) <= 8 + oldSize / 100)
+	return (newSize - len) / 2;
+    if (v > 0 && Abs (v + len - oldSize) <= 1)
+	return newSize - len;
+    return v;
+}
+
+/* Squared distance from (px, py) to the nearest point of r. */
+static long
+DistanceTo (SnapRect *r, int px, int py)
+{
+    long dx = 0, dy = 0;
+
+    if (px < r->x) dx = r->x - px;
+    else if (px >= r->x + r->w) dx = px - (r->x + r->w - 1);
+    if (py < r->y) dy = r->y - py;
+    else if (py >= r->y + r->h) dy = py - (r->y + r->h - 1);
+    return dx * dx + dy * dy;
+}
+
+/* The monitor nearest to (px, py); the whole screen without Xinerama. */
+static void
+NearestHeadRect (ClientData *pcd, int px, int py, SnapRect *r)
+{
+    unsigned int i, w, h, ux, uy;
+    SnapRect	 cand;
+    long	 d, best = -1;
+
+    ScreenRect (pcd, r);
+    if (!DtXI)
+	DtXI = _DtXineramaInit (DISPLAY);
+    if (!DtXI)
+	return;
+    for (i = 0; _DtXineramaGetScreen (DtXI, i, &w, &h, &ux, &uy); i++)
+    {
+	cand.x = (int) ux; cand.y = (int) uy;
+	cand.w = (int) w;  cand.h = (int) h;
+	d = DistanceTo (&cand, px, py);
+	if (best < 0 || d < best)
+	{
+	    best = d;
+	    *r = cand;
+	}
+    }
+}
+
+/*
+ * The screen size or monitor layout changed (RandR: a monitor was
+ * plugged in or removed, the resolution or rotation changed).  Keep
+ * the window reachable: re-anchor it, fit it on its monitor (the
+ * nearest one if its monitor is gone), and refit maximized and tiled
+ * windows to their monitor.  oldW/oldH are the screen size before the change.
+ */
+void
+SnapScreenChanged (ClientData *pcd, int oldW, int oldH, Time time)
+{
+    SnapRect	 f, head;
+    int		 bx, by, x, y, cx, cy;
+    Boolean	 maximized;
+
+    if (!pcd || pcd->clientState == MINIMIZED_STATE ||
+	pcd->clientState == WITHDRAWN_STATE)
+	return;
+
+    maximized = (pcd->clientState == MAXIMIZED_STATE);
+    bx = pcd->clientOffset.x;
+    by = pcd->clientOffset.y;
+
+    /* Normal (unmaximized) frame geometry. */
+    f.x = pcd->clientX - bx;
+    f.y = pcd->clientY - by;
+    f.w = pcd->clientWidth + 2 * bx;
+    f.h = pcd->clientHeight + bx + by;
+
+    ScreenRect (pcd, &head);
+    x = Reanchor (f.x, f.w, oldW, head.w);
+    y = Reanchor (f.y, f.h, oldH, head.h);
+
+    /*
+     * Fit it on the monitor holding its center (or the nearest one if
+     * that monitor is gone); the title bar wins if it is too big.
+     */
+    cx = x + f.w / 2;
+    cy = y + f.h / 2;
+    NearestHeadRect (pcd, cx, cy, &head);
+    if (x + f.w > head.x + head.w) x = head.x + head.w - f.w;
+    if (y + f.h > head.y + head.h) y = head.y + head.h - f.h;
+    if (x < head.x) x = head.x;
+    if (y < head.y) y = head.y;
+
+    if (maximized)
+    {
+	/* Re-maximize on the monitor the window now belongs to. */
+	pcd->clientX = x + bx;
+	pcd->clientY = y + by;
+	SetClientState (pcd, NORMAL_STATE, time);
+	SetClientState (pcd, MAXIMIZED_STATE, time);
+	return;
+    }
+
+    if (x != f.x || y != f.y)
+	ProcessNewConfiguration (pcd, x, y, (unsigned int) pcd->clientWidth,
+				 (unsigned int) pcd->clientHeight, False);
+
+    if (pcd->snapTiled && pcd->snapZone != SNAP_ZONE_NONE)
+	SnapTile (pcd, pcd->snapZone, -1, -1, time);
 }

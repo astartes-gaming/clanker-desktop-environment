@@ -16,7 +16,7 @@ apt-get install -y -q --no-install-recommends $(cat "$P/runtime-pkgs.txt") \
     xfonts-100dpi xfonts-75dpi xfonts-100dpi-transcoded xfonts-75dpi-transcoded \
     ksh tcl rpcbind ncompress m4 cpp ncurses-term \
     dbus dbus-x11 dbus-user-session libpam-systemd \
-    xterm dex xdotool gtk-3-examples
+    xterm dex xdotool gtk-3-examples xinput python3-evdev
 
 # The staged CDE tree (built on the host with make install DESTDIR=...).
 tar -xzf "$P/cde-stage.tar.gz" -C /

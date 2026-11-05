@@ -354,6 +354,14 @@ $ _DtMessage 20 is the label used for the "Button 2" toggle on
 $ a two button mouse (ignored on a three button mouse)
 20 Menu
 
+$ Touchpad section of the Mouse dialog (shown only with a touchpad)
+21 Touchpad
+22 Tap to click
+23 Natural scrolling
+24 Scroll with two fingers
+25 Disable while typing
+26 Touchpad Speed
+
 $set 10
 $ _DtMessage set 10 is for the SaveRestore functionality
 $ Messages 2,4 from set 10 have been deleted from the message catalog

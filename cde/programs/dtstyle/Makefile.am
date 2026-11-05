@@ -1,13 +1,13 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-bin_PROGRAMS = dtstyle
+bin_PROGRAMS = dtstyle dttouchpad
 
 dtstyle_CPPFLAGS = -DCDE_CONFIGURATION_TOP=\"$(CDE_CONFIGURATION_TOP)\"	\
 	-DCDE_INSTALLATION_TOP=\"$(CDE_INSTALLATION_TOP)\" -I../dthelp	\
 	-DCDE_DATA_TOP=\"$(CDE_DATA_TOP)\" \
 	$(DT_INCDIR)
 
-dtstyle_LDADD = $(DTCLIENTLIBS) $(XTOOLLIB)
+dtstyle_LDADD = $(DTCLIENTLIBS) $(XILIB) $(XTOOLLIB)
 
 dtstyle_SOURCES = Main.c MainWin.c Font.c Audio.c Startup.c Mouse.c	\
 		  SaveRestore.c Backdrop.c Screen.c Keyboard.c		\
@@ -18,7 +18,11 @@ dtstyle_SOURCES = Main.c MainWin.c Font.c Audio.c Startup.c Mouse.c	\
 		  ColorPalette.h I18nEnv.h Main.h Protocol.h		\
 		  Startup.h ColorEdit.h Dtwm.h I18nMain.h MainWin.h	\
 		  Resource.h ColorFile.h Font.h I18nUtil.h Mouse.h	\
-		  SaveRestore.h ExtTheme.c ExtTheme.h
+		  SaveRestore.h ExtTheme.c ExtTheme.h Touchpad.c Touchpad.h
+
+# Applies the touchpad settings at login (Xsession.d/0070.dtmodern).
+dttouchpad_SOURCES = dttouchpad.c Touchpad.c Touchpad.h
+dttouchpad_LDADD = $(XILIB) $(XTOOLLIB)
 
 if SOLARIS
 dtstyle_SOURCES += OWsync.c

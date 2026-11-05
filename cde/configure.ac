@@ -579,6 +579,35 @@ AC_CHECK_LIB(Xinerama, XineramaQueryScreens,
                 [SOURCE_CPP_DEFINES="${SOURCE_CPP_DEFINES} -DUSE_XINERAMA"],
                 [AC_MSG_ERROR([libXinerama not found])], $X_LIBS)
 
+dnl dtstyle/dttouchpad: touchpad settings use XInput 1.5 device
+dnl properties (X.Org 1.6+).  Optional: without libXi they are left out.
+have_xi_props=no
+AC_CHECK_LIB([Xi], [XListDeviceProperties],
+    [AC_CHECK_HEADER([X11/extensions/XInput.h], [have_xi_props=yes], [],
+        [#include <X11/Xlib.h>])], [], $X_LIBS)
+XILIB=
+if test "$have_xi_props" = yes; then
+    AC_DEFINE([HAVE_XI_PROPS], [1],
+        [Define if libXi supports XInput device properties])
+    XILIB=-lXi
+fi
+AC_SUBST(XILIB)
+AM_CONDITIONAL([HAVE_XI_PROPS], [test "$have_xi_props" = yes])
+
+dnl dtwm: follow monitor hotplug and resolution changes with RandR.
+dnl Optional: without libXrandr dtwm keeps the screen layout it
+dnl started with, as before.
+have_xrandr=no
+AC_CHECK_LIB([Xrandr], [XRRUpdateConfiguration],
+    [AC_CHECK_HEADER([X11/extensions/Xrandr.h], [have_xrandr=yes], [],
+        [#include <X11/Xlib.h>])], [], $X_LIBS)
+XRANDRLIB=
+if test "$have_xrandr" = yes; then
+    AC_DEFINE([HAVE_XRANDR], [1], [Define if libXrandr is available])
+    XRANDRLIB=-lXrandr
+fi
+AC_SUBST(XRANDRLIB)
+
 dnl Special check for tirpc...
 AC_CHECK_LIB(tirpc, svc_register,
       [CFLAGS="${CFLAGS} -DOPT_TIRPC -I/usr/include/tirpc";

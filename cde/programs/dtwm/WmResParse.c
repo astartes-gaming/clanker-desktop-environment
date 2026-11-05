@@ -4266,10 +4266,12 @@ static Boolean ParseEvent (unsigned char **linePP, EventTableEntry *table,
     status = (*(table[ix].parseProc))(&lineP, table[ix].closure, detail);
     *fClick = table[ix].fClick;
 
-    if (status)
-    {
-        *linePP = lineP;
-    }
+    /*
+     * Step past the detail even when it is not valid (e.g. a KeySym
+     * this Xlib does not know), so the caller can still parse the
+     * context and honor "ifkey" for optional hardware keys.
+     */
+    *linePP = lineP;
     return (status);
 
 } /* END OF FUNCTION ParseEvent */
@@ -4586,6 +4588,7 @@ static Boolean ParseKeySym (unsigned char **linePP, unsigned int closure,
             ((*detail = StrToNum ((unsigned char *)&keySymName[0])) == -1))
         {
             *detail = NoSymbol;
+            *linePP = lineP;	/* skip the unknown name */
             return (FALSE);
         }
     }
