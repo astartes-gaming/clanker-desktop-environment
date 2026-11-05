@@ -626,6 +626,9 @@ $ Messages 13-16 are replacements for messages 5-8
 15 Raise Window When Made Active
 16 Show Contents During Move
 
+$ Runs a compositing manager (picom, compton or xcompmgr) when installed
+30 Use Compositor (GPU-Accelerated, Tear-Free)
+
 $set 19
 $ The set 19 contains messages for the I18N dialog
 

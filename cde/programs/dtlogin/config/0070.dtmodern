@@ -8,7 +8,8 @@
 ##               freedesktop.org session variables, the D-Bus session
 ##               bus, systemd --user / D-Bus activation environment,
 ##               XDG autostart, dtstyle's GTK/Qt theming, touchpad
-##               settings and locking the screen before suspend.
+##               settings, locking the screen before suspend and the
+##               optional compositor.
 ##
 ##  Sourced by:  CDE_INSTALLATION_TOP/bin/Xsession (after .dtprofile)
 ##
@@ -21,6 +22,7 @@
 ##      DT_NO_XDG_AUTOSTART=1   don't run ~/.config/autostart etc.
 ##      DT_NO_TOUCHPAD=1        don't apply Style Manager touchpad settings
 ##      DT_NO_LOCK_ON_SLEEP=1   don't lock the screen before suspend
+##      DT_NO_COMPOSITOR=1      don't start the compositor even if enabled
 ##
 ##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
 #####################################################################
@@ -125,6 +127,14 @@ fi
 #
 if [ -z "$DT_NO_LOCK_ON_SLEEP" ] && [ -x "$_dtm_bin/dtsleeplock" ]; then
   PATH="$_dtm_bin:$PATH" "$_dtm_bin/dtsleeplock" >/dev/null 2>&1 &
+fi
+#
+# 8. Compositor (GPU-accelerated, tear-free drawing), when turned on in
+#    Style Manager > Window ($HOME/.dt/compositor) and one is installed.
+#
+if [ -z "$DT_NO_COMPOSITOR" ] && [ -f "$HOME/.dt/compositor" ] &&
+   [ -x "$_dtm_bin/dtcompositor" ]; then
+  "$_dtm_bin/dtcompositor" start >/dev/null 2>&1 &
 fi
 unset _dtm_bin
 
