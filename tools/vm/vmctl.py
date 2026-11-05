@@ -209,6 +209,12 @@ def main():
             monitor("sendkey " + key)
             time.sleep(0.1)
     elif a.cmd == "stop":
+        # "quit" is a hard power-off: flush the guest's disk cache first,
+        # or files written just before (installs!) come back truncated.
+        try:
+            run("sync", 60)
+        except Exception:
+            pass
         try:
             monitor("quit")
         except Exception:
