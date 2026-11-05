@@ -594,6 +594,20 @@ fi
 AC_SUBST(XILIB)
 AM_CONDITIONAL([HAVE_XI_PROPS], [test "$have_xi_props" = yes])
 
+dnl dtwm: follow monitor hotplug and resolution changes with RandR.
+dnl Optional: without libXrandr dtwm keeps the screen layout it
+dnl started with, as before.
+have_xrandr=no
+AC_CHECK_LIB([Xrandr], [XRRUpdateConfiguration],
+    [AC_CHECK_HEADER([X11/extensions/Xrandr.h], [have_xrandr=yes], [],
+        [#include <X11/Xlib.h>])], [], $X_LIBS)
+XRANDRLIB=
+if test "$have_xrandr" = yes; then
+    AC_DEFINE([HAVE_XRANDR], [1], [Define if libXrandr is available])
+    XRANDRLIB=-lXrandr
+fi
+AC_SUBST(XRANDRLIB)
+
 dnl Special check for tirpc...
 AC_CHECK_LIB(tirpc, svc_register,
       [CFLAGS="${CFLAGS} -DOPT_TIRPC -I/usr/include/tirpc";

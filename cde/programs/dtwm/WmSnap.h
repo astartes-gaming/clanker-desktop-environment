@@ -37,4 +37,10 @@ extern void SnapUntile (ClientData *pcd, Time time);
  * pointer keeps its relative position along the title bar. */
 extern void SnapPrepareDrag (ClientData *pcd, int ptrX, int ptrY);
 
+/* The screen size or monitor layout changed (RandR); oldW/oldH is the
+ * previous screen size.  Keeps the window on a monitor and refits
+ * maximized and tiled windows. */
+extern void SnapScreenChanged (ClientData *pcd, int oldW, int oldH,
+			       Time time);
+
 #endif /* _WmSnap_h */

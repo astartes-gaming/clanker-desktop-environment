@@ -20,6 +20,10 @@
  * IN THE SOFTWARE.
  */
 
+#ifdef HAVE_CONFIG_H
+#include <cde_config.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -33,7 +37,7 @@
 /*
  * Global Variables
  */
-DtXineramaInfo_t *DtXI = NULL;/* Xinerama data is static for life of X server */
+DtXineramaInfo_t *DtXI = NULL;/* Xinerama data; refreshed on RandR changes */
 
 
 /*************************************<->*************************************
@@ -69,6 +73,7 @@ DtXineramaInfo_t *DtXI = NULL;/* Xinerama data is static for life of X server */
  *************************************<->***********************************/
 WmHeadInfo_t *GetHeadInfo(const ClientData *pcd) {
     WmHeadInfo_t *WmHI = NULL;
+    int idx = 0;
 
     if (!DtXI)
         DtXI = _DtXineramaInit(DISPLAY);
@@ -81,7 +86,6 @@ WmHeadInfo_t *GetHeadInfo(const ClientData *pcd) {
         fprintf(stderr, "(dtwm) _GetScreenInfo: malloc failed\n");
 #endif
 
-        free(DtXI);
         return NULL;
     }
 
@@ -96,7 +100,6 @@ WmHeadInfo_t *GetHeadInfo(const ClientData *pcd) {
      * Explicit casting would shut the compiler up, but wouldn't change the
      * fundamental fact that we can't agree on coordinate types.
      */
-    int idx = 0;
     while (_DtXineramaGetScreen(DtXI, idx++,
             &WmHI->width, &WmHI->height, &WmHI->x_org, &WmHI->y_org)) {
 
@@ -158,7 +161,6 @@ WmHeadInfo_t *GetHeadInfoById(int id) {
         fprintf(stderr, "(dtwm) _GetHeadInfoById: malloc failed\n");
 #endif
 
-        free(DtXI);
         return NULL;
     }
 
@@ -168,4 +170,129 @@ WmHeadInfo_t *GetHeadInfoById(int id) {
 
     free(WmHI);
     return NULL;
+}
+
+
+/*************************************<->*************************************
+ *
+ *  Monitor hotplug and resolution changes.
+ *
+ *  With the RandR extension (optional at build and run time) dtwm hears
+ *  about monitors being connected or removed and about resolution or
+ *  rotation changes.  It then updates Xlib's idea of the screen size,
+ *  re-reads the monitor layout, resizes the workspace backdrops and
+ *  moves windows that would otherwise be lost off screen.  Without
+ *  RandR nothing changes.
+ *
+ *************************************<->***********************************/
+
+#ifdef HAVE_XRANDR
+#include <X11/extensions/Xrandr.h>
+#include "WmFunction.h"
+#include "WmSnap.h"
+
+static int randrEventBase = -1;
+
+static void RefreshHeadInfo(void)
+{
+    if (DtXI) {
+        if (DtXI->ScreenInfo)
+            XFree(DtXI->ScreenInfo);
+        free(DtXI);
+        DtXI = NULL;
+    }
+}
+
+static void ScreenChanged(WmScreenData *pSD, int oldW, int oldH, Time time)
+{
+    ClientListEntry *pCLE;
+    int ws;
+    int w = DisplayWidth(DISPLAY, pSD->screen);
+    int h = DisplayHeight(DISPLAY, pSD->screen);
+
+    for (ws = 0; ws < pSD->numWorkspaces; ws++) {
+        WmWorkspaceData *pWS = &pSD->pWS[ws];
+
+        if (pWS->backdrop.window)
+            XResizeWindow(DISPLAY, pWS->backdrop.window,
+                          (unsigned int) w, (unsigned int) h);
+    }
+
+    for (pCLE = pSD->clientList; pCLE; pCLE = pCLE->nextSibling) {
+        if (pCLE->type == NORMAL_STATE)
+            SnapScreenChanged(pCLE->pCD, oldW, oldH, time);
+    }
+
+    /*
+     * Some drivers lose window contents on a mode change without
+     * sending Expose; repaint everything, as f.refresh does.
+     */
+    F_Refresh(NULL, NULL, NULL);
+}
+#endif /* HAVE_XRANDR */
+
+void InitScreenChangeEvents(void)
+{
+#ifdef HAVE_XRANDR
+    int errorBase, i;
+    unsigned long mask = RRScreenChangeNotifyMask;
+
+    if (!XRRQueryExtension(DISPLAY, &randrEventBase, &errorBase)) {
+        randrEventBase = -1;
+        return;
+    }
+#ifdef RRCrtcChangeNotifyMask
+    mask |= RRCrtcChangeNotifyMask;	/* monitors moved, same screen size */
+#endif
+    for (i = 0; i < wmGD.numScreens; i++) {
+        if (wmGD.Screens[i].managed)
+            XRRSelectInput(DISPLAY, wmGD.Screens[i].rootWindow, mask);
+    }
+#endif
+}
+
+Boolean HandleScreenChangeEvent(XEvent *event)
+{
+#ifdef HAVE_XRANDR
+    WmScreenData *pSD = NULL;
+    Window root;
+    Time time = CurrentTime;
+    int i, oldW, oldH;
+
+    if (randrEventBase < 0)
+        return False;
+
+    if (event->type == randrEventBase + RRScreenChangeNotify) {
+        XRRScreenChangeNotifyEvent *sce = (XRRScreenChangeNotifyEvent *) event;
+
+        root = sce->root;
+        time = sce->timestamp;
+    }
+#ifdef RRNotify_CrtcChange
+    else if (event->type == randrEventBase + RRNotify &&
+             ((XRRNotifyEvent *) event)->subtype == RRNotify_CrtcChange) {
+        root = event->xany.window;
+    }
+#endif
+    else
+        return False;
+
+    for (i = 0; i < wmGD.numScreens; i++) {
+        if (wmGD.Screens[i].managed && wmGD.Screens[i].rootWindow == root) {
+            pSD = &wmGD.Screens[i];
+            break;
+        }
+    }
+
+    oldW = DisplayWidth(DISPLAY, pSD ? pSD->screen : DefaultScreen(DISPLAY));
+    oldH = DisplayHeight(DISPLAY, pSD ? pSD->screen : DefaultScreen(DISPLAY));
+    XRRUpdateConfiguration(event);	/* updates DisplayWidth/Height */
+    RefreshHeadInfo();
+
+    if (pSD)
+        ScreenChanged(pSD, oldW, oldH, time);
+    return True;
+#else
+    return False;
+#endif
 }

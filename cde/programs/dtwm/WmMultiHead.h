@@ -35,4 +35,8 @@ typedef struct _WmHeadInfo {
 WmHeadInfo_t *GetHeadInfo(const ClientData *pcd);
 WmHeadInfo_t *GetHeadInfoById(int id);
 
+/* Monitor hotplug / resolution changes (RandR, when available). */
+void InitScreenChangeEvents(void);
+Boolean HandleScreenChangeEvent(XEvent *event);
+
 #endif /* _WmMultiHead_h */
