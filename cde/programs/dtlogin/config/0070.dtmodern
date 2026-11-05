@@ -7,8 +7,8 @@
 ##  Purpose:     Integrate CDE sessions with modern desktop plumbing:
 ##               freedesktop.org session variables, the D-Bus session
 ##               bus, systemd --user / D-Bus activation environment,
-##               XDG autostart, dtstyle's GTK/Qt theming and touchpad
-##               settings.
+##               XDG autostart, dtstyle's GTK/Qt theming, touchpad
+##               settings and locking the screen before suspend.
 ##
 ##  Sourced by:  CDE_INSTALLATION_TOP/bin/Xsession (after .dtprofile)
 ##
@@ -20,6 +20,7 @@
 ##      DT_NO_DBUS=1            don't start a D-Bus session bus
 ##      DT_NO_XDG_AUTOSTART=1   don't run ~/.config/autostart etc.
 ##      DT_NO_TOUCHPAD=1        don't apply Style Manager touchpad settings
+##      DT_NO_LOCK_ON_SLEEP=1   don't lock the screen before suspend
 ##
 ##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
 #####################################################################
@@ -118,6 +119,13 @@ if [ -z "$DT_NO_TOUCHPAD" ] && [ -x "$_dtm_bin/dttouchpad" ]; then
   "$_dtm_bin/dttouchpad" -watch >/dev/null 2>&1 &
 fi
 
+#
+# 7. Lock the screen before suspend/hibernate and when logind asks
+#    (systemd-logind or elogind only; otherwise dtsleeplock just exits).
+#
+if [ -z "$DT_NO_LOCK_ON_SLEEP" ] && [ -x "$_dtm_bin/dtsleeplock" ]; then
+  PATH="$_dtm_bin:$PATH" "$_dtm_bin/dtsleeplock" >/dev/null 2>&1 &
+fi
 unset _dtm_bin
 
 unset -f _dtm_have 2>/dev/null

@@ -170,6 +170,12 @@ $ *
     Mod4<Key>Right		window			f.tile_right\n\
     Mod4<Key>Up		window			f.maximize\n\
     Mod4<Key>Down		window			f.untile\n\
+    <Key>XF86MonBrightnessUp	ifkey|root|icon|window	f.exec "dthwkeys brightness-up"\n\
+    <Key>XF86MonBrightnessDown	ifkey|root|icon|window	f.exec "dthwkeys brightness-down"\n\
+    <Key>XF86AudioRaiseVolume	ifkey|root|icon|window	f.exec "dthwkeys volume-up"\n\
+    <Key>XF86AudioLowerVolume	ifkey|root|icon|window	f.exec "dthwkeys volume-down"\n\
+    <Key>XF86AudioMute		ifkey|root|icon|window	f.exec "dthwkeys volume-mute"\n\
+    <Key>XF86AudioMicMute	ifkey|root|icon|window	f.exec "dthwkeys mic-mute"\n\
     Alt<Key>F10			root|icon|window	f.menu DtRootMenu
 $ *
 $ * #DtButtonBindings#
@@ -218,6 +224,12 @@ $ *
     Mod4<Key>Right		window			f.tile_right\n\
     Mod4<Key>Up		window			f.maximize\n\
     Mod4<Key>Down		window			f.untile\n\
+    <Key>XF86MonBrightnessUp	ifkey|root|icon|window	f.exec "dthwkeys brightness-up"\n\
+    <Key>XF86MonBrightnessDown	ifkey|root|icon|window	f.exec "dthwkeys brightness-down"\n\
+    <Key>XF86AudioRaiseVolume	ifkey|root|icon|window	f.exec "dthwkeys volume-up"\n\
+    <Key>XF86AudioLowerVolume	ifkey|root|icon|window	f.exec "dthwkeys volume-down"\n\
+    <Key>XF86AudioMute		ifkey|root|icon|window	f.exec "dthwkeys volume-mute"\n\
+    <Key>XF86AudioMicMute	ifkey|root|icon|window	f.exec "dthwkeys mic-mute"\n\
     <Key>SunFront               ifkey|icon|window       f.raise_lower\n\
     <Key>SunOpen                ifkey|window            f.minimize\n\
     <Key>SunOpen                ifkey|icon              f.normalize

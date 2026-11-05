@@ -1,0 +1,151 @@
+#!/bin/sh
+#####################################################################
+##  dthwkeys - act on laptop/multimedia keys for the CDE desktop.
+##
+##  Usage: dthwkeys brightness-up | brightness-down
+##                  volume-up | volume-down | volume-mute | mic-mute
+##
+##  Bound to the XF86 keys in sys.dtwmrc (with "ifkey", so keyboards
+##  without these keys are not affected).  Uses whatever the system
+##  provides, first match wins:
+##    brightness: brightnessctl, logind (dbus-send, Linux
+##                /sys/class/backlight), xbacklight, backlight(8) (FreeBSD)
+##    volume:     wpctl (PipeWire), pactl (PulseAudio), amixer (ALSA),
+##                sndioctl (OpenBSD), mixerctl (NetBSD), mixer (FreeBSD)
+##  Does nothing, quietly, when no tool is available.
+##
+##  Bourne shell only (no $(...)), so it also runs on old systems.
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+STEP=5          # percent per key press
+
+have() { type "$1" >/dev/null 2>&1; }
+
+# ---- brightness ---------------------------------------------------
+
+# Linux: change the backlight through systemd-logind/elogind, which
+# lets the active session's user do it without extra permissions.
+logind_brightness() {
+    dir=""
+    for kind in firmware platform raw; do
+        for d in /sys/class/backlight/*; do
+            [ -r "$d/type" ] || continue
+            if [ "`cat $d/type`" = "$kind" ]; then dir=$d; break 2; fi
+        done
+    done
+    [ -n "$dir" ] || return 1
+    have dbus-send || return 1
+    max=`cat $dir/max_brightness`
+    cur=`cat $dir/brightness`
+    delta=`expr $max \* $STEP / 100`
+    [ "$delta" -gt 0 ] || delta=1
+    if [ "$1" = up ]; then
+        new=`expr $cur + $delta`
+        [ "$new" -le "$max" ] || new=$max
+    else
+        new=`expr $cur - $delta`
+        [ "$new" -ge "$delta" ] || new=$delta   # never fully dark
+    fi
+    dbus-send --system --print-reply=literal \
+        --dest=org.freedesktop.login1 \
+        /org/freedesktop/login1/session/auto \
+        org.freedesktop.login1.Session.SetBrightness \
+        string:backlight string:"`basename $dir`" uint32:$new >/dev/null 2>&1
+}
+
+brightness() {
+    if have brightnessctl; then
+        if [ "$1" = up ]; then sign=+; else sign=-; fi
+        brightnessctl -q set "$STEP%$sign" && return
+    fi
+    logind_brightness "$1" && return
+    if have xbacklight; then
+        if [ "$1" = up ]; then xbacklight -inc $STEP; else xbacklight -dec $STEP; fi \
+            >/dev/null 2>&1 && return
+    fi
+    if have backlight; then                 # FreeBSD 13+
+        if [ "$1" = up ]; then backlight + $STEP; else backlight - $STEP; fi \
+            >/dev/null 2>&1 && return
+    fi
+    return 1
+}
+
+# ---- volume -------------------------------------------------------
+
+volume() {
+    if have wpctl && wpctl status >/dev/null 2>&1; then
+        case $1 in
+        up)   wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+              wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ $STEP%+ ;;
+        down) wpctl set-volume @DEFAULT_AUDIO_SINK@ $STEP%- ;;
+        mute) wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle ;;
+        mic)  wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle ;;
+        esac
+        return
+    fi
+    if have pactl && pactl info >/dev/null 2>&1; then
+        case $1 in
+        up)   pactl set-sink-mute @DEFAULT_SINK@ 0
+              pactl set-sink-volume @DEFAULT_SINK@ +$STEP% ;;
+        down) pactl set-sink-volume @DEFAULT_SINK@ -$STEP% ;;
+        mute) pactl set-sink-mute @DEFAULT_SINK@ toggle ;;
+        mic)  pactl set-source-mute @DEFAULT_SOURCE@ toggle ;;
+        esac
+        return
+    fi
+    if have amixer; then
+        case $1 in
+        up)   amixer -q set Master $STEP%+ unmute ;;
+        down) amixer -q set Master $STEP%- ;;
+        mute) amixer -q set Master toggle ;;
+        mic)  amixer -q set Capture toggle ;;
+        esac
+        return
+    fi
+    if have sndioctl; then                  # OpenBSD
+        case $1 in
+        up)   sndioctl -q output.level=+0.05 ;;
+        down) sndioctl -q output.level=-0.05 ;;
+        mute) sndioctl -q output.mute=! ;;
+        mic)  sndioctl -q input.mute=! ;;
+        esac
+        return
+    fi
+    if have mixerctl; then                  # NetBSD
+        case $1 in
+        up)   mixerctl -q -w outputs.master+=8 ;;
+        down) mixerctl -q -w outputs.master-=8 ;;
+        mute) mixerctl -q -w outputs.master.mute=toggle ;;
+        mic)  : ;;
+        esac
+        return
+    fi
+    if have mixer; then                     # FreeBSD
+        case $1 in
+        up)   mixer vol.volume=+0.05 || mixer vol +$STEP ;;
+        down) mixer vol.volume=-0.05 || mixer vol -$STEP ;;
+        mute) mixer vol.mute=^ ;;
+        mic)  mixer rec.mute=^ ;;
+        esac
+        return
+    fi
+    return 1
+}
+
+case $1 in
+brightness-up|brightness-down|volume-up|volume-down|volume-mute|mic-mute) ;;
+*)  echo "usage: dthwkeys brightness-up | brightness-down | volume-up |" >&2
+    echo "                volume-down | volume-mute | mic-mute" >&2
+    exit 2 ;;
+esac
+
+case $1 in
+brightness-up)   brightness up ;;
+brightness-down) brightness down ;;
+volume-up)       volume up ;;
+volume-down)     volume down ;;
+volume-mute)     volume mute ;;
+mic-mute)        volume mic ;;
+esac >/dev/null 2>&1
+exit 0
