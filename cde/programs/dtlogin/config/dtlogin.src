@@ -6,6 +6,22 @@ auth required pam_unix.so
 account required pam_nologin.so
 account required pam_unix.so
 
+#ifdef __linux__
+XCOMM Linux-PAM: a leading "-" skips modules that are not installed, so
+XCOMM this works with systemd-logind, elogind, or neither.
+XCOMM pam_lastlog was removed from Linux-PAM 1.6+, so it must not be
+XCOMM "required" (that made every dtlogin login fail on current distros).
+-session optional pam_lastlog.so
+-session optional pam_lastlog2.so
+-session optional pam_loginuid.so
+-session optional pam_env.so readenv=1
+-session optional pam_limits.so
+XCOMM Register the session with logind: XDG_RUNTIME_DIR, the per-user
+XCOMM D-Bus and systemd --user, and seat device access (audio, USB...).
+-session optional pam_systemd.so
+-session optional pam_elogind.so
+#else
 session required pam_lastlog.so
+#endif
 
 password required pam_deny.so

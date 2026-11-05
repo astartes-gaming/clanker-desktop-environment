@@ -75,7 +75,7 @@ dist_configs_DATA = Xaccess Xconfig Xservers
 dist_configs_SCRIPTS = sys.dtprofile Xfailsafe Xreset Xsetup Xstartup
 
 xsessdir=$(CDE_DATA_TOP)/config/Xsession.d
-dist_xsess_SCRIPTS = 0060.dtsysenv
+dist_xsess_SCRIPTS = 0060.dtsysenv 0070.dtmodern
 
 dist_bin_SCRIPTS = Xsession
 
