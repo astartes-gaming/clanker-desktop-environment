@@ -51,10 +51,13 @@ static int PamStart(const char *service_name, const char *user,
     char *colon, *hostname;
 
     if (pamh) {
+	/* Reuse the handle, but for this service and user. */
+	status = PAM_SUCCESS;
 	if (service_name)
 	    status = pam_set_item(pamh, PAM_SERVICE, service_name);
 
-	if (status != PAM_SUCCESS && user) pam_set_item(pamh, PAM_USER, user);
+	if (status == PAM_SUCCESS && user)
+	    status = pam_set_item(pamh, PAM_USER, user);
     }
     else {
 	status = pam_start(service_name, user, &pam_conv, &pamh);
@@ -109,6 +112,14 @@ int _DtSvcPamAuthenticate(const char *service_name, const char *user,
 	return status;
 
     saved_user_passwd = (char *) user_passwd;
+
+    /*
+     * Forget the token from any earlier attempt on this handle (the
+     * dtsession screen lock reuses it): modules such as pam_unix use a
+     * cached PAM_AUTHTOK instead of asking again, so a single mistyped
+     * password would otherwise make every later attempt fail.
+     */
+    (void) pam_set_item(pamh, PAM_AUTHTOK, NULL);
 
     return pam_authenticate(pamh, PAM_DISALLOW_NULL_AUTHTOK);
 }
