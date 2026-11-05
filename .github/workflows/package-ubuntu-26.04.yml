@@ -110,7 +110,7 @@ jobs:
           dpkg-query -S /usr/include/Xm/Xm.h
           echo '=== dynamic linker view of libXm ==='
           ldconfig -p | grep -E 'libXm[.]so'
-          libxm="$(ldconfig -p | awk '/libXm[.]so/{print $NF; exit}')"
+          libxm="$(ldconfig -p | awk '!f && /libXm[.]so/ {print $NF; f=1}')"
           test -n "$libxm"
           libxm="$(realpath "$libxm")"
           printf 'libXm: %s\n' "$libxm"
@@ -388,7 +388,7 @@ jobs:
               continue
             fi
             test -f "$pathname" || continue
-            file -b "$pathname" | grep -q '^ELF ' || continue
+            file -b "$pathname" | grep '^ELF ' >/dev/null || continue
             ((elf_count += 1))
             dependencies="$(ldd "$pathname" 2>&1 || true)"
             if grep -q '=> not found' <<<"$dependencies"; then
@@ -408,13 +408,13 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          dtwm="$(dpkg -L cde-desktop | awk '/\/dtwm$/{print; exit}')"
+          dtwm="$(dpkg -L cde-desktop | awk '!f && /\/dtwm$/ {print; f=1}')"
           test -n "$dtwm"
           test -x "$dtwm"
           echo "dtwm: $dtwm"
           dependencies="$(ldd "$dtwm")"
           printf '%s\n' "$dependencies"
-          libxm="$(awk '/libXm[.]so/ {print $3; exit}' <<<"$dependencies")"
+          libxm="$(awk '!f && /libXm[.]so/ {print $3; f=1}' <<<"$dependencies")"
           test -n "$libxm"
           test -e "$libxm"
           libxm="$(realpath "$libxm")"

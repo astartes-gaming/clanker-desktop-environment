@@ -118,7 +118,7 @@ case "$stage" in
         failed=1
       fi
       test -f "$path" || continue
-      if file -b "$path" | grep -q '^ELF '; then
+      if file -b "$path" | grep '^ELF ' >/dev/null; then
         ((elf_count+=1))
         echo "=== $path ==="
         dynamic="$(readelf -d "$path")"
