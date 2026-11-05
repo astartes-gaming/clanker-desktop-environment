@@ -2581,6 +2581,7 @@ CatchAndIgnoreXError(
         Display *display,
         XErrorEvent *event )
 {
+   return 0;
 }
 
 

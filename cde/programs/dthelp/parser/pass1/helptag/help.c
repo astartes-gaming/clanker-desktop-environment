@@ -1461,9 +1461,10 @@ if (*stdCharset)
     helpcharset = MakeWideCharString(stdCharset);
 helplang = MakeWideCharString(stdLang);
 
-mb_free(&locale);
+/* free charset first: dotPtr points into locale */
 if (charset && (charset != (dotPtr+1)))
     mb_free(&charset);
+mb_free(&locale);
 }
 
 

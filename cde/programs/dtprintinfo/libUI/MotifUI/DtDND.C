@@ -563,7 +563,7 @@ void DtDND::TransferCB(Widget /*widget*/, XtPointer client_data,
 	 MotifUI *tmp = (MotifUI *)obj->obj;
 	 DtActionInvoke(tmp->topLevel, value, aap, numItems, NULL, NULL, NULL,
 			1, NULL, NULL);
-	 delete aap;
+	 delete [] aap;
 	 delete value;
        }
       break;

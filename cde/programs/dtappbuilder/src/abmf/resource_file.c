@@ -451,8 +451,9 @@ find_user_seg_begin(File modifiedResFile)
 	    userSegOff = ERR_EOF;
 	}
     }
-    else if (userSegOff >= 0)
 
+    /* A dangling "else if (userSegOff >= 0)" used to swallow this
+     * return, so error/EOF results came back as garbage. */
     return userSegOff;
 }
 

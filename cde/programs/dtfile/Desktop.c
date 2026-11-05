@@ -2305,7 +2305,7 @@ IsAFileOnDesktop2(
           {
             newLen = strlen(filesOnDesktop) + strlen(filename1) + 6;
             filesOnDesktop = (char *)XtRealloc(filesOnDesktop, newLen);
-            sprintf(filesOnDesktop, "%s   %s\n", filesOnDesktop, filename1);
+            strcat(filesOnDesktop, "   "); strcat(filesOnDesktop, filename1); strcat(filesOnDesktop, "\n");  /* append; sprintf onto itself is UB */
           }
           *number += 1;
           break;
