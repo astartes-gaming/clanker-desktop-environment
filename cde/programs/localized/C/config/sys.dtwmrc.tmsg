@@ -166,6 +166,10 @@ $ *
     Alt<Key>Up			root|icon|window	f.circle_up\n\
     Alt Ctrl Shift<Key>exclam	root|icon|window	f.set_behavior\n\
     Alt<Key>F6			window			f.next_key transient\n\
+    Mod4<Key>Left		window			f.tile_left\n\
+    Mod4<Key>Right		window			f.tile_right\n\
+    Mod4<Key>Up		window			f.maximize\n\
+    Mod4<Key>Down		window			f.untile\n\
     Alt<Key>F10			root|icon|window	f.menu DtRootMenu
 $ *
 $ * #DtButtonBindings#
@@ -175,6 +179,7 @@ $ *
     <Btn1Down>		frame|icon		f.raise\n\
     <Btn3Down>		frame|icon		f.post_wmenu\n\
     Alt<Btn1Down>	icon|window		f.move\n\
+    <Btn1Click2>	title			f.toggle_maximize\n\
     Alt<Btn3Down>	window			f.minimize
 $ *
 $ * #DefaultKeyBindings#
@@ -209,6 +214,10 @@ $ *
     Alt Ctrl Shift<Key>exclam	root|icon|window	f.set_behavior\n\
     Alt<Key>F6  		window			f.next_key transient\n\
     Alt Shift<Key>F6		window			f.prev_key transient\n\
+    Mod4<Key>Left		window			f.tile_left\n\
+    Mod4<Key>Right		window			f.tile_right\n\
+    Mod4<Key>Up		window			f.maximize\n\
+    Mod4<Key>Down		window			f.untile\n\
     <Key>SunFront               ifkey|icon|window       f.raise_lower\n\
     <Key>SunOpen                ifkey|window            f.minimize\n\
     <Key>SunOpen                ifkey|icon              f.normalize

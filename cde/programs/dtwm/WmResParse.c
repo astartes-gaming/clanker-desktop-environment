@@ -570,6 +570,18 @@ FunctionTableEntry functionTable[] = {
 			0,
 			F_Set_Context,
 			(Boolean (*)(unsigned char **, Boolean (*)(char *, ClientData *, XEvent *), char **)) ParseWmFuncNbrArg},
+    {"f.tile_left",	F_CONTEXT_ICON|F_CONTEXT_ROOT|
+                                 F_SUBCONTEXT_IB_IICON|F_SUBCONTEXT_IB_WICON,
+			CRS_ANY,
+			MWM_FUNC_RESIZE,
+			F_Tile_Left,
+			ParseWmFuncNoArg},
+    {"f.tile_right",	F_CONTEXT_ICON|F_CONTEXT_ROOT|
+                                 F_SUBCONTEXT_IB_IICON|F_SUBCONTEXT_IB_WICON,
+			CRS_ANY,
+			MWM_FUNC_RESIZE,
+			F_Tile_Right,
+			ParseWmFuncNoArg},
     {"f.title",		0,
 			CRS_MENU,
 			0,
@@ -579,6 +591,18 @@ FunctionTableEntry functionTable[] = {
 			CRS_ANY,
 			0,
 			F_Toggle_Front_Panel,
+			ParseWmFuncNoArg},
+    {"f.toggle_maximize", F_CONTEXT_ICON|F_CONTEXT_ROOT|
+	                               F_SUBCONTEXT_IB_IICON|F_SUBCONTEXT_IB_WICON,
+			CRS_ANY,
+			MWM_FUNC_MAXIMIZE,
+			F_Toggle_Maximize,
+			ParseWmFuncNoArg},
+    {"f.untile",	F_CONTEXT_ICON|F_CONTEXT_ROOT|
+	                               F_SUBCONTEXT_IB_IICON|F_SUBCONTEXT_IB_WICON,
+			CRS_ANY,
+			0,
+			F_Untile,
 			ParseWmFuncNoArg},
 
     {"f.version",       0,
