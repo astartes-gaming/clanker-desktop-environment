@@ -56,6 +56,16 @@ mkdir -p "$PAY"
 tar --owner=0 --group=0 -C "$STAGE" -czf "$PAY/cde-stage.tar.gz" .
 cp "$HERE/provision.sh" "$OUT/runtime-pkgs.txt" "$PAY/"
 cp "$CDE/contrib/rc/systemd/dtlogin.service" "$PAY/"
+
+# Self-test (run in the VM: sh /root/payload/selftest.sh PASSWORD).
+cp "$HERE/selftest.sh" "$HERE/touchpad.py" "$PAY/"
+python3 "$HERE/mkpng.py" "$PAY/selftest.png"
+cc -O2 -o "$PAY/wsmbackdrop" "$HERE/wsmbackdrop.c" \
+    -I"$CDE/include" -I/usr/include/tirpc \
+    -L"$CDE/lib/DtSvc/.libs" -L"$CDE/lib/tt/lib/.libs" \
+    -L"$CDE/lib/DtXinerama/.libs" \
+    -lDtSvc -ltt -lDtXinerama -lXinerama -lXm -lXt -lX11 -ltirpc ||
+    echo "warning: wsmbackdrop not built; wallpaper checks will be skipped"
 if [ ! -f "$OUT/credentials" ]; then
     pw=$(head -c 12 /dev/urandom | base64 | tr -d '/+=' | cut -c1-12)
     rpw=$(head -c 12 /dev/urandom | base64 | tr -d '/+=' | cut -c1-12)

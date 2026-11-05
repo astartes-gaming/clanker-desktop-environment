@@ -25,3 +25,40 @@ tools/vm/vmctl.py screenshot out/screen.png
   disk.
 
 Everything generated lives in `out/` (git-ignored).
+
+## Self-test
+
+`selftest.sh` checks a running session end to end. Each check prints
+PASS, FAIL or SKIP:
+- session environment (PAM, D-Bus, XDG)
+- loopback-only listeners, no XDMCP
+- touchpad settings and hotplug (with a virtual uinput touchpad)
+- laptop keys
+- window snapping
+- wallpapers, including PNG colours
+- resolution changes
+- screen lock and unlock, and lock-before-suspend
+- the compositor
+
+Log in as `tester` at the dtlogin screen, then on the serial console
+(or as root in a terminal):
+
+```sh
+tools/vm/vmctl.py run "sh /root/payload/selftest.sh PASSWORD" -t 900
+```
+
+`PASSWORD` is the test user's password from `out/credentials`.
+Without it, the lock and suspend checks are skipped.
+
+## A second VM
+
+```sh
+VM_OUT=$PWD/tools/vm/out-512 DISK_SIZE=32G tools/vm/build-vm.sh
+VM_OUT=$PWD/tools/vm/out-512 tools/vm/vmctl.py boot --ram 512 --cpus 2
+VM_OUT=$PWD/tools/vm/out-512 tools/vm/vmctl.py provision
+```
+
+`provision.sh` grows the root filesystem to fill the disk.
+`qemu-img convert -O qcow2 out-512/disk.qcow2 standalone.qcow2` gives
+an image without the backing file, e.g. for AQEMU or virt-manager.
+
