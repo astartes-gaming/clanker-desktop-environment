@@ -129,7 +129,17 @@ _DtCvRunInterp(
     /*
      * open a temporary file to write the data to.
      */
-    fileName = tempnam(NULL, NULL);
+    {
+	const char *tmpdir = getenv("TMPDIR");
+	size_t      len;
+
+	if (tmpdir == NULL || *tmpdir == '\0')
+	    tmpdir = "/tmp";
+	len = strlen(tmpdir) + sizeof("/dthelpXXXXXX");
+	fileName = (char *) malloc(len);
+	if (fileName != NULL)
+	    snprintf(fileName, len, "%s/dthelpXXXXXX", tmpdir);
+    }
     if (fileName == NULL)
       {
 	if (newData != data)
@@ -138,15 +148,20 @@ _DtCvRunInterp(
       }
 
     /*
-     * write the data to file.
+     * write the data to file.  mkstemp() creates it atomically with
+     * mode 0600; the old tempnam()+open(O_CREAT) followed symlinks
+     * planted in /tmp and created the file world-writable.
      */
     result = -1;
-#if defined(__linux__)
-    myFd   = open(fileName, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
-#else
-    myFd   = open(fileName, O_WRONLY | O_CREAT | O_TRUNC);
-#endif
-    if (myFd != -1)
+    myFd   = mkstemp(fileName);
+    if (myFd == -1)
+      {
+	if (newData != data)
+	    free(newData);
+	free(fileName);
+	return -1;
+      }
+    else
       {
 	/*
 	 * write the data to the file
@@ -159,7 +174,7 @@ _DtCvRunInterp(
 	     * change the access permissions so the interpreter can read
 	     * the file.
 	     */
-	    result = fchmod(myFd, S_IRUSR | S_IRGRP | S_IROTH);
+	    result = fchmod(myFd, S_IRUSR);
 	  }
 
         /*
@@ -181,7 +196,8 @@ _DtCvRunInterp(
     /*
      * create the system command string with its parameters
      */
-    ptr = (char *) malloc(sizeof(interp) + strlen(fileName) + 1);
+    /* was sizeof(interp): the size of a pointer, not of the string */
+    ptr = (char *) malloc(strlen(interp) + 1 + strlen(fileName) + 1);
     if (!ptr)
       {
 	unlink(fileName);

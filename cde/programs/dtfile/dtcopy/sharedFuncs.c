@@ -58,6 +58,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/mount.h>
@@ -442,11 +443,15 @@ CopyCheckDeletePermission(
     {
        char *tmpfile;
        int rv;
-       tmpfile = tempnam(parentdir,"dtfile");
+       {
+           size_t len = strlen(parentdir) + sizeof("/dtfileXXXXXX");
+           if ((tmpfile = malloc(len)) != NULL)
+               snprintf(tmpfile, len, "%s/dtfileXXXXXX", parentdir);
+       }
        if (tmpfile)
        {
            /* Create a temporary file */
-           if ( (rv = creat(tmpfile,O_RDONLY)) < 0)
+           if ( (rv = mkstemp(tmpfile)) < 0)  /* atomic; no symlink race */
            {
                free(tmpfile);
                return -1;

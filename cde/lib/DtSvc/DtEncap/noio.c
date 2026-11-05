@@ -39,6 +39,10 @@
 #define XOS_USE_XT_LOCKING
 #include <X11/Xos_r.h>
 #include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <SPC/spcP.h>
 #include "DtSvcLock.h"
@@ -202,6 +206,38 @@ static char * get_tmp_dir (
 }
 
 /*
+ * make_logfile - create a unique, private (mode 0600) log file in 'dir'
+ *    (or $TMPDIR, or /tmp) and return its malloc'd name, or NULL.
+ *
+ *    Replaces tempnam(), which only picked a name: another user could
+ *    create that name (e.g. as a symlink) before we opened it.
+ */
+static char * make_logfile (
+	const char *dir)
+{
+   char		*path;
+   size_t	len;
+   int		fd;
+
+   if (dir == NULL || *dir == '\0')
+      dir = getenv ("TMPDIR");
+   if (dir == NULL || *dir == '\0')
+      dir = "/tmp";
+
+   len = strlen (dir) + sizeof ("/SPCXXXXXX");
+   if ((path = malloc (len)) == NULL)
+      return (NULL);
+   snprintf (path, len, "%s/SPCXXXXXX", dir);
+
+   if ((fd = mkstemp (path)) < 0) {
+      free (path);
+      return (NULL);
+   }
+   close (fd);
+   return (path);
+}
+
+/*
  ***
  *** Method definitions for noio channel objects
  ***
@@ -229,12 +265,12 @@ SPC_Channel_Ptr open_noio_channel_object(SPC_Channel_Ptr channel,
   if(IS_SPCIO_USE_LOGFILE(iomode)) {
 
     _DtSvcProcessLock();
-    /* Storage from tempnam() freed in remove_logfile_local_channel_object */
+    /* Storage from make_logfile() freed in remove_logfile_local_channel_object */
     if (SPCD_Authentication_Dir != NULL)
-      channel->logfile=tempnam(SPCD_Authentication_Dir,"SPC");
+      channel->logfile=make_logfile(SPCD_Authentication_Dir);
     else {
       temp_dir_name = get_tmp_dir ();
-      channel->logfile=tempnam(temp_dir_name,"SPC");
+      channel->logfile=make_logfile(temp_dir_name);
       free(temp_dir_name);
     }
 
@@ -337,7 +373,8 @@ int post_fork_noio_channel_object(SPC_Channel_Ptr channel,
     /* Open logfile if necessary */
     
     if(IS_SPCIO_USE_LOGFILE(channel->IOMode))
-      if((fd=open(channel->logfile, O_WRONLY | O_CREAT, 0666)) == ERROR) {
+      /* The file was already created privately by make_logfile() */
+      if((fd=open(channel->logfile, O_WRONLY | O_CREAT, 0600)) == ERROR) {
 	SPC_Error(SPC_Cannot_Open_Log, channel->logfile);
 	return(SPC_ERROR);
       }

@@ -1666,8 +1666,17 @@ write_rcfile(enum menu_type mtype, int exists, int cfno, char *val, char *commen
       if (access(rcname, F_OK) == 0) rcexists = 1 ;
     }
   strcpy(tmp_filename, "/tmp/.dtcalcrcXXXXXX") ;
-  mktemp(tmp_filename) ;
-  if ((tmpfd = fopen(tmp_filename, "w+")) == NULL) return ;
+  /* mkstemp()+fdopen() instead of mktemp()+fopen(): no /tmp symlink race */
+  {
+    int fd = mkstemp(tmp_filename) ;
+    if (fd < 0) return ;
+    if ((tmpfd = fdopen(fd, "w+")) == NULL)
+      {
+        close(fd) ;
+        unlink(tmp_filename) ;
+        return ;
+      }
+  }
 
   if (rcexists)
     {

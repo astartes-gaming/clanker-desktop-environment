@@ -94,6 +94,8 @@ from the X Consortium.
 #include <X11/X.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <errno.h>
 #ifdef X_NOT_STDC_ENV
@@ -391,7 +393,15 @@ MakeServerAuthFile (struct display *d)
 	}
     	sprintf (d->authFile, "%s/%s/%s/A%s-XXXXXX",
 		 authDir, authdir1, authdir2, cleanname);
-    	(void) mktemp (d->authFile);
+	/* mkstemp() creates the file atomically (mode 0600), unlike the
+	 * racy mktemp() which only picked a name. */
+	r = mkstemp (d->authFile);
+	if (r < 0) {
+	    free (d->authFile);
+	    d->authFile = NULL;
+	    return FALSE;
+	}
+	close (r);
     }
     return TRUE;
 }
@@ -408,7 +418,13 @@ SaveServerAuthorizations (struct display *d, Xauth **auths, int count)
     if (!d->authFile && !MakeServerAuthFile (d))
 	return FALSE;
     (void) unlink (d->authFile);
-    auth_file = fopen (d->authFile, "w");
+    /* O_EXCL: never follow a symlink or reuse a file planted after unlink() */
+    {
+	int fd = open (d->authFile, O_WRONLY | O_CREAT | O_EXCL, 0600);
+	auth_file = (fd < 0) ? NULL : fdopen (fd, "w");
+	if (fd >= 0 && !auth_file)
+	    close (fd);
+    }
     umask (mask);
     if (!auth_file) {
 	Debug ("Can't creat auth file %s\n", d->authFile);
@@ -533,7 +549,14 @@ openFiles (char *name, char *new_name, FILE **oldp, FILE **newp)
 	strcat (new_name, "-n");
 	mask = umask (0077);
 	(void) unlink (new_name);
-	*newp = fopen (new_name, "w");
+	/* Runs as root in the user's directory: O_EXCL refuses symlinks
+	 * planted between unlink() and open(). */
+	{
+		int fd = open (new_name, O_WRONLY | O_CREAT | O_EXCL, 0600);
+		*newp = (fd < 0) ? NULL : fdopen (fd, "w");
+		if (fd >= 0 && !*newp)
+			close (fd);
+	}
 	(void) umask (mask);
 	if (!*newp) {
 		Debug ("can't open new file %s\n", new_name);
@@ -1109,10 +1132,19 @@ SetUserAuthorization (struct display *d, struct verify_info *verify)
 	    }
 	}
 	if (lockStatus != LOCK_SUCCESS) {
-	    sprintf (backup_name, "%s/.XauthXXXXXX", d->userAuthDir);
-	    (void) mktemp (backup_name);
-	    Debug ("XauLockAuth %s\n", backup_name);
-	    lockStatus = XauLockAuth (backup_name, 1, 2, 10);
+	    int bfd;
+
+	    snprintf (backup_name, sizeof(backup_name), "%s/.XauthXXXXXX",
+		      d->userAuthDir);
+	    /* Reserve the name atomically instead of the racy mktemp() */
+	    bfd = mkstemp (backup_name);
+	    if (bfd >= 0) {
+		close (bfd);
+		Debug ("XauLockAuth %s\n", backup_name);
+		lockStatus = XauLockAuth (backup_name, 1, 2, 10);
+	    } else {
+		lockStatus = LOCK_ERROR;
+	    }
 	    Debug ("backup lock is %d\n", lockStatus);
 	    if (lockStatus == LOCK_SUCCESS) {
 		if (openFiles (backup_name, new_name, &old, &new)) {
@@ -1121,8 +1153,10 @@ SetUserAuthorization (struct display *d, struct verify_info *verify)
 		} else {
 		    XauUnlockAuth (backup_name);
 		    lockStatus = LOCK_ERROR;
-		}	
+		}
 	    }
+	    if (lockStatus != LOCK_SUCCESS && bfd >= 0)
+		(void) unlink (backup_name);
 	    /*
 	     * Won't be using this file so unlock it.
 	     */

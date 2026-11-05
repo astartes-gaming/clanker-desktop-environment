@@ -1153,20 +1153,19 @@ ImmediateExit(
 	Tt_message msg,
 	Boolean doSave)
 {
-    long old;
+    sigset_t block;
     Tt_message notice;
 
     /*
      * Turn off SIGTERM so we don't catch one in the middle of shutting
-     * down
+     * down.  POSIX sigprocmask() replaces the deprecated BSD sigblock()
+     * and SysV sighold(); it exists on every supported system.
      */
-#if !defined(SVR4) && !defined(__linux__)
-    old = sigblock(sigmask(SIGTERM));
-    sigblock(sigmask(SIGHUP));
-    sigblock(sigmask(SIGPIPE));
-#else
-    old = sighold(SIGTERM);
-#endif
+    sigemptyset(&block);
+    sigaddset(&block, SIGTERM);
+    sigaddset(&block, SIGHUP);
+    sigaddset(&block, SIGPIPE);
+    sigprocmask(SIG_BLOCK, &block, NULL);
     /*
      *
      */

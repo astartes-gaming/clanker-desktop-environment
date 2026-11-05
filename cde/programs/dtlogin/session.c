@@ -652,9 +652,10 @@ LoadXloginResources( struct display *d )
     char	*auth_key="";
     char        *resources = NULL;
     char	*p;
-    char	tmpname[32];
+    char	tmpname[MAXPATHLEN];
+    int		tmpfd;
 
-    if (d->resources && d->resources[0]) { 
+    if (d->resources && d->resources[0]) {
         resources = _ExpandLang(d->resources, d->language);
         if (access (resources, R_OK) != 0) {
             /** fallback to the C locale for resources **/
@@ -684,12 +685,19 @@ LoadXloginResources( struct display *d )
 
 	LoadAltDtsResources(d); 
 
-        strcpy(tmpname,CDE_LOGFILES_TOP "/dtlogin_XXXXXX");
-        (void) mktemp(tmpname);
+        snprintf(tmpname, sizeof(tmpname), "%s",
+                 CDE_LOGFILES_TOP "/dtlogin_XXXXXX");
+        /* Create the file atomically (0600) rather than racing mktemp() */
+        if ((tmpfd = mkstemp(tmpname)) < 0) {
+            Debug("LoadXloginResources - mkstemp(%s) failed\n", tmpname);
+            if (resources) free(resources);
+            return -1;
+        }
+        close(tmpfd);
 
         XrmPutFileDatabase(XresourceDB, tmpname);
 
-	sprintf (cmd, "%s%s %s -display %s -load %s",
+	snprintf (cmd, sizeof(cmd), "%s%s %s -display %s -load %s",
 			auth_key, authority, d->xrdb, d->name, tmpname);
 	Debug ("Loading resource file: %s\n", cmd);
 
