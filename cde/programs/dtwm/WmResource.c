@@ -5181,11 +5181,9 @@ ProcessWorkspaceResources (WmWorkspaceData *pWS)
 	WmNbackdrop, WmCBackdrop, wmBackdropResources, 
 	XtNumber (wmBackdropResources), NULL, 0);
 
-    /* This call will create the backdrop windows of the correct size */
+    /* Load and render the backdrop and create its window. */
+    pWS->backdrop.renderedPixmap = None;
     ProcessBackdropResources (pWS, 0);
-    /* 1 = CHANGE_BACKDROP HACK this call will handle changing from the
-     * default tiled, to centered, fill or fit */
-    ProcessBackdropResources (pWS, 1);
 
 } /* END OF FUNCTION ProcessWorkspaceResources */
 

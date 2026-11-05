@@ -62,7 +62,8 @@ typedef enum {
   DtWSM_BACKDROP_IMAGETYPE_TILED  = 0,
   DtWSM_BACKDROP_IMAGETYPE_CENTER = 1,
   DtWSM_BACKDROP_IMAGETYPE_FIT    = 2,
-  DtWSM_BACKDROP_IMAGETYPE_FILL   = 3
+  DtWSM_BACKDROP_IMAGETYPE_FILL   = 3,	/* cover, aspect kept, cropped */
+  DtWSM_BACKDROP_IMAGETYPE_STRETCH = 4	/* monitor size, aspect ignored */
 } DtWsmBackdropImageType;
 
 /* Workspace property information */

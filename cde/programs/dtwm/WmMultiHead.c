@@ -188,6 +188,7 @@ WmHeadInfo_t *GetHeadInfoById(int id) {
 
 #ifdef HAVE_XRANDR
 #include <X11/extensions/Xrandr.h>
+#include "WmBackdrop.h"
 #include "WmFunction.h"
 #include "WmSnap.h"
 
@@ -216,7 +217,10 @@ static void ScreenChanged(WmScreenData *pSD, int oldW, int oldH, Time time)
         if (pWS->backdrop.window)
             XResizeWindow(DISPLAY, pWS->backdrop.window,
                           (unsigned int) w, (unsigned int) h);
+        RefreshBackdrop(pWS);	/* scaled pictures: render anew */
     }
+    if (pSD->pActiveWS)
+        ChangeBackdrop(pSD->pActiveWS);	/* publish the new root pixmap */
 
     for (pCLE = pSD->clientList; pCLE; pCLE = pCLE->nextSibling) {
         if (pCLE->type == NORMAL_STATE)

@@ -40,6 +40,8 @@ extern void SetNewBackdrop(
                         Pixmap pixmap,
                         String bitmapFile,
                         DtWsmBackdropImageType imageType) ;
+extern void RefreshBackdrop( 
+                        WmWorkspaceData *pWS) ;
 extern Boolean IsBackdropWindow( 
                         WmScreenData *pSD,
                         Window win) ;

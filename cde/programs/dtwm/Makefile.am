@@ -35,7 +35,7 @@ dtwm_SOURCES = WmCDInfo.c      WmCDecor.c      WmCEvent.c \
                WmMultiHead.c   Button.c        Callback.c \
                Clock.c         DataBaseLoad.c  PanelS.c \
                Parse.c         PopupMenu.c     Session.c \
-               UI.c            WmBackdrop.c    WmFP.c \
+               UI.c            WmBackdrop.c    WmWallpaper.c   WmFP.c \
                WmHelp.c        WmIPC.c         WmInstantTitle.c \
                WmOL.c          WmParse.c       WmParseP.c \
                WmPresence.c    WmWrkspace.c    WmXSMP.c
