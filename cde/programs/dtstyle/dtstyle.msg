@@ -533,6 +533,7 @@ $ _DtMessage 41-43 are the ColorUse options
 41 More Colors for Desktop
 42 More Colors for Applications
 43 Most Colors for Applications
+44 Apply colors to GTK and Qt applications
 
 $set 15
 $ All of the messages from set 15 have been deleted from the message catalog

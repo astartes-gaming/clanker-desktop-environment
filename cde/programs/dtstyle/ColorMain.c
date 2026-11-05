@@ -79,6 +79,7 @@
 #include "ColorFile.h"
 #include "ColorEdit.h"
 #include "ColorPalette.h"
+#include "ExtTheme.h"
 
 #ifdef sun
 #include "OWsync.h"
@@ -225,6 +226,8 @@ static void colorEditorCB(
                         XtPointer call_data) ;
 
 static void allocNewColors(void);
+static void extThemeCB(Widget w, XtPointer client_data, XtPointer call_data);
+static Widget extThemeTG = NULL;
 static Boolean ValidName( char *name) ;
 void loadDatabase();
 
@@ -2284,6 +2287,9 @@ void
        _DtAddToResource(style.display, xrdb_string);
 #endif
    }
+
+   /* Re-export the palette to GTK/Qt applications if enabled */
+   ExtThemeApply(pCurrentPalette);
 }
  
 
@@ -2855,11 +2861,29 @@ CreateBottomColor( void )
                             (XtPointer) NULL);
     }
 /*
-**  Create a pushbutton for configuring DT colors
+**  Toggle: apply the palette to GTK and Qt applications too
 */
     n=0;
     XtSetArg (args[n], XmNtopAttachment, XmATTACH_WIDGET);  n++;
     XtSetArg (args[n], XmNtopWidget, colorDialog.buttonsTB);  n++;
+    XtSetArg (args[n], XmNleftAttachment, XmATTACH_FORM);  n++;
+    XtSetArg (args[n], XmNrightAttachment, XmATTACH_FORM);  n++;
+    XtSetArg (args[n], XmNset, ExtThemeEnabled());  n++;
+    string = CMPSTR(((char *)GETMESSAGE(14, 44,
+                    "Apply colors to GTK and Qt applications")));
+    XtSetArg (args[n], XmNlabelString, string); n++;
+    extThemeTG = XmCreateToggleButtonGadget(colorDialog.colorForm,
+                                            "extThemeTG", args, n);
+    XmStringFree(string);
+    XtManageChild(extThemeTG);
+    XtAddCallback(extThemeTG, XmNvalueChangedCallback, extThemeCB, NULL);
+
+/*
+**  Create a pushbutton for configuring DT colors
+*/
+    n=0;
+    XtSetArg (args[n], XmNtopAttachment, XmATTACH_WIDGET);  n++;
+    XtSetArg (args[n], XmNtopWidget, extThemeTG);  n++;
     XtSetArg (args[n], XmNleftAttachment, XmATTACH_FORM);  n++;
     XtSetArg (args[n], XmNrightAttachment, XmATTACH_FORM);  n++;
     XtSetArg (args[n], XmNbottomAttachment, XmATTACH_FORM);  n++;
@@ -2876,3 +2900,19 @@ CreateBottomColor( void )
 }
  
 
+
+
+/*
+ * extThemeCB - "Apply colors to GTK and Qt applications" toggled.
+ * Takes effect immediately for newly started GTK/Qt applications; the
+ * very first time it is enabled, a new login is needed so the session
+ * environment (GTK_THEME etc.) is picked up.
+ */
+static void
+extThemeCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    XmToggleButtonCallbackStruct *cb =
+        (XmToggleButtonCallbackStruct *) call_data;
+
+    ExtThemeSetEnabled(cb->set ? True : False, pCurrentPalette);
+}
