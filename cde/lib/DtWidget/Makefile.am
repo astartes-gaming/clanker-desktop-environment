@@ -16,9 +16,11 @@ else
 libDtWidget_la_LDFLAGS = -version-info 3:0:1
 endif
 
+libDtWidget_la_LIBADD = $(PNGLIB)
+
 if SOLARIS
 libDtWidget_la_CFLAGS += -DNO_REGCOMP
-libDtWidget_la_LIBADD = -lw -lintl
+libDtWidget_la_LIBADD += -lw -lintl
 endif
 
 
@@ -27,7 +29,7 @@ libDtWidget_la_SOURCES = ComboBox.c      Control.c       DialogBox.c \
 			 EditCalls.c     Editor.c        Icon.c \
 			 MenuButton.c    NewCvt.c        SearchCalls.c \
 			 SearchDlg.c     SpinBox.c       TitleBox.c \
-			 View.c
+			 View.c          Picture.c
 
 # cpp this...
 BUILT_SOURCES = UNIXbindings
