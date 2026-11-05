@@ -71,6 +71,7 @@
 /*+++++++++++++++++++++++++++++++++++++++*/
 #include "Mouse.h"
 #include "Protocol.h"
+#include "Touchpad.h"
 
 
 /*+++++++++++++++++++++++++++++++++++++++*/
@@ -98,6 +99,12 @@
 #define MIDDLEMSG ((char *)GETMESSAGE(9, 4, "Button 2:"))
 #define MSG3  ((char *)GETMESSAGE(9, 10, "ERROR: setting pointer mapping\n"))
 #define TRANSMSG ((char *)GETMESSAGE(9, 11, "Transfer"))
+#define TPMSG       ((char *)GETMESSAGE(9, 21, "Touchpad"))
+#define TPTAPMSG    ((char *)GETMESSAGE(9, 22, "Tap to click"))
+#define TPNATMSG    ((char *)GETMESSAGE(9, 23, "Natural scrolling"))
+#define TPTWOMSG    ((char *)GETMESSAGE(9, 24, "Scroll with two fingers"))
+#define TPDWTMSG    ((char *)GETMESSAGE(9, 25, "Disable while typing"))
+#define TPSPEEDMSG  ((char *)GETMESSAGE(9, 26, "Touchpad Speed"))
 #define ADJMSG ((char *)GETMESSAGE(9, 12, "Adjust"))
 #define WARN_MSG  ((char *)GETMESSAGE(9, 13, "The right and left mouse buttons will swap\n\
 functions immediately after you click on OK.\n\
@@ -130,6 +137,11 @@ static char *mouseString = "Mouse";
 /* Internal Functions                    */
 /*+++++++++++++++++++++++++++++++++++++++*/
 
+static void build_touchpad( Widget form ) ;
+static void touchpadToUI( const TpSettings *s ) ;
+static void touchpadFromUI( TpSettings *s ) ;
+static void touchpadCB( Widget w, XtPointer client_data,
+                        XtPointer call_data ) ;
 static Widget build_mouseDialog( 
                         Widget shell) ;
 static void formLayoutCB( 
@@ -236,6 +248,16 @@ typedef struct {
     Boolean     handed;
     Boolean     function;
     Boolean     origFunction;
+    /* Touchpad section (only built when a touchpad is present) */
+    int         tpCaps;
+    Boolean     tpChanged;
+    TpSettings  tpOrig;
+    Widget      tpFrame;
+    Widget      tpTap;
+    Widget      tpNatural;
+    Widget      tpTwoFinger;
+    Widget      tpDwt;
+    Widget      tpSpeed;
 } Mouse;
 
 static Widget warnDialog;
@@ -599,6 +621,12 @@ build_mouseDialog( Widget shell )
     widget_list[count++] = 
     mouse.threshScale= XmCreateScale(form,"threshScale", args, n);
 
+    mouse.tpFrame = NULL;
+    mouse.tpChanged = False;
+    mouse.tpCaps = TpProbe(style.display);
+    if (mouse.tpCaps)
+        build_touchpad(form);
+
     XtAddCallback(style.mouseDialog, XmNmapCallback, formLayoutCB, NULL);
     XtAddCallback(style.mouseDialog, XmNmapCallback, _DtmapCB_mouseDialog, shell);
     XtAddCallback(mouse.systemDefault, XmNactivateCallback, 
@@ -884,8 +912,12 @@ formLayoutCB(
     XtSetArg(args[n], XmNtopAttachment,    XmATTACH_WIDGET);    n++;
     XtSetArg(args[n], XmNtopWidget,        mouse.accelScale);   n++;
     XtSetArg(args[n], XmNtopOffset,        TopOffset);          n++;
-    XtSetArg(args[n], XmNbottomAttachment, XmATTACH_FORM);      n++;
-    XtSetArg(args[n], XmNbottomOffset,     style.verticalSpacing);   n++;
+    if (mouse.tpFrame) {
+        XtSetArg(args[n], XmNbottomAttachment, XmATTACH_NONE);  n++;
+    } else {
+        XtSetArg(args[n], XmNbottomAttachment, XmATTACH_FORM);  n++;
+        XtSetArg(args[n], XmNbottomOffset, style.verticalSpacing); n++;
+    }
     XtSetArg(args[n], XmNleftAttachment,   XmATTACH_FORM);      n++;
     LeftOffset =  MaxLabelWidth + style.horizontalSpacing - ThreshLabelWidth;
     XtSetArg(args[n], XmNleftOffset,       LeftOffset);         n++;
@@ -903,6 +935,19 @@ formLayoutCB(
     XtSetArg(args[n], XmNleftOffset,       2*style.horizontalSpacing); n++;
     XtSetArg(args[n], XmNrightAttachment,  XmATTACH_FORM);      n++;
     XtSetValues (mouse.threshScale, args, n);
+
+    /* Touchpad frame below everything else */
+    if (mouse.tpFrame) {
+        n=0;
+        XtSetArg(args[n], XmNtopAttachment,    XmATTACH_WIDGET);    n++;
+        XtSetArg(args[n], XmNtopWidget,        mouse.threshScale);  n++;
+        XtSetArg(args[n], XmNtopOffset,        TopOffset);          n++;
+        XtSetArg(args[n], XmNbottomAttachment, XmATTACH_FORM);      n++;
+        XtSetArg(args[n], XmNbottomOffset,     style.verticalSpacing); n++;
+        XtSetArg(args[n], XmNleftAttachment,   XmATTACH_FORM);      n++;
+        XtSetArg(args[n], XmNrightAttachment,  XmATTACH_FORM);      n++;
+        XtSetValues (mouse.tpFrame, args, n);
+    }
 
     XtRemoveCallback(style.mouseDialog, XmNmapCallback, formLayoutCB, NULL);
 
@@ -976,7 +1021,11 @@ _DtmapCB_mouseDialog(
     XtSetArg(args[n], XmNvalue,mouse.threshold); n++;
     XtSetValues(mouse.threshScale, args, n);
 
-    
+    if (mouse.tpFrame) {
+        TpGetCurrent(style.display, &mouse.tpOrig);
+        touchpadToUI(&mouse.tpOrig);
+        mouse.tpChanged = False;
+    }
 }
 
 static int 
@@ -1416,6 +1465,17 @@ systemDefaultCB(
   
   /*get default mouse values for sliders*/
   XGetPointerControl(style.display, &new_acceln, &new_acceld, &new_thresh);
+
+  /* touchpad: the driver's own defaults, where it publishes them */
+  if (mouse.tpFrame) {
+      TpSettings tp;
+
+      TpGetDefaults(style.display, &tp);
+      TpApply(style.display, &tp);
+      TpGetCurrent(style.display, &tp);
+      touchpadToUI(&tp);
+      mouse.tpChanged = True;
+  }
   
   n=0;
   XtSetArg(args[n], XmNvalue,new_acceln); n++;
@@ -1508,6 +1568,18 @@ ButtonCB(
 
          XtUnmanageChild(w);
 
+         if (mouse.tpFrame && mouse.tpChanged)
+         {
+             TpSettings tp;
+
+             touchpadFromUI(&tp);
+             if (!TpSave(&tp))
+                 _DtSimpleError(progName, DtWarning, NULL,
+                     "Cannot save the touchpad settings in ~/.dt/touchpad",
+                     NULL);
+             mouse.tpChanged = False;
+         }
+
          /* if sendSettings is true send data to Session Manager */
 
          if(style.smState.smSendSettings)
@@ -1579,6 +1651,12 @@ ButtonCB(
        case CANCEL_BUTTON:
 	 
 	 XtUnmanageChild(w);
+
+	 if (mouse.tpFrame && mouse.tpChanged)
+	 {
+	     TpApply(style.display, &mouse.tpOrig);
+	     mouse.tpChanged = False;
+	 }
 	 
 	 /* check if values and changePonterControl only if needed */
 	 
@@ -1687,6 +1765,137 @@ ButtonCB(
 	 break;
        }
   }
+
+
+/*+++++++++++++++++++++++++++++++++++++++*/
+/* Touchpad section                      */
+/*+++++++++++++++++++++++++++++++++++++++*/
+
+static Widget
+tpToggle(
+        Widget parent,
+        char *name,
+        char *label )
+{
+    Widget   w;
+    XmString string;
+    Arg      args[4];
+    int      n = 0;
+
+    string = CMPSTR(label);
+    XtSetArg(args[n], XmNlabelString, string); n++;
+    w = XmCreateToggleButtonGadget(parent, name, args, n);
+    XmStringFree(string);
+    XtAddCallback(w, XmNvalueChangedCallback, touchpadCB, NULL);
+    XtManageChild(w);
+    return w;
+}
+
+static void
+build_touchpad(
+        Widget form )
+{
+    Widget   rc, title;
+    XmString string;
+    Arg      args[MAX_ARGS];
+    int      n;
+
+    n = 0;
+    XtSetArg(args[n], XmNshadowType, XmSHADOW_ETCHED_IN); n++;
+    mouse.tpFrame = XmCreateFrame(form, "touchpadFrame", args, n);
+
+    n = 0;
+    string = CMPSTR(TPMSG);
+    XtSetArg(args[n], XmNlabelString, string); n++;
+    XtSetArg(args[n], XmNchildType, XmFRAME_TITLE_CHILD); n++;
+    title = XmCreateLabelGadget(mouse.tpFrame, "touchpadTitle", args, n);
+    XmStringFree(string);
+    XtManageChild(title);
+
+    n = 0;
+    XtSetArg(args[n], XmNorientation, XmVERTICAL); n++;
+    XtSetArg(args[n], XmNpacking, XmPACK_TIGHT); n++;
+    rc = XmCreateRowColumn(mouse.tpFrame, "touchpadRC", args, n);
+
+    mouse.tpTap = mouse.tpNatural = mouse.tpTwoFinger = NULL;
+    mouse.tpDwt = mouse.tpSpeed = NULL;
+    if (mouse.tpCaps & TP_CAP_TAP)
+        mouse.tpTap = tpToggle(rc, "tapToggle", TPTAPMSG);
+    if (mouse.tpCaps & TP_CAP_NATURAL)
+        mouse.tpNatural = tpToggle(rc, "naturalToggle", TPNATMSG);
+    if (mouse.tpCaps & TP_CAP_SCROLL)
+        mouse.tpTwoFinger = tpToggle(rc, "twoFingerToggle", TPTWOMSG);
+    if (mouse.tpCaps & TP_CAP_DWT)
+        mouse.tpDwt = tpToggle(rc, "dwtToggle", TPDWTMSG);
+    if (mouse.tpCaps & TP_CAP_SPEED) {
+        n = 0;
+        string = CMPSTR(TPSPEEDMSG);
+        XtSetArg(args[n], XmNtitleString, string); n++;
+        XtSetArg(args[n], XmNminimum, -10); n++;
+        XtSetArg(args[n], XmNmaximum, 10); n++;
+        XtSetArg(args[n], XmNorientation, XmHORIZONTAL); n++;
+        XtSetArg(args[n], XmNprocessingDirection, XmMAX_ON_RIGHT); n++;
+        XtSetArg(args[n], XmNhighlightThickness, SCALE_HIGHLIGHT_THICKNESS); n++;
+        XtSetArg(args[n], XmNshowValue, True); n++;
+        mouse.tpSpeed = XmCreateScale(rc, "touchpadSpeed", args, n);
+        XmStringFree(string);
+        XtAddCallback(mouse.tpSpeed, XmNvalueChangedCallback,
+                      touchpadCB, NULL);
+        XtManageChild(mouse.tpSpeed);
+    }
+    XtManageChild(rc);
+    XtManageChild(mouse.tpFrame);
+}
+
+static void
+touchpadToUI(
+        const TpSettings *s )
+{
+    if (mouse.tpTap && s->tapping != TP_UNSET)
+        XmToggleButtonGadgetSetState(mouse.tpTap, s->tapping, False);
+    if (mouse.tpNatural && s->natural != TP_UNSET)
+        XmToggleButtonGadgetSetState(mouse.tpNatural, s->natural, False);
+    if (mouse.tpTwoFinger && s->scroll != TP_UNSET)
+        XmToggleButtonGadgetSetState(mouse.tpTwoFinger,
+                                     s->scroll == TP_SCROLL_TWOFINGER, False);
+    if (mouse.tpDwt && s->dwt != TP_UNSET)
+        XmToggleButtonGadgetSetState(mouse.tpDwt, s->dwt, False);
+    if (mouse.tpSpeed && s->speed != TP_UNSET)
+        XtVaSetValues(mouse.tpSpeed, XmNvalue, s->speed < 0 ?
+                      -((5 - s->speed) / 10) : (s->speed + 5) / 10, NULL);
+}
+
+static void
+touchpadFromUI(
+        TpSettings *s )
+{
+    TpClear(s);
+    if (mouse.tpTap)
+        s->tapping = XmToggleButtonGadgetGetState(mouse.tpTap) ? 1 : 0;
+    if (mouse.tpNatural)
+        s->natural = XmToggleButtonGadgetGetState(mouse.tpNatural) ? 1 : 0;
+    if (mouse.tpTwoFinger)
+        s->scroll = XmToggleButtonGadgetGetState(mouse.tpTwoFinger) ?
+                    TP_SCROLL_TWOFINGER : TP_SCROLL_EDGE;
+    if (mouse.tpDwt)
+        s->dwt = XmToggleButtonGadgetGetState(mouse.tpDwt) ? 1 : 0;
+    if (mouse.tpSpeed)
+        s->speed = getValue(mouse.tpSpeed) * 10;
+}
+
+/* Changes take effect at once, like the other Mouse settings. */
+static void
+touchpadCB(
+        Widget w,
+        XtPointer client_data,
+        XtPointer call_data )
+{
+    TpSettings s;
+
+    touchpadFromUI(&s);
+    TpApply(style.display, &s);
+    mouse.tpChanged = True;
+}
 
 
 /************************************************************************

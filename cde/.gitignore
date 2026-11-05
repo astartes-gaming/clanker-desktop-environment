@@ -88,6 +88,7 @@ programs/dtstyle/Dtstyle.iso
 programs/dtstyle/Palettes
 programs/dtstyle/Palettes.iso
 programs/dtstyle/dtstyle
+programs/dtstyle/dttouchpad
 programs/dtterm/DtTermFallBackResources.c
 programs/dtterm/DtTermFallBackResources.c.src
 programs/dtterm/Dtterm.ad
