@@ -4,6 +4,7 @@
 #   tools/vm/build-vm.sh        (CDE must already be built in ../../cde)
 #   tools/vm/build-vm.sh --payload-only   refresh the CDE payload, keep disk
 #   tools/vm/vmctl.py boot      then: vmctl.py provision, screenshot, ...
+#   VM_OUT=dir DISK_SIZE=32G tools/vm/build-vm.sh   a second, separate VM
 #
 # Uses Debian's official "nocloud" image (root on the console, no
 # password) as a read-only base with a qcow2 overlay, and passes the
@@ -12,7 +13,7 @@
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 CDE=$(cd "$HERE/../../cde" && pwd)
-OUT=$HERE/out
+OUT=${VM_OUT:-$HERE/out}
 BASE_URL=https://cloud.debian.org/images/cloud/trixie/latest
 BASE=debian-13-nocloud-amd64.qcow2
 DISK_SIZE=${DISK_SIZE:-4G}
