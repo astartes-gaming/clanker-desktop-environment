@@ -151,8 +151,16 @@ init(_Tt_host_ptr &host, int program, int version,
 	_server_addr.sin_family = AF_INET;
 	_server_addr.sin_port = htons((optval) ? 0 : 4000);
 
-	if (!inet_aton((char *)(_host->stringaddr()), &_server_addr.sin_addr))
+	// Same host as us: use loopback, where ttsession listens unless
+	// TT_ALLOW_REMOTE is set (mirrors _Tt_stream_socket::init()).
+	_Tt_host_ptr	local_host;
+	if (_tt_global->get_local_host(local_host) &&
+	    _host->stringaddr() == local_host->stringaddr()) {
+		_server_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	} else if (!inet_aton((char *)(_host->stringaddr()),
+			      &_server_addr.sin_addr)) {
 		return 0;
+	}
 
 	_client = clnttcp_create(&_server_addr, _program,
 			         _version, &_socket, 4000, 4000);

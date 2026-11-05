@@ -59,8 +59,25 @@
 #endif
 
 #include <sys/time.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <arpa/inet.h>
+
+/*
+ * Clanker: ToolTalk listens on loopback only unless TT_ALLOW_REMOTE=1 is
+ * set in ttsession's environment.  Local clients reach it through
+ * 127.0.0.1 (see _Tt_rpc_client::init and _Tt_stream_socket::init), so a
+ * normal desktop keeps working while ttsession is no longer reachable
+ * from the network.
+ */
+static int
+tt_remote_allowed()
+{
+	const char *v = getenv("TT_ALLOW_REMOTE");
+	return v != 0 && (strcmp(v, "1") == 0 || strcmp(v, "yes") == 0 ||
+			  strcmp(v, "true") == 0);
+}
 
 /* 
  * Constructs a socket object. Using (char *)0 for host means use the
@@ -85,7 +102,10 @@ _Tt_stream_socket(_Tt_host_ptr &host, int portnum)
 	_msgsock = -1;
 	_host = host;
 	memset(&_hostaddr, 0, sizeof(_hostaddr));
-        _hostaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	// Listening ends bind to loopback unless remote use is allowed;
+	// connecting ends overwrite this address in init().
+        _hostaddr.sin_addr.s_addr =
+		htonl(tt_remote_allowed() ? INADDR_ANY : INADDR_LOOPBACK);
 	_hostaddr.sin_port = htons(portnum);
 	_hostaddr.sin_family = AF_INET;
 	_is_source = 0;

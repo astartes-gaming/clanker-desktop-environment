@@ -381,6 +381,12 @@ eval CDE_BINDIR="\"$bindir\""
 eval CDE_BINDIR="\"$CDE_BINDIR\""
 AC_SUBST(CDE_BINDIR)
 
+dnl dtsession: libICE's _IceTransNoListen() lets the session manager stop
+dnl listening on TCP.  Old libICE builds may not export it, so check.
+AC_CHECK_LIB([ICE], [_IceTransNoListen],
+    [AC_DEFINE([HAVE_ICETRANSNOLISTEN], [1],
+        [Define if libICE exports _IceTransNoListen])])
+
 AC_DEFINE_UNQUOTED([CDE_INSTALLATION_TOP], ["$_cde_install_top"],
     [Top of the CDE installation tree (== --prefix)])
 AC_DEFINE_UNQUOTED([CDE_DATA_TOP], ["$_cde_data_top"],

@@ -141,9 +141,12 @@ XCOMM  Dtlogin*terminateServer:   True
 
 
 XCOMM #########################################################################
-XCOMM  To disable listening for XDMCP requests from X-terminals.
+XCOMM  XDMCP (logins from X terminals on the network) is unencrypted, so it
+XCOMM  is disabled by default, as in other modern display managers.  To let
+XCOMM  X terminals query this host, comment out the next line (or set the
+XCOMM  port to 177).
 XCOMM
-XCOMM  Dtlogin.requestPort:       0
+Dtlogin.requestPort:       0
 
 
 XCOMM #########################################################################

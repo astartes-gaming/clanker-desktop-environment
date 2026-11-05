@@ -42,7 +42,11 @@
  *****************************************************************************
  *************************************<+>*************************************/
 
+#if HAVE_CONFIG_H
+#include <cde_config.h>
+#endif
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 
@@ -203,6 +207,22 @@ Boolean InitXSMP (void)
 		DtMsgLogMessage (smGD.programName, DtMsgLogError, errorMsg);
 		PostXSMPFailureDialog (XSMP_FAILURE_SMS_INITIALIZE, True);
 	}
+
+#ifdef HAVE_ICETRANSNOLISTEN
+	{
+		/*
+		 * Session clients run on this host and connect through the
+		 * local (Unix socket) transport, so don't also accept
+		 * session-manager connections from the network.  Set
+		 * DT_ICE_TCP=1 to restore TCP listening.
+		 */
+		extern int _IceTransNoListen (const char *protocol);
+		const char *iceTcp = getenv ("DT_ICE_TCP");
+
+		if (iceTcp == NULL || strcmp (iceTcp, "1") != 0)
+			(void) _IceTransNoListen ("tcp");
+	}
+#endif
 
 	if (!IceListenForConnections (&smXSMP.numTransports, 
 				      &smXSMP.listenObjs, 

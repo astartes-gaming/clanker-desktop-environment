@@ -85,6 +85,7 @@ from the X Consortium.
  * socket.c - Support for BSD sockets
  */
 
+#include <fcntl.h>
 #include "dm.h"
 #include "vgmsg.h"
 
@@ -152,6 +153,23 @@ CreateWellKnownSockets (void)
 	LogError ((unsigned char *)"chooser socket creation failed, errno %d\n", errno);
 	return;
     }
+    /*
+     * Don't leak this root-owned listening socket into the X server and
+     * every user session (it was not close-on-fork, unlike xdmcpFd), and
+     * only accept the local chooser process: it connects back through
+     * the address GetChooserAddr() hands it, so loopback is enough.
+     */
+    RegisterCloseOnFork (chooserFd);
+    (void) fcntl (chooserFd, F_SETFD, FD_CLOEXEC);
+    bzero ((char *) &sock_addr, sizeof (sock_addr));
+#ifdef BSD44SOCKETS
+    sock_addr.sin_len = sizeof(sock_addr);
+#endif
+    sock_addr.sin_family = AF_INET;
+    sock_addr.sin_port = 0;
+    sock_addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+    if (bind (chooserFd, (struct sockaddr *)&sock_addr, sizeof (sock_addr)) == -1)
+	Debug ("chooser socket bind failed, errno %d\n", errno);
     listen (chooserFd, 5);
     if (chooserFd > WellKnownSocketsMax)
 	WellKnownSocketsMax = chooserFd;
