@@ -7,7 +7,7 @@ $_rc_subr_loaded . /etc/rc.subr
 
 name="dtlogin"
 rcvar=$name
-command="@bindir@/${name}"
+command="@CDE_BINDIR@/${name}"
 command_args="-daemon"
 pidfile=@CDE_LOGFILES_TOP@/Xpid
 extra_commands=""

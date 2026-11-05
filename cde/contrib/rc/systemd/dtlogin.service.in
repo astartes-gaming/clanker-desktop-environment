@@ -5,7 +5,7 @@ Requires=rpcbind.service
 After=systemd-user-sessions.service
 
 [Service]
-ExecStart=@bindir@/dtlogin -nodaemon
+ExecStart=@CDE_BINDIR@/dtlogin -nodaemon
 
 [Install]
 Alias=display-manager.service

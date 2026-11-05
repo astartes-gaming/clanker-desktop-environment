@@ -16,7 +16,7 @@
 name=dtlogin
 rcvar=dtlogin_enable
 
-command="@bindir@/dtlogin"
+command="@CDE_BINDIR@/dtlogin"
 command_args="&"
 
 dtlogin_prestart()

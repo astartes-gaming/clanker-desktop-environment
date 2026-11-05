@@ -9,23 +9,23 @@
 # Description:		Dtlogin
 ### END INIT INFO
 
-export PATH="@bindir@:$PATH"
+export PATH="@CDE_BINDIR@:$PATH"
 OPTIONS="-quiet -daemon"
 
 start(){
-	if [ -z "$(pgrep @bindir@/dtlogin)" ];
+	if [ -z "$(pgrep @CDE_BINDIR@/dtlogin)" ];
 	then
 		echo " * Starting dtlogin..."
 		export LANG=C
-		@bindir@/dtlogin $OPTIONS
+		@CDE_BINDIR@/dtlogin $OPTIONS
 	fi
 }
 
 stop(){
-	if [ -n "$(pgrep @bindir@/dtlogin)" ];
+	if [ -n "$(pgrep @CDE_BINDIR@/dtlogin)" ];
 	then
 		echo " * Stopping dtlogin..."
-		killall @bindir@/dtlogin
+		killall @CDE_BINDIR@/dtlogin
 	fi
 }
 

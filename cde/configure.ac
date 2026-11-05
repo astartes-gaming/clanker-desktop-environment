@@ -372,6 +372,15 @@ eval _cde_data_top="\"$CDE_DATA_TOP\""
 eval _cde_libexec_dir="\"$CDE_LIBEXEC_DIR\""
 eval _cde_libexec_dir="\"$_cde_libexec_dir\""
 
+dnl Fully expanded bindir for generated files that are not processed by
+dnl make (systemd units, rc scripts, the xsessions .desktop entry).  Using
+dnl @bindir@ there left a literal "${exec_prefix}/bin" that neither
+dnl systemd nor display managers expand, so dtlogin.service and the
+dnl CDE session entry could not start.
+eval CDE_BINDIR="\"$bindir\""
+eval CDE_BINDIR="\"$CDE_BINDIR\""
+AC_SUBST(CDE_BINDIR)
+
 AC_DEFINE_UNQUOTED([CDE_INSTALLATION_TOP], ["$_cde_install_top"],
     [Top of the CDE installation tree (== --prefix)])
 AC_DEFINE_UNQUOTED([CDE_DATA_TOP], ["$_cde_data_top"],
