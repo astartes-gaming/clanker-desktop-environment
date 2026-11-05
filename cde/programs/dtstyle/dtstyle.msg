@@ -397,6 +397,13 @@ $ Styles of backdrop
 15 Centered
 16 Fit
 17 Fill
+18 Stretch
+
+$ Button that copies a picture file into $HOME/.dt/backdrops, and its dialog
+19 Add Picture...
+20 Style Manager - Add Picture
+21 Choose a PNG or JPEG picture whose name has no spaces.
+22 The picture could not be copied to $HOME/.dt/backdrops.
 
 $set 12
 $ _DtMessage set 12 is for the Screen dialog

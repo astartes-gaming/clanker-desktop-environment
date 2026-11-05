@@ -66,6 +66,10 @@
 #include <Xm/AtomMgr.h>
 #include <Xm/RowColumn.h>
 #include <Xm/ToggleBG.h>
+#include <Xm/PushBG.h>
+#include <Xm/FileSB.h>
+#include <Xm/IconFileP.h>	/* XmeFlushIconFileCache */
+#include <Dt/PictureP.h>
 
 #include <Dt/DialogBox.h>
 
@@ -86,6 +90,12 @@
 /*+++++++++++++++++++++++++++++++++++++++*/
 #include "Backdrop.h"
 #include "Dtwm.h"
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#if defined(USE_XRENDER)
+#include <X11/extensions/Xrender.h>
+#endif
 
 
 /*+++++++++++++++++++++++++++++++++++++++*/
@@ -108,6 +118,17 @@ static int CreateBackdropDialog( Widget parent) ;
 static void MoreBitmaps( void ) ;
 static int ReadBitmaps( void ) ;
 static Boolean CreatePixmaps( void ) ;
+static Boolean IsPhoto( const char *name ) ;
+static Boolean SameBackdrop( const char *a, const char *b ) ;
+static Pixmap BitmapAt( int i ) ;
+static DtWsmBackdropImageType CurrentImageType( void ) ;
+static Boolean DrawPreview( Window win, int ax, int ay, int aw, int ah ) ;
+static void ImageTypeCB( Widget w, XtPointer client_data,
+                         XtPointer call_data ) ;
+static void AddPictureCB( Widget w, XtPointer client_data,
+                          XtPointer call_data ) ;
+static void AddPictureDoneCB( Widget w, XtPointer client_data,
+                              XtPointer call_data ) ;
 static int ReadBitmapDirectory( char *dir ) ;
 static void DrawBitmap( 
                         Widget w,
@@ -145,10 +166,12 @@ typedef struct {
     Widget   imageTypeRC;
     Widget   tiledTG;
     Widget   centeredTG;
-#if defined(USE_XRENDER)
     Widget   fitTG;
     Widget   fillTG;
-#endif /* USE_XRENDER */
+    Widget   stretchTG;
+    Widget   addPB;
+    Widget   fileDialog;
+    int      loadedPhoto;	/* index of the one photo kept loaded */
     char   **dirList;
     int      dirCount;
     char   **tmpBitmapNames;
@@ -292,7 +315,7 @@ void SelectCurrentBackdrop(int callback)
     backdropName = XmGetAtomName(style.display, wInfo->backdropName);
 
     for (i = 0; i < backdrops.numBitmaps; i++) {
-      if (strcmp(backdrops.bitmapNames[i], backdropName) == 0) {
+      if (SameBackdrop(backdrops.bitmapNames[i], backdropName)) {
 	XmListSelectPos (list, i + 1, callback);
 	XmListSetPos(list, i + 1);
 	backdrops.selected = i;
@@ -300,20 +323,21 @@ void SelectCurrentBackdrop(int callback)
     }
 
     switch(wInfo->imageType) {
-#if defined(USE_XRENDER)
+	case DtWSM_BACKDROP_IMAGETYPE_STRETCH:
+	  XmToggleButtonGadgetSetState(backdrops.stretchTG,  True, True);
+	  break;
 	case DtWSM_BACKDROP_IMAGETYPE_FILL:
-	  XmToggleButtonGadgetSetState(backdrops.fillTG,     True, False);
+	  XmToggleButtonGadgetSetState(backdrops.fillTG,     True, True);
 	  break;
 	case DtWSM_BACKDROP_IMAGETYPE_FIT:
-	  XmToggleButtonGadgetSetState(backdrops.fitTG,      True, False);
+	  XmToggleButtonGadgetSetState(backdrops.fitTG,      True, True);
 	  break;
-#endif /* USE_XRENDER */
 	case DtWSM_BACKDROP_IMAGETYPE_CENTER:
-	  XmToggleButtonGadgetSetState(backdrops.centeredTG, True, False);
+	  XmToggleButtonGadgetSetState(backdrops.centeredTG, True, True);
 	  break;
 	case DtWSM_BACKDROP_IMAGETYPE_TILED:
 	default:
-	  XmToggleButtonGadgetSetState(backdrops.tiledTG,    True, False);
+	  XmToggleButtonGadgetSetState(backdrops.tiledTG,    True, True);
 	  break;
     }
 
@@ -510,7 +534,6 @@ CreateBackdropDialog(
         XmCreateToggleButtonGadget(backdrops.imageTypeRC, "centeredTG", args, n);
     XmStringFree(string);
 
-#if defined(USE_XRENDER)
     n = 0;
     string = CMPSTR((char *)GETMESSAGE(11, 16, "Fit"));
     XtSetArg(args[n], XmNlabelString, string); n++;
@@ -524,7 +547,34 @@ CreateBackdropDialog(
     backdrops.fillTG =
         XmCreateToggleButtonGadget(backdrops.imageTypeRC, "fillTG", args, n);
     XmStringFree(string);
-#endif /* USE_XRENDER */
+
+    n = 0;
+    string = CMPSTR((char *)GETMESSAGE(11, 18, "Stretch"));
+    XtSetArg(args[n], XmNlabelString, string); n++;
+    backdrops.stretchTG =
+        XmCreateToggleButtonGadget(backdrops.imageTypeRC, "stretchTG", args, n);
+    XmStringFree(string);
+
+    XtAddCallback(backdrops.tiledTG, XmNvalueChangedCallback, ImageTypeCB, NULL);
+    XtAddCallback(backdrops.centeredTG, XmNvalueChangedCallback, ImageTypeCB, NULL);
+    XtAddCallback(backdrops.fitTG, XmNvalueChangedCallback, ImageTypeCB, NULL);
+    XtAddCallback(backdrops.fillTG, XmNvalueChangedCallback, ImageTypeCB, NULL);
+    XtAddCallback(backdrops.stretchTG, XmNvalueChangedCallback, ImageTypeCB, NULL);
+
+    /* Copy a picture from anywhere into ~/.dt/backdrops */
+    n = 0;
+    string = CMPSTR((char *)GETMESSAGE(11, 19, "Add Picture..."));
+    XtSetArg(args[n], XmNlabelString, string); n++;
+    XtSetArg(args[n], XmNtopAttachment, XmATTACH_WIDGET); n++;
+    XtSetArg(args[n], XmNtopWidget, backdrops.imageTypeRC); n++;
+    XtSetArg(args[n], XmNtopOffset, style.verticalSpacing); n++;
+    XtSetArg(args[n], XmNleftAttachment, XmATTACH_FORM); n++;
+    XtSetArg(args[n], XmNrightAttachment, XmATTACH_FORM); n++;
+    backdrops.addPB =
+        XmCreatePushButtonGadget(imageStyleForm, "addPicturePB", args, n);
+    XmStringFree(string);
+    XtAddCallback(backdrops.addPB, XmNactivateCallback, AddPictureCB, NULL);
+    backdrops.fileDialog = NULL;
 
     /* create the scrolled list of bitmap names... first create XmStrings */
     listStrings = MakeListStrings ();
@@ -572,10 +622,10 @@ CreateBackdropDialog(
     XtManageChild(backdrops.imageTypeRC);
     XtManageChild(backdrops.tiledTG);
     XtManageChild(backdrops.centeredTG);
-#if defined(USE_XRENDER)
     XtManageChild(backdrops.fitTG);
     XtManageChild(backdrops.fillTG);
-#endif /* USE_XRENDER */
+    XtManageChild(backdrops.stretchTG);
+    XtManageChild(backdrops.addPB);
 
     return 1;
 }
@@ -722,11 +772,16 @@ CreatePixmaps( void )
     backdrops.bitmapNames = (char **)XtCalloc(100, sizeof(char *));
     backdrops.bitmaps = (Pixmap *)XtCalloc(100, sizeof(Pixmap));
 
+    backdrops.loadedPhoto = -1;
     for (i=0; i<backdrops.tmpNumBitmaps; i++)
     {
-        tmpPixmap = XmGetPixmap (style.screen, 
-                                 backdrops.tmpBitmapNames[i], 
-                                 backdrops.fg, backdrops.bg); 
+        /* Photos are big: list them now, load them when selected. */
+        if (IsPhoto(backdrops.tmpBitmapNames[i]))
+            tmpPixmap = None;
+        else
+            tmpPixmap = XmGetPixmap (style.screen, 
+                                     backdrops.tmpBitmapNames[i], 
+                                     backdrops.fg, backdrops.bg); 
         if (tmpPixmap != XmUNSPECIFIED_PIXMAP)
         {
             if (backdrops.numBitmaps == backdrops.maxNumBitmaps)
@@ -886,17 +941,28 @@ DrawBitmap(
         /* backdrops.newColors = False; */
     }
 
+    if (!XtIsRealized(w))
+        return;
+
+    /* Pictures and placed images: show them as on the screen. */
+    if ((IsPhoto(backdrops.bitmapNames[backdrops.selected]) ||
+         CurrentImageType() != DtWSM_BACKDROP_IMAGETYPE_TILED) &&
+        DrawPreview(XtWindow(w), backdrops.shadow, backdrops.shadow,
+                    backdrops.width, backdrops.height))
+        return;
+
     if (backdrops.gc == NULL)
     {
         gcValues.background = backdrops.bg;
         gcValues.foreground = backdrops.fg;
         gcValues.fill_style = FillTiled;
-        gcValues.tile = backdrops.bitmaps[backdrops.selected];
-
         backdrops.gc = XCreateGC (style.display, XtWindow(w), 
                                 GCForeground | GCBackground | 
-                                GCTile | GCFillStyle, &gcValues);
+                                GCFillStyle, &gcValues);
     }
+    if (BitmapAt(backdrops.selected) == None)
+        return;
+    XSetTile (style.display, backdrops.gc, BitmapAt(backdrops.selected));
 
     XFillRectangle (style.display, XtWindow(w), backdrops.gc, backdrops.shadow,
                     backdrops.shadow, backdrops.width, backdrops.height);
@@ -1018,8 +1084,12 @@ ListCB(
 
     backdrops.selected = cb->item_position - 1;
 
-    XSetTile (style.display, backdrops.gc, 
-	      backdrops.bitmaps[backdrops.selected]);
+    /* may be called while the dialog is being mapped */
+    if (!XtIsRealized(backdrops.drawnButton))
+        return;
+    XClearArea (style.display, XtWindow(backdrops.drawnButton),
+                backdrops.shadow, backdrops.shadow,
+                backdrops.width, backdrops.height, False);
 
     DrawBitmap (backdrops.drawnButton, NULL, NULL);
 }
@@ -1042,19 +1112,7 @@ ButtonCB(
 
     DtDialogBoxCallbackStruct *cb = (DtDialogBoxCallbackStruct *) call_data;
 
-#if defined(USE_XRENDER)
-    if(XmToggleButtonGadgetGetState(backdrops.fillTG)) {
-	imageType = DtWSM_BACKDROP_IMAGETYPE_FILL;
-    } else if (XmToggleButtonGadgetGetState(backdrops.fitTG)) {
-	imageType = DtWSM_BACKDROP_IMAGETYPE_FIT;
-    } else
-#endif /* USE_XRENDER */
-    if (XmToggleButtonGadgetGetState(backdrops.centeredTG)) {
-	imageType = DtWSM_BACKDROP_IMAGETYPE_CENTER;
-    } else {
-	/* Default to tiled */
-	imageType = DtWSM_BACKDROP_IMAGETYPE_TILED;
-    }
+    imageType = CurrentImageType();
 
     switch (cb->button_position)
     {
@@ -1065,7 +1123,7 @@ ButtonCB(
 
           _DtWsmChangeBackdrop(style.display, style.root, 
                              backdrops.bitmapNames[num], 
-                             backdrops.bitmaps[num],
+                             BitmapAt(num),
                              imageType);
           break;
 
@@ -1076,7 +1134,7 @@ ButtonCB(
 
           _DtWsmChangeBackdrop(style.display, style.root,
                              backdrops.bitmapNames[num],
-                             backdrops.bitmaps[num],
+                             BitmapAt(num),
                              imageType);
           XtUnmanageChild(w);
           break;
@@ -1141,7 +1199,9 @@ GetColors( void )
         backdrops.fg = 1;
     }
 
-    if (backdrops.gc)      /* update the gc if there is one */
+    /* update the gc if there is one; pictures don't use fg/bg */
+    if (backdrops.gc &&
+        !IsPhoto(backdrops.bitmapNames[backdrops.selected]))
     {
         gcValues.background = backdrops.bg;
         gcValues.foreground = backdrops.fg;
@@ -1185,8 +1245,8 @@ FreeAll( void )
 
     /* free backdrop bitmaps */
     for (i = 0; i < backdrops.numBitmaps; i++) {
-        if (backdrops.bitmaps[i]) 
-            XFreePixmap (style.display, backdrops.bitmaps[i]);
+        if (backdrops.bitmaps[i] && backdrops.bitmaps[i] != XmUNSPECIFIED_PIXMAP)
+            _DtDestroyPicturePixmap (style.screen, backdrops.bitmaps[i]);
     if (backdrops.numBitmaps)
         XtFree((char *)backdrops.bitmaps);  
     }
@@ -1337,3 +1397,410 @@ saveBackdrop(
 
 
 
+
+
+/************************************************************************
+ *   Pictures (PNG/JPEG) as backdrops
+ ************************************************************************/
+
+/* A photo-like picture, by file name suffix (case-insensitive). */
+static Boolean
+IsPhoto( const char *name )
+{
+    static const char *suffixes[] = { ".png", ".jpg", ".jpeg", NULL };
+    size_t len, slen;
+    int i, k;
+
+    if (!name)
+        return False;
+    len = strlen(name);
+    for (i = 0; suffixes[i]; i++)
+    {
+        slen = strlen(suffixes[i]);
+        if (len <= slen)
+            continue;
+        for (k = 0; k < (int) slen; k++)
+        {
+            char c = name[len - slen + k];
+            if (c >= 'A' && c <= 'Z')
+                c = c - 'A' + 'a';
+            if (c != suffixes[i][k])
+                break;
+        }
+        if (k == (int) slen)
+            return True;
+    }
+    return False;
+}
+
+/*
+ * The pixmap for list entry i.  Pictures are loaded on first use and
+ * only one is kept loaded at a time, so a folder of photos doesn't
+ * fill the X server's memory.  Returns None if it can't be loaded.
+ */
+static Pixmap
+BitmapAt( int i )
+{
+    Pixmap pix;
+    int    old = backdrops.loadedPhoto;
+
+    if (i < 0 || i >= backdrops.numBitmaps)
+        return None;
+    pix = backdrops.bitmaps[i];
+    if (pix == None && IsPhoto(backdrops.bitmapNames[i]))
+    {
+        if (old >= 0 && old != i && old < backdrops.numBitmaps &&
+            backdrops.bitmaps[old] != None)
+        {
+            _DtDestroyPicturePixmap(style.screen, backdrops.bitmaps[old]);
+            backdrops.bitmaps[old] = None;
+        }
+        pix = _DtGetPicturePixmap(style.screen, backdrops.bitmapNames[i],
+                                  backdrops.fg, backdrops.bg);
+        if (pix == XmUNSPECIFIED_PIXMAP)
+            pix = None;
+        backdrops.bitmaps[i] = pix;
+        backdrops.loadedPhoto = i;
+    }
+    return (pix == XmUNSPECIFIED_PIXMAP) ? None : pix;
+}
+
+static DtWsmBackdropImageType
+CurrentImageType( void )
+{
+    if (XmToggleButtonGadgetGetState(backdrops.stretchTG))
+        return DtWSM_BACKDROP_IMAGETYPE_STRETCH;
+    if (XmToggleButtonGadgetGetState(backdrops.fillTG))
+        return DtWSM_BACKDROP_IMAGETYPE_FILL;
+    if (XmToggleButtonGadgetGetState(backdrops.fitTG))
+        return DtWSM_BACKDROP_IMAGETYPE_FIT;
+    if (XmToggleButtonGadgetGetState(backdrops.centeredTG))
+        return DtWSM_BACKDROP_IMAGETYPE_CENTER;
+    return DtWSM_BACKDROP_IMAGETYPE_TILED;
+}
+
+/* The placement changed: show it in the preview. */
+static void
+ImageTypeCB(
+        Widget w,
+        XtPointer client_data,
+        XtPointer call_data )
+{
+    XmToggleButtonCallbackStruct *cb =
+        (XmToggleButtonCallbackStruct *) call_data;
+
+    if (!cb->set || !backdrops.drawnButton ||
+        !XtIsRealized(backdrops.drawnButton))
+        return;
+    XClearArea (style.display, XtWindow(backdrops.drawnButton),
+                backdrops.shadow, backdrops.shadow,
+                backdrops.width, backdrops.height, False);
+    DrawBitmap (backdrops.drawnButton, NULL, NULL);
+}
+
+static int
+HalfOf( int v )
+{
+    return (v >= 0) ? v / 2 : -((-v) / 2);
+}
+
+/*
+ * Draw the selected backdrop into the preview area as it will look on
+ * the screen: a screen-shaped rectangle with the picture placed and
+ * scaled in it.  Uses RENDER; returns False if that isn't possible
+ * (the caller then shows the plain tile as before).
+ */
+static Boolean
+DrawPreview( Window win, int ax, int ay, int aw, int ah )
+{
+#if defined(USE_XRENDER)
+    Display *dpy = style.display;
+    Pixmap   src = BitmapAt(backdrops.selected);
+    int      type = (int) CurrentImageType();
+    int      SW = WidthOfScreen(style.screen), SH = HeightOfScreen(style.screen);
+    Window   root;
+    int      x, y, ev, er, px, py, pw, ph, dx, dy, dw, dh, cx, cy, cw, ch;
+    unsigned int sw, sh, bw, depth;
+    double   p, s, sx, sy;
+    XRenderPictFormat *fmt;
+    XRenderPictureAttributes pa;
+    Picture  sp, dp;
+    XTransform xf;
+    GC       gc;
+
+    if (src == None || aw <= 0 || ah <= 0 ||
+        !XRenderQueryExtension(dpy, &ev, &er) ||
+        !XGetGeometry(dpy, src, &root, &x, &y, &sw, &sh, &bw, &depth) ||
+        (int) depth != DefaultDepthOfScreen(style.screen) ||
+        sw == 0 || sh == 0)
+        return False;
+    fmt = XRenderFindVisualFormat(dpy, DefaultVisualOfScreen(style.screen));
+    if (!fmt)
+        return False;
+
+    /* the screen, shrunk into the preview area */
+    sx = (double) aw / SW;
+    sy = (double) ah / SH;
+    p = (sx < sy) ? sx : sy;
+    pw = (int) (SW * p); ph = (int) (SH * p);
+    if (pw < 1 || ph < 1)
+        return False;
+    px = ax + (aw - pw) / 2;
+    py = ay + (ah - ph) / 2;
+
+    gc = XCreateGC(dpy, win, 0, NULL);
+    XSetForeground(dpy, gc, BlackPixelOfScreen(style.screen));
+    XFillRectangle(dpy, win, gc, ax, ay, (unsigned) aw, (unsigned) ah);
+    XSetForeground(dpy, gc, backdrops.bg);
+    XFillRectangle(dpy, win, gc, px, py, (unsigned) pw, (unsigned) ph);
+
+    /* the picture on that screen, as dtwm places it on a monitor */
+    sx = (double) pw / sw;
+    sy = (double) ph / sh;
+    switch (type)
+    {
+      case DtWSM_BACKDROP_IMAGETYPE_FIT:
+        s = (sx < sy) ? sx : sy;
+        dw = (int) (sw * s + 0.5); dh = (int) (sh * s + 0.5);
+        break;
+      case DtWSM_BACKDROP_IMAGETYPE_FILL:
+        s = (sx > sy) ? sx : sy;
+        dw = (int) (sw * s + 0.5); dh = (int) (sh * s + 0.5);
+        break;
+      case DtWSM_BACKDROP_IMAGETYPE_STRETCH:
+        dw = pw; dh = ph;
+        break;
+      default:                    /* center, and tiled photos */
+        dw = (int) (sw * p + 0.5); dh = (int) (sh * p + 0.5);
+        break;
+    }
+    if (dw < 1) dw = 1;
+    if (dh < 1) dh = 1;
+    if (type == DtWSM_BACKDROP_IMAGETYPE_TILED)
+    {
+        dx = px; dy = py;
+    }
+    else
+    {
+        dx = px + HalfOf(pw - dw);
+        dy = py + HalfOf(ph - dh);
+    }
+
+    /* visible part: placed image inside the screen rectangle */
+    if (type == DtWSM_BACKDROP_IMAGETYPE_TILED)
+    {
+        cx = px; cy = py; cw = pw; ch = ph;
+    }
+    else
+    {
+        cx = (dx > px) ? dx : px;
+        cy = (dy > py) ? dy : py;
+        cw = ((dx + dw < px + pw) ? dx + dw : px + pw) - cx;
+        ch = ((dy + dh < py + ph) ? dy + dh : py + ph) - cy;
+    }
+
+    if (cw > 0 && ch > 0)
+    {
+        memset(&pa, 0, sizeof(pa));
+        pa.repeat = (type == DtWSM_BACKDROP_IMAGETYPE_TILED) ?
+                    RepeatNormal : RepeatNone;
+        sp = XRenderCreatePicture(dpy, src, fmt, CPRepeat, &pa);
+        dp = XRenderCreatePicture(dpy, win, fmt, 0, &pa);
+        memset(&xf, 0, sizeof(xf));
+        xf.matrix[0][0] = XDoubleToFixed((double) sw / dw);
+        xf.matrix[1][1] = XDoubleToFixed((double) sh / dh);
+        xf.matrix[2][2] = XDoubleToFixed(1.0);
+        XRenderSetPictureTransform(dpy, sp, &xf);
+        XRenderSetPictureFilter(dpy, sp, FilterGood, NULL, 0);
+        XRenderComposite(dpy, PictOpSrc, sp, None, dp,
+                         cx - dx, cy - dy, 0, 0, cx, cy,
+                         (unsigned) cw, (unsigned) ch);
+        XRenderFreePicture(dpy, sp);
+        XRenderFreePicture(dpy, dp);
+    }
+    XFreeGC(dpy, gc);
+    return True;
+#else
+    return False;
+#endif
+}
+
+/* "Add Picture...": choose a file anywhere. */
+static void
+AddPictureCB(
+        Widget w,
+        XtPointer client_data,
+        XtPointer call_data )
+{
+    Arg      args[4];
+    int      n;
+    XmString str;
+
+    if (!backdrops.fileDialog)
+    {
+        n = 0;
+        str = CMPSTR(style.home);
+        XtSetArg(args[n], XmNdirectory, str); n++;
+        XtSetArg(args[n], XmNtitle,
+                 (char *)GETMESSAGE(11, 20, "Style Manager - Add Picture")); n++;
+        backdrops.fileDialog =
+            XmCreateFileSelectionDialog(style.backdropDialog, "addPicture",
+                                        args, n);
+        XmStringFree(str);
+        XtAddCallback(backdrops.fileDialog, XmNokCallback,
+                      AddPictureDoneCB, NULL);
+        XtAddCallback(backdrops.fileDialog, XmNcancelCallback,
+                      AddPictureDoneCB, NULL);
+        XtUnmanageChild(XmFileSelectionBoxGetChild(backdrops.fileDialog,
+                                                   XmDIALOG_HELP_BUTTON));
+    }
+    XtManageChild(backdrops.fileDialog);
+}
+
+/* Copy 'from' to 'to' via a temporary file; True on success. */
+static Boolean
+CopyFile( const char *from, const char *to )
+{
+    char   *tmp, buf[8192];
+    int     in, out, len;
+    Boolean ok = True;
+
+    if ((in = open(from, O_RDONLY)) < 0)
+        return False;
+    tmp = XtMalloc(strlen(to) + 8);
+    sprintf(tmp, "%s.XXXXXX", to);
+    if ((out = mkstemp(tmp)) < 0)
+    {
+        close(in);
+        XtFree(tmp);
+        return False;
+    }
+    while ((len = read(in, buf, sizeof(buf))) > 0)
+    {
+        if (write(out, buf, len) != len)
+        {
+            ok = False;
+            break;
+        }
+    }
+    if (len < 0)
+        ok = False;
+    close(in);
+    if (fchmod(out, 0644) != 0 || close(out) != 0)
+        ok = False;
+    if (!ok || rename(tmp, to) != 0)
+    {
+        unlink(tmp);
+        ok = False;
+    }
+    XtFree(tmp);
+    return ok;
+}
+
+static void
+AddPictureDoneCB(
+        Widget w,
+        XtPointer client_data,
+        XtPointer call_data )
+{
+    XmFileSelectionBoxCallbackStruct *cb =
+        (XmFileSelectionBoxCallbackStruct *) call_data;
+    char     *path = NULL, *base, *dir, *dest;
+    Widget    list;
+    XmString  item;
+    int       i;
+
+    XtUnmanageChild(w);
+    if (cb->reason != XmCR_OK ||
+        !XmStringGetLtoR(cb->value, XmFONTLIST_DEFAULT_TAG, &path) ||
+        !path || !*path)
+    {
+        XtFree(path);
+        return;
+    }
+    base = strrchr(path, '/');
+    base = base ? base + 1 : path;
+    if (!*base || !IsPhoto(base) || strchr(base, ' '))
+    {
+        ErrDialog((char *)GETMESSAGE(11, 21,
+                  "Choose a PNG or JPEG picture whose name has no spaces."),
+                  style.shell);
+        XtFree(path);
+        return;
+    }
+
+    /* ~/.dt/backdrops, created if needed */
+    dir = XtMalloc(strlen(style.home) + 20);
+    sprintf(dir, "%s/.dt", style.home);
+    (void) mkdir(dir, 0755);
+    strcat(dir, "/backdrops");
+    (void) mkdir(dir, 0755);
+    dest = XtMalloc(strlen(dir) + strlen(base) + 2);
+    sprintf(dest, "%s/%s", dir, base);
+
+    if (strcmp(dest, path) != 0 && !CopyFile(path, dest))
+    {
+        ErrDialog((char *)GETMESSAGE(11, 22,
+                  "The picture could not be copied to $HOME/.dt/backdrops."),
+                  style.shell);
+        XtFree(dest); XtFree(dir); XtFree(path);
+        return;
+    }
+
+    /* Motif caches folder listings, even for full paths: forget them
+     * so the new file can be found. */
+    XmeFlushIconFileCache(NULL);
+
+    /* add it to the list (or find it there) and select it */
+    list = XtNameToWidget(style.backdropDialog, "*bitmapList");
+    for (i = 0; i < backdrops.numBitmaps; i++)
+        if (strcmp(backdrops.bitmapNames[i], base) == 0 ||
+            strcmp(backdrops.bitmapNames[i], dest) == 0)
+            break;
+    if (i == backdrops.numBitmaps)
+    {
+        if (backdrops.numBitmaps == backdrops.maxNumBitmaps)
+            MoreBitmaps();
+        /* Full path: Motif caches folder listings, so a file added
+         * now can't be found by name alone until restart. */
+        backdrops.bitmapNames[i] = XtNewString(dest);
+        backdrops.bitmaps[i] = None;
+        backdrops.bitmapDescs = (char **) XtRealloc(
+            (char *) backdrops.bitmapDescs, (i + 1) * sizeof(char *));
+        backdrops.bitmapDescs[i] = XtNewString(base);
+        backdrops.numBitmaps++;
+        item = CMPSTR(base);
+        XmListAddItem(list, item, 0);
+        XmStringFree(item);
+    }
+    else if (i == backdrops.loadedPhoto && backdrops.bitmaps[i] != None)
+    {
+        /* replaced a picture of the same name: reload it */
+        _DtDestroyPicturePixmap(style.screen, backdrops.bitmaps[i]);
+        backdrops.bitmaps[i] = None;
+    }
+    XmListSelectPos(list, i + 1, True);
+    XmListSetBottomPos(list, i + 1);
+
+    XtFree(dest); XtFree(dir); XtFree(path);
+}
+
+
+/* Same backdrop: equal names, or the same file name when one or both
+ * are full paths (pictures added with "Add Picture..." are stored by
+ * path, but listed by name once they are in a backdrop directory). */
+static Boolean
+SameBackdrop( const char *a, const char *b )
+{
+    const char *ba, *bb;
+
+    if (!a || !b)
+        return False;
+    if (strcmp(a, b) == 0)
+        return True;
+    ba = strrchr(a, '/');
+    bb = strrchr(b, '/');
+    if (!ba && !bb)
+        return False;
+    return strcmp(ba ? ba + 1 : a, bb ? bb + 1 : b) == 0;
+}
