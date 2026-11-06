@@ -83,12 +83,15 @@ check "XDG_CURRENT_DESKTOP=CDE"     grep -q '^XDG_CURRENT_DESKTOP=CDE' $envf
 rm -f $envf
 # Loading the action database must not warn (long EXEC_STRINGs were
 # cut at 1024 bytes; cpp left CDE_INSTALLATION_TOP in quoted commands).
+# The database is parsed when a client starts, so look at what the
+# running dtfile logged then.
 elog=/home/$U/.dt/errorlog
-before=`wc -l < $elog 2>/dev/null || echo 0`
-x /usr/dt/bin/dtaction -help >/dev/null 2>&1
-x /usr/dt/bin/dttypes -type /etc/hosts >/dev/null 2>&1
-check "the action database loads without warnings" \
-      sh -c "! tail -n +$((before + 1)) $elog 2>/dev/null | grep -q 'unrecognized field'"
+dbwarn=0
+for p in `pgrep -u $U -x dtfile`; do
+    n=`grep -A4 "dtfile: PID $p:" $elog 2>/dev/null | grep -c 'unrecognized field'`
+    dbwarn=`expr $dbwarn + $n`
+done
+check "the action database loads without warnings ($dbwarn)" test "$dbwarn" = 0
 check "installed actions have real paths" \
       sh -c "! grep -l 'CDE_INSTALLATION_TOP\|CDE_CONFIGURATION_TOP' /usr/dt/appconfig/types/C/*.dt"
 
