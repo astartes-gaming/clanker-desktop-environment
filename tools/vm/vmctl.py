@@ -163,7 +163,12 @@ KEYMAP = {" ": "spc", "\n": "ret", "-": "minus", "=": "equal", ".": "dot",
           "_": "shift-minus", ":": "shift-semicolon", "!": "shift-1",
           "@": "shift-2", "#": "shift-3", "$": "shift-4", "%": "shift-5",
           "&": "shift-7", "*": "shift-8", "(": "shift-9", ")": "shift-0",
-          "+": "shift-equal", "?": "shift-slash", "~": "shift-grave_accent"}
+          "+": "shift-equal", "?": "shift-slash", "~": "shift-grave_accent",
+          ">": "shift-dot", "<": "shift-comma", "|": "shift-backslash",
+          "\\": "backslash", '"': "shift-apostrophe", "^": "shift-6",
+          "[": "bracket_left", "]": "bracket_right",
+          "{": "shift-bracket_left", "}": "shift-bracket_right",
+          "`": "grave_accent", "\t": "tab"}
 
 
 def type_text(text):

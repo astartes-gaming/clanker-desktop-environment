@@ -44,9 +44,6 @@ features stay optional or detected at run time.
 - [ ] Translations for the new strings (dtstyle.msg sets 4 and 20,
       Workspace menu power entries, laptop key bindings) in the
       localized catalogs under `cde/programs/localized/`.
-- [ ] Experimental Wayland session: CDE running in a rootful Xwayland
-      inside a small compositor (cage or labwc), the way Xfce 4.20
-      started. Optional, Linux only, off by default.
 - [ ] Replace ToolTalk with D-Bus where both are available, keeping
       ToolTalk for old systems. Stages 1 and 2 are done (see below); still
       to do:
@@ -66,6 +63,8 @@ features stay optional or detected at run time.
 
 ## Done
 
+- Wayland: `dtwayland` and the "CDE (Xwayland)" session run CDE in a
+  rootful Xwayland under cage or labwc (Linux, opt-in).
 - xfwm4 manages the windows when installed (opt out with
   `DT_WINDOW_MANAGER=dtwm`); `dtwm -panelonly` keeps the Front Panel,
   backdrops and Workspace menu, with workspaces and desktops in step.

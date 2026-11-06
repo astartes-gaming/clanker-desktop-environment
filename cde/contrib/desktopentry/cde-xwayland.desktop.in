@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=CDE (Xwayland)
+DesktopNames=CDE
+Comment=The Common Desktop Environment in Xwayland on a Wayland compositor
+Keywords=Common Desktop Environment;Wayland
+Exec=@CDE_BINDIR@/dtwayland
+TryExec=@CDE_BINDIR@/dtwayland
+Icon=Dtlogo.pm
+Type=Application
