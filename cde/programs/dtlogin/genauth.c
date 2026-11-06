@@ -291,7 +291,7 @@ GenerateAuthData (char *auth, int len)
 	    auth[i] = 0;
 	    for (bit = 1; bit < 256; bit <<= 1) {
 	    	_XdmcpAuthDoIt (tdata, tdata, schedule, 1);
-	    	if (tdata[0] + tdata[1] & 0x4)
+	    	if ((tdata[0] + tdata[1]) & 0x4)
 		    auth[i] |= bit;
 	    }
     	}

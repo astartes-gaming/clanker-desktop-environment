@@ -885,9 +885,10 @@ char 	    *temp_p;
 	      temp_p =  keyrmvalue.addr;
 
 	  /* 
-	   * Make sure the key file exists.
+	   * Make sure the key file exists (a value of only spaces names
+	   * no file at all).
 	   */
-	  if (stat( temp_p, &statb) == 0) { 
+	  if (temp_p && stat( temp_p, &statb) == 0) { 
 
     	    j = InitArg(ToggleBG);
     	    if (XrmGetResource(

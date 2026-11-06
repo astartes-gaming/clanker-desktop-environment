@@ -476,9 +476,13 @@ MakeLangList( void )
      */
 
     p = savelist = strdup(languageList);
+    if (!savelist)
+        return;
     nlang = 0;
 
-    while ( (s = strtok(p, DELIM)) != NULL ) {
+    /* at most 499 languages: lang[] also holds the terminating 0 */
+    while ( nlang < (int) (sizeof(lang) / sizeof(lang[0])) - 1 &&
+            (s = strtok(p, DELIM)) != NULL ) {
 
         if ( nlang == 0 ) {
             lang[0] = s;

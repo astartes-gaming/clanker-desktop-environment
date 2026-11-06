@@ -254,10 +254,10 @@ int main(int argc, XeString *argv)
       i++;
       if (i != argc) {
 	(void) snprintf (tmp, sizeof(tmp), "%s=%s", MOUNT_POINT, argv[i]);
-	if (putenv (tmp) == 0) {
+	/* putenv keeps the string itself: give it one that stays put */
+	SPC_mount_point_env_var = strdup (tmp);
+	if (SPC_mount_point_env_var && putenv (SPC_mount_point_env_var) == 0) {
 	  SPC_Format_Log((XeString)"Mount point set to '%s'.", argv[i]);
-	  SPC_mount_point_env_var = (char *) malloc (strlen (tmp) + 1);
-	  (void) strcpy (SPC_mount_point_env_var, tmp);
 	}
 	else
 	  SPC_Format_Log((XeString)"Failed to add the mount point '%s' to the environment.", tmp);
