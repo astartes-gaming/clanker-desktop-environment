@@ -72,6 +72,7 @@
 #include "DataBaseLoad.h"
 #include "PopupMenu.h"
 #include "UI.h"
+#include "WmSysTray.h"
 
 
 
@@ -1551,7 +1552,9 @@ ControlSetIconData (Widget        parent,
 
 
       if ((intptr_t) control_data->element_values[CONTROL_TYPE].parsed_value
-							 != CONTROL_BLANK)
+							 != CONTROL_BLANK &&
+          (intptr_t) control_data->element_values[CONTROL_TYPE].parsed_value
+							 != CONTROL_SYSTRAY)
       {
          if (control_label != NULL)
          {
@@ -1650,6 +1653,7 @@ ControlSetBehavior (ControlData * control_data,
    switch ((intptr_t) control_data->element_values[CONTROL_TYPE].parsed_value)
    {
       case CONTROL_BLANK:
+      case CONTROL_SYSTRAY:
       {
          XtSetArg (al[*ac], XmNshadowThickness, 0);             (*ac)++;
          XtSetArg (al[*ac], XmNhighlightThickness, 0);          (*ac)++;
@@ -1663,8 +1667,9 @@ ControlSetBehavior (ControlData * control_data,
       {
          XtSetArg (al[*ac], XmNshadowThickness, 0);             (*ac)++;
          XtSetArg (al[*ac], XmNcontrolType, XmCONTROL_BUSY);    (*ac)++;
-         XtSetArg (al[*ac], XmNhighlightThickness, 0);          (*ac)++;
-         XtSetArg (al[*ac], XmNsensitive, False);               (*ac)++;
+         /* Clanker: clicking the light runs its PUSH_ACTION, if any */
+         XtSetArg (al[*ac], XmNhighlightThickness, highlight_thickness); (*ac)++;
+         XtSetArg (al[*ac], XmNsensitive, sensitive);           (*ac)++;
          XtSetArg (al[*ac], XmNmarginWidth, margin_width);      (*ac)++;
          panel.busy_light_data = control_data;
       }
@@ -1950,6 +1955,12 @@ ControlCreateAndRegister (Widget        parent,
       if ((intptr_t) control_data->element_values[CONTROL_TYPE].parsed_value == CONTROL_CLIENT)
          EmbeddedClientRegister (control_data, True);
    }
+
+   /*  Clanker: a systray control hosts the system tray icons.  */
+
+   if (!main_copy &&
+       (intptr_t) control_data->element_values[CONTROL_TYPE].parsed_value == CONTROL_SYSTRAY)
+      SysTrayCreate (icon);
 
    return (icon);
 }

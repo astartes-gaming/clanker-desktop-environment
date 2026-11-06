@@ -1,0 +1,20 @@
+###############################################################################
+#
+#   taskmgr.dt - the Task Manager behind the Front Panel's busy light.
+#
+#   dttaskmgr opens the first process viewer it finds (xfce4-taskmanager,
+#   lxtask, the MATE, GNOME or KDE system monitors, qps), or htop/top in
+#   a terminal.  Set DT_TASKMANAGER in ~/.dtprofile to choose another.
+#
+###############################################################################
+
+ACTION TaskManager
+{
+     LABEL         Task Manager
+     TYPE          COMMAND
+     EXEC_STRING   dttaskmgr
+     ICON          Fplite
+     WINDOW_TYPE   NO_STDIO
+     DESCRIPTION   Shows the running programs and how much of the \
+                   computer they use, and lets you end them.
+}

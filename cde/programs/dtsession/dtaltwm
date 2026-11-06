@@ -58,7 +58,10 @@ case `basename "$wm"` in
             [ "`q button_layout`" = "O|SHMC" ] &&
                 xfconf-query -c xfwm4 -p /general/button_layout -s "O|HM"
             mkdir -p "$HOME/.dt" && : > "$mark"
-        fi ;;
+        fi
+        # Its window menu is GTK: the CDE-wm stylesheet from dtxfwmtheme.
+        # DT_XFWM_GTK_THEME (e.g. in ~/.dtprofile) picks another theme.
+        set -- env GTK_THEME="${DT_XFWM_GTK_THEME:-CDE-wm}" "$@" ;;
 esac
 
 panel=
@@ -91,14 +94,20 @@ while :; do
     fi
     wait $timer 2>/dev/null
 
+    # dtxfwmtheme asked for a restart (new palette): not a failure.
+    if [ -f "$HOME/.dt/.xfwm4-restart" ]; then
+        rm -f "$HOME/.dt/.xfwm4-restart"
+        quick=0
+        continue
+    fi
     if [ $status -eq 0 ]; then
         [ -n "$panel" ] && kill $panel 2>/dev/null
         exit 0
     fi
     if [ $quick -ge $MAXQUICK ]; then
-        echo "dtaltwm: $1 keeps failing (status $status); starting dtwm" >&2
+        echo "dtaltwm: $wm keeps failing (status $status); starting dtwm" >&2
         fulldtwm
     fi
-    echo "dtaltwm: $1 exited with status $status; restarting it" >&2
+    echo "dtaltwm: $wm exited with status $status; restarting it" >&2
     sleep 1
 done

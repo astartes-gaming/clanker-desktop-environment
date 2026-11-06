@@ -324,6 +324,8 @@ StringToControlType (char * parse_source,
       *parse_return = (void *) CONTROL_CLIENT;
    else if (strcmp (parse_source, control_types[CONTROL_CLOCK]) == 0)
       *parse_return = (void *) CONTROL_CLOCK;
+   else if (strcmp (parse_source, control_types[CONTROL_SYSTRAY]) == 0)
+      *parse_return = (void *) CONTROL_SYSTRAY;
    else if (strcmp (parse_source, control_types[CONTROL_DATE]) == 0)
       *parse_return = (void *) CONTROL_DATE;
    else if (strcmp (parse_source, control_types[CONTROL_FILE]) == 0)

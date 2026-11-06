@@ -1577,6 +1577,7 @@ PushCB (Widget    w,
 	 case CONTROL_ICON:
 	 case CONTROL_FILE:
 	 case CONTROL_DATE:
+	 case CONTROL_BUSY:	/* the busy light may have a PUSH_ACTION */
          {
       
             /*  Turn off the subpanel control monitor indicator  */
@@ -1724,7 +1725,6 @@ PushCB (Widget    w,
 
 
          case CONTROL_BLANK:
-         case CONTROL_BUSY:
 	 case CONTROL_CLOCK:
             return;
          break;

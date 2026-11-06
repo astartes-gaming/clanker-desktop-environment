@@ -43,6 +43,7 @@
 #include "WmXSMP.h"
 #include "WmWrkspace.h"
 #include <Dt/Session.h>
+#include "WmSysTray.h"
 
 extern XtPointer _XmStringUngenerate(XmString, XmStringTag,
 				     XmTextType, XmTextType);
@@ -928,6 +929,7 @@ ResignFromSM(void)
 void
 ExitWM(int exitCode)
 {
+    SysTrayShutdown();		/* tray icons go back to the root window */
     ResignFromSM();
     exit(exitCode);
 }

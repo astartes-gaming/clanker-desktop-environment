@@ -322,6 +322,7 @@ char * control_types[] =
    "clock",
    "date",
    "file",
+   "systray",
 };
 
 

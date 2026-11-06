@@ -90,6 +90,7 @@ extern char * monitor_types[];
 #define CONTROL_CLOCK		4
 #define CONTROL_DATE		5
 #define CONTROL_FILE		6
+#define CONTROL_SYSTRAY		7	/* Clanker: system tray (WmSysTray.c) */
 
 #define POSITION_FIRST	0
 #define POSITION_LAST	100
