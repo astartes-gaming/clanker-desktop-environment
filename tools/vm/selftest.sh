@@ -232,6 +232,55 @@ else
 fi
 
 #####################################################################
+section "Screen saver inhibit (D-Bus)"
+# dtsession answers org.freedesktop.ScreenSaver, which browsers and
+# video players call to keep the screen from locking during playback.
+ssq() {
+    x dbus-send --session --print-reply=literal \
+        --dest=org.freedesktop.ScreenSaver /org/freedesktop/ScreenSaver \
+        org.freedesktop.ScreenSaver."$@" 2>/dev/null | awk '{print $2}'
+}
+unlock() {
+    x xdotool key shift; sleep 2
+    if locked; then
+        x xdotool type --delay 80 "$PW"; x xdotool key Return; sleep 5
+    fi
+}
+sspid=`x dbus-send --session --print-reply=literal \
+        --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+        org.freedesktop.DBus.GetConnectionUnixProcessID \
+        string:org.freedesktop.ScreenSaver 2>/dev/null | awk '{print $2}'`
+check "dtsession owns org.freedesktop.ScreenSaver (pid $sspid)" \
+      test "$sspid" = "`pgrep -u $U -x dtsession | head -1`"
+active=`ssq GetActive`
+check "GetActive is false while unlocked ($active)" test "$active" = false
+idle=`ssq GetSessionIdleTime`
+check "GetSessionIdleTime answers ($idle s)" test -n "$idle"
+ssi=/tmp/selftest-ssinhibit
+[ -x "$P/ssinhibit" ] && install -m 755 "$P/ssinhibit" $ssi
+if [ -n "$PW" ] && [ -x $ssi ]; then
+    saved=`x xset q | awk '/timeout:/ {print $2}' | sed -n 1p`
+    x xset s 5 0                # saver after 5 idle seconds
+    xbg $ssi 15; sleep 12       # held for 15 s, then it leaves the bus
+    check "an inhibit keeps the screen saver and lock off" notlocked
+    sleep 13
+    check "the screen locks once the inhibiting application exits" locked
+    active=`ssq GetActive`
+    check "GetActive is true while the screen is covered ($active)" \
+          test "$active" = true
+    unlock
+    check "unlocks after the saver" notlocked
+
+    xbg $ssi -u 8; sleep 15     # released at 8 s, still on the bus
+    check "the screen locks after UnInhibit" locked
+    unlock
+    pkill -u $U -f selftest-ssinhibit
+    x xset s "${saved:-600}" 0
+else
+    skp "inhibit (no password given, or ssinhibit not built)"
+fi
+
+#####################################################################
 section "Compositor"
 if x /usr/dt/bin/dtcompositor available; then
     x /usr/dt/bin/dtcompositor start

@@ -169,13 +169,22 @@ libDtSvc_la_SOURCES = 	DtCodelibs/buf.C \
 	DtUtil2/SharedProcs.c \
 	DtUtil2/SmCreateDirs.c \
 	DtUtil2/SunDtHelp.c \
+	DtUtil2/SvcDbus.c \
 	DtUtil2/SvcTT.c \
 	DtUtil2/UErrNoBMS.c \
 	DtUtil2/Utility.c \
 	DtUtil2/XlationSvc.c \
 	DtUtil2/XmWrap.c
 
+libDtSvc_la_LIBADD =
+
 if HAS_PAM_LIBRARY
 libDtSvc_la_SOURCES += DtUtil2/SvcPam.c
-libDtSvc_la_LIBADD = $(PAMLIB)
+libDtSvc_la_LIBADD += $(PAMLIB)
+endif
+
+# Desktop services on the D-Bus session bus (optional)
+if HAVE_DBUS
+libDtSvc_la_CPPFLAGS += $(DBUS_CFLAGS)
+libDtSvc_la_LIBADD += $(DBUS_LIBS)
 endif

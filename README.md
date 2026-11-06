@@ -10,10 +10,11 @@ fixes.
 It is developed with heavy assistance from AI (Claude). CDE's source is
 licensed under the LGPL 2.0 or later; so is everything Clanker adds.
 
-Old systems stay supported. New code is C89, uses POSIX.1-2001
-interfaces, and every modern feature is optional at build time or
-detected at run time: on Solaris, AIX, the BSDs or a 32-bit machine
-without those features, CDE behaves as it always did.
+Old systems stay supported. New code is C99 (every compiler on the
+supported systems has a C99 mode), uses POSIX.1-2001 interfaces, and
+every modern feature is optional at build time or detected at run time:
+on Solaris, AIX, the BSDs or a 32-bit machine without those features,
+CDE behaves as it always did.
 
 ## What's new
 
@@ -45,6 +46,9 @@ without those features, CDE behaves as it always did.
   package tools) and **Autostart** (start applications at login).
 - **Lock Screen**, **Suspend**, **Restart...** and **Shut Down...** in
   the Workspace menu (right-click the desktop).
+- Browsers and video players can keep the screen from blanking and
+  locking while they play: the session answers
+  `org.freedesktop.ScreenSaver` on D-Bus.
 - Logins work on current Linux-PAM. Sessions are registered with logind
   and use the user D-Bus, XDG autostart and systemd's
   `graphical-session.target`.
@@ -69,13 +73,14 @@ sudo apt install build-essential autoconf automake libtool pkgconf \
     libxaw7-dev libx11-dev libxext-dev libxrender-dev libxau-dev \
     libice-dev libsm-dev libxdmcp-dev libxss-dev libxi-dev libxrandr-dev \
     libpng-dev libjpeg-dev libtirpc-dev rpcsvc-proto libutempter-dev \
-    libpam-dev libcrypt-dev liblmdb-dev tcl-dev locales-all opensp flex \
+    libpam-dev libcrypt-dev liblmdb-dev libdbus-1-dev tcl-dev locales-all opensp flex \
     bison ksh m4 ncompress x11-xserver-utils xfonts-utils xbitmaps
 ```
 
 The authoritative list is `cde/debian/control`. `libxi-dev`,
-`libxrandr-dev` and `libpng-dev` are optional: without them you lose,
-respectively, the touchpad settings, monitor hotplug and the PNG fix.
+`libxrandr-dev`, `libpng-dev` and `libdbus-1-dev` are optional: without
+them you lose, respectively, the touchpad settings, monitor hotplug, the
+PNG fix and the D-Bus services (`--without-dbus` turns them off).
 
 For the optional extras: `picom` (compositor), `network-manager`,
 `bluez`, `packagekit`, `dex` (XDG autostart), `brightnessctl`, and
@@ -148,8 +153,8 @@ Window snapping is set with dtwm resources: `Dtwm*snapDistance`,
 
 `tools/vm/` builds a small Debian VM without root and runs an end-to-end
 self-test of the desktop. It checks logins, touchpad, keys, snapping,
-wallpapers, resolution changes, the screen lock, suspend and the
-compositor. See [tools/vm/README.md](tools/vm/README.md).
+wallpapers, resolution changes, the screen lock, screen-saver inhibit,
+suspend and the compositor. See [tools/vm/README.md](tools/vm/README.md).
 
 ```sh
 tools/vm/build-vm.sh && tools/vm/vmctl.py boot && tools/vm/vmctl.py provision

@@ -79,6 +79,7 @@
 #include "SrvPalette.h"
 #include "SmProtocol.h"
 #include "SmXSMP.h"
+#include "SmDbus.h"
 
 /*
  * Internal Functions
@@ -490,6 +491,11 @@ main (int argc, char **argv)
     XGetWindowAttributes(smGD.display, smGD.topLevelWindow, &windAtt);
     XSelectInput(smGD.display, smGD.topLevelWindow,
 		 windAtt.your_event_mask | PropertyChangeMask);
+
+    /*
+     * Desktop services on the D-Bus session bus (screen saver inhibit)
+     */
+    SmDbusInit();
 
     LeaveWaitState();
 

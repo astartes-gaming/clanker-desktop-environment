@@ -15,6 +15,17 @@ apt-get -o Acquire::Retries=5 update -q
 apt-get -o Acquire::Retries=5 install -y -q --no-install-recommends \
     cloud-guest-utils
 growpart "$disk" "$part" >/dev/null 2>&1 && resize2fs "$root" >/dev/null 2>&1 || true
+# Local packages from VM_DEBS (see build-vm.sh), dependencies from the
+# mirror.
+if ls "$P"/debs/*.deb >/dev/null 2>&1; then
+    # apt reads them as the _apt user, which cannot enter /root
+    d=$(mktemp -d /var/tmp/debs.XXXXXX)
+    cp "$P"/debs/*.deb "$d"/
+    chmod 755 "$d"; chmod 644 "$d"/*.deb
+    apt-get -o Acquire::Retries=5 install -y -q --no-install-recommends \
+        "$d"/*.deb
+    rm -rf "$d"
+fi
 # Libraries the CDE binaries link against (computed on the build host),
 # plus what CDE needs at runtime and a few test tools.
 # shellcheck disable=SC2046

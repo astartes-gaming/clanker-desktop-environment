@@ -96,6 +96,7 @@
 #include "SmError.h"
 #include "SmLock.h"
 #include "SmScreen.h"
+#include "SmDbus.h"
 
 /*
  * Variables global to this module only
@@ -634,6 +635,7 @@ FinishLocking(Widget		wid,
 #endif
  
             PutUpLogin(False, True); /* already mapped, but set timeout */
+            SmDbusScreenActive(True);
 
            /*
             * Start external screen saver.
@@ -1279,6 +1281,7 @@ UnlockDisplay(
     }
 
     smGD.lockedState = UNLOCKED;
+    SmDbusScreenActive(False);
 
     XSync(smGD.display, 0);
 

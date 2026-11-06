@@ -38,6 +38,7 @@ PASS, FAIL or SKIP:
 - wallpapers, including PNG colours
 - resolution changes
 - screen lock and unlock, and lock-before-suspend
+- screen-saver inhibit over D-Bus (`ssinhibit` plays a video player)
 - the compositor
 
 Log in as `tester` at the dtlogin screen, then on the serial console
@@ -49,6 +50,16 @@ tools/vm/vmctl.py run "sh /root/payload/selftest.sh PASSWORD" -t 900
 
 `PASSWORD` is the test user's password from `out/credentials`.
 Without it, the lock and suspend checks are skipped.
+
+## Offline packages
+
+If the VM keeps failing to download some packages, fetch them on the
+host and pass them in with the payload:
+
+```sh
+mkdir debs && (cd debs && apt-get download xterm ...)
+VM_DEBS=$PWD/debs tools/vm/build-vm.sh --payload-only
+```
 
 ## A second VM
 

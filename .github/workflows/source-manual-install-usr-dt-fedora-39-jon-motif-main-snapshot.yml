@@ -114,6 +114,7 @@ jobs:
             libXt-devel \
             libjpeg-turbo-devel \
             libpng-devel \
+            dbus-devel \
             libtirpc-devel \
             libtool \
             libutempter-devel \

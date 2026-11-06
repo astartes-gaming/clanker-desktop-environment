@@ -33,6 +33,37 @@ dnl These must be up here for the compiler search list to actually work
 AC_PROG_CC([cc gcc clang])
 AC_PROG_CXX([c++ g++ clang++])
 
+dnl New and modernized code is C99.  Autoconf 2.70+ asks the compiler
+dnl for C11 or C99 mode in AC_PROG_CC; with 2.69 ask for C99 here.
+dnl Every compiler on the supported systems has a C99 mode: GCC 3+,
+dnl Clang, Oracle Developer Studio 12+, IBM XL C 10+.
+m4_version_prereq([2.70], [], [AC_PROG_CC_C99])
+AC_MSG_CHECKING([whether the C compiler accepts C99])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#define LOG(...) snprintf(buf, sizeof buf, __VA_ARGS__)
+static inline int sum(const int *v, int n)
+{
+    int s = 0;
+    for (int i = 0; i < n; i++)   // C99: loop declaration, // comment
+        s += v[i];
+    return s;
+}
+]], [[
+    char buf[16];
+    struct pt { int x, y; } p = { .y = 2, .x = 1 };
+    int v[] = { p.x, p.y };
+    bool ok = sum(v, 2) == 3;
+    uint32_t u = UINT32_C(1);
+    long long big = 1LL << 40;
+    LOG("%d", (int) u);
+    return !(ok && big > 0);
+]])], [AC_MSG_RESULT([yes])],
+    [AC_MSG_RESULT([no])
+     AC_MSG_ERROR([a C99 compiler is required (set CC, e.g. CC="gcc -std=gnu99" or CC=c99)])])
+
 LT_INIT
 AC_PREFIX_DEFAULT(/usr/dt)
 
@@ -620,6 +651,32 @@ if test "$have_xrandr" = yes; then
     XRANDRLIB=-lXrandr
 fi
 AC_SUBST(XRANDRLIB)
+
+dnl D-Bus: desktop services on the session bus (dtsession answers
+dnl org.freedesktop.ScreenSaver, so video players can keep the screen
+dnl from locking).  Optional; without it CDE uses ToolTalk only.
+AC_ARG_WITH([dbus],
+    [AS_HELP_STRING([--without-dbus],
+        [do not offer desktop services on D-Bus @<:@default: if found@:>@])],
+    [], [with_dbus=check])
+have_dbus=no
+if test "x$with_dbus" != xno; then
+    PKG_CHECK_MODULES([DBUS], [dbus-1 >= 1.6], [have_dbus=yes],
+        [if test "x$with_dbus" = xyes; then
+             AC_MSG_ERROR([--with-dbus was given, but dbus-1 was not found])
+         fi])
+fi
+if test "$have_dbus" = yes; then
+    AC_DEFINE([HAVE_DBUS], [1], [Define if libdbus-1 is available])
+fi
+AM_CONDITIONAL([HAVE_DBUS], [test "$have_dbus" = yes])
+
+dnl dtsession: XScreenSaverSuspend (libXss 1.1) keeps the screen saver
+dnl and DPMS off while an application inhibits them.  Without it,
+dnl dtsession resets the saver timer every 30 seconds instead.
+AC_CHECK_LIB([Xss], [XScreenSaverSuspend],
+    [AC_DEFINE([HAVE_XSCREENSAVERSUSPEND], [1],
+        [Define if libXss has XScreenSaverSuspend])], [], $X_LIBS)
 
 dnl Special check for tirpc...
 AC_CHECK_LIB(tirpc, svc_register,

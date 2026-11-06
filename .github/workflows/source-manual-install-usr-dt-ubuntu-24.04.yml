@@ -173,6 +173,7 @@ jobs:
             git \
             ksh \
             libcrypt-dev \
+            libdbus-1-dev \
             libfreetype6-dev \
             libjpeg-dev \
             liblmdb-dev \
