@@ -89,3 +89,9 @@ The VM needs `cage`, `xwayland` and `xauth` (add their .deb files to
 test user on the text console with `vmctl.py type`, and run
 `/usr/dt/bin/dtwayland`. Clients of the inner session use `DISPLAY=:1`
 and `XAUTHORITY=/run/user/UID/dtwayland-Xauthority.1`.
+
+## Login screen
+
+`sh /root/payload/selftest-greeter.sh` (as root in the VM) restarts
+dtlogin, ending any X11 session, and checks that the login screen
+comes back after SIGHUPs to dtlogin.
