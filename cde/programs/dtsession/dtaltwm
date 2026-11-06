@@ -44,6 +44,23 @@ if [ -z "$wm" ]; then
     exec $DTWM
 fi
 
+# xfwm4: Motif-style frames in the CDE palette (the "CDE" theme)
+case `basename "$wm"` in
+    xfwm4)
+        "`dirname $0`/dtxfwmtheme" >/dev/null 2>&1
+        # Once: an xfwm4 that ran before the CDE defaults existed copied
+        # its stock theme and buttons into the user's settings.  Move
+        # those (only if still stock) to the CDE look.
+        mark=$HOME/.dt/.xfwm4-cde-look
+        if [ ! -f "$mark" ] && type xfconf-query >/dev/null 2>&1; then
+            q() { xfconf-query -c xfwm4 -p /general/$1 2>/dev/null; }
+            [ "`q theme`" = Default ] && xfconf-query -c xfwm4 -p /general/theme -s CDE
+            [ "`q button_layout`" = "O|SHMC" ] &&
+                xfconf-query -c xfwm4 -p /general/button_layout -s "O|HM"
+            mkdir -p "$HOME/.dt" && : > "$mark"
+        fi ;;
+esac
+
 panel=
 if [ -z "$DT_ALTWM_NO_PANEL" ]; then
     # Give the window manager a moment to take the screen, so it

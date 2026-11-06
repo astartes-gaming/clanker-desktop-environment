@@ -162,6 +162,13 @@ everything as before:
 
     DT_WINDOW_MANAGER=dtwm
 
+Under xfwm4 the windows get Motif-style frames like dtwm's (the "CDE"
+xfwm4 theme, made from the current palette and remade when you change
+it in Style Manager > Color), with the window menu button on the left
+and minimize and maximize on the right. A theme or button layout you
+choose in xfwm4's own settings is kept; these settings are shared with
+Xfce sessions.
+
 `DT_WINDOW_MANAGER` can also name another EWMH window manager. It is
 started by `dtaltwm`, which restarts it if it crashes and falls back
 to dtwm if it is missing or keeps failing. Window snapping and the

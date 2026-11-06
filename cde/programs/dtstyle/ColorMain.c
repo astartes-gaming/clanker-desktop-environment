@@ -80,6 +80,7 @@
 #include "ColorEdit.h"
 #include "ColorPalette.h"
 #include "ExtTheme.h"
+#include "SysCmd.h"
 
 #ifdef sun
 #include "OWsync.h"
@@ -2290,6 +2291,29 @@ void
 
    /* Re-export the palette to GTK/Qt applications if enabled */
    ExtThemeApply(pCurrentPalette);
+
+   /* Under xfwm4 the window frames follow the palette too:
+    * color set 1 for the active window, 2 for the others. */
+   {
+       const char *wm = getenv("DT_WINDOW_MANAGER");
+
+       if (wm && strstr(wm, "xfwm4"))
+       {
+           static char act[8], ina[8];
+           char *argv[] = { CDE_INSTALLATION_TOP "/bin/dtxfwmtheme",
+                            "--reload", "--colors", act, ina, NULL };
+
+           snprintf(act, sizeof(act), "#%02X%02X%02X",
+                    pCurrentPalette->color[0].bg.red >> 8,
+                    pCurrentPalette->color[0].bg.green >> 8,
+                    pCurrentPalette->color[0].bg.blue >> 8);
+           snprintf(ina, sizeof(ina), "#%02X%02X%02X",
+                    pCurrentPalette->color[1].bg.red >> 8,
+                    pCurrentPalette->color[1].bg.green >> 8,
+                    pCurrentPalette->color[1].bg.blue >> 8);
+           (void) SysCmdRun(argv, NULL, 30, NULL, NULL);
+       }
+   }
 }
  
 
