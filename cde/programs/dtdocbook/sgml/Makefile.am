@@ -32,3 +32,11 @@ sgml_DATA = docbook.dcl \
 	    isopub.gml \
 	    isotech.gml \
 	    styprolog.sgml
+
+# Entity sets for help volumes (dtdocbook2sdl); regenerate with
+# "sh sdl/mksdata.sh" after changing the ISO sets or DtHelp's SpcTable.
+sgmlsdldir = $(sgmldir)/sdl
+sgmlsdl_DATA = sdl/catalog sdl/isoamsa.gml sdl/isoamsb.gml sdl/isoamso.gml \
+	       sdl/isogrk3.gml sdl/isolat1.gml sdl/isonum.gml sdl/isopub.gml \
+	       sdl/isotech.gml
+EXTRA_DIST = sdl/mksdata.sh
