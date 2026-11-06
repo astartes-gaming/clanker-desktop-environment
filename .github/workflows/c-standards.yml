@@ -53,7 +53,8 @@ jobs:
             libtirpc-dev libtool libutempter-dev libx11-dev libxaw7-dev \
             libxft-dev libxinerama-dev libxmu-dev libxpm-dev libxrandr-dev \
             libxrender-dev libxss-dev libxt-dev locales m4 ncompress opensp \
-            patch python3 tcl-dev x11proto-fonts-dev xbitmaps
+            patch python3 tcl-dev x11-session-utils x11-xserver-utils \
+            x11proto-fonts-dev xbitmaps xfonts-utils
           sudo locale-gen en_US.UTF-8
 
       - name: Configure (-std=${{ matrix.std }})
