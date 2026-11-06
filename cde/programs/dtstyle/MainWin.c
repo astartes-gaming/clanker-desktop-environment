@@ -76,6 +76,8 @@
 #include "Main.h"
 #include "ColorMain.h"
 #include "Backdrop.h"
+#include "SysPanels.h"
+#include "SysCmd.h"
 #include "Keyboard.h"
 #include "Mouse.h"
 #include "Audio.h"
@@ -549,6 +551,25 @@ ProcessComponentList(
 	  dtIcon = _DtGetIconFileName(style.screen, I18N_ICON, NULL, NULL, 0);	  
           helpTag = HELP_I18N_BUTTON;        
       }
+      /* Shown only when the system tool behind them is installed. */
+      else if (strcmp(string, NETWORK) == 0 && SysCmdHave("nmcli"))
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 61, "Network"));
+	  dtIcon = _DtGetIconFileName(style.screen, NETWORK_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, BLUETOOTH) == 0 && SysCmdHave("bluetoothctl"))
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 62, "Bluetooth"));
+	  dtIcon = _DtGetIconFileName(style.screen, BLUETOOTH_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, UPDATES) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 63, "Updates"));
+	  dtIcon = _DtGetIconFileName(style.screen, UPDATES_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
       else
       {
           s += strlen(string) +1;
@@ -717,6 +738,15 @@ activateCB(
 
   else if (strcmp(cd, I18N) == 0)
     popup_i18nBB(style.shell);
+
+  else if (strcmp(cd, NETWORK) == 0)
+    popup_networkBB(style.shell);
+
+  else if (strcmp(cd, BLUETOOTH) == 0)
+    popup_bluetoothBB(style.shell);
+
+  else if (strcmp(cd, UPDATES) == 0)
+    popup_updatesBB(style.shell);
 
 }
 

@@ -18,7 +18,8 @@ dtstyle_SOURCES = Main.c MainWin.c Font.c Audio.c Startup.c Mouse.c	\
 		  ColorPalette.h I18nEnv.h Main.h Protocol.h		\
 		  Startup.h ColorEdit.h Dtwm.h I18nMain.h MainWin.h	\
 		  Resource.h ColorFile.h Font.h I18nUtil.h Mouse.h	\
-		  SaveRestore.h ExtTheme.c ExtTheme.h Touchpad.c Touchpad.h
+		  SaveRestore.h ExtTheme.c ExtTheme.h Touchpad.c Touchpad.h \
+		  SysCmd.c SysCmd.h SysPanels.c SysPanels.h
 
 # Applies the touchpad settings at login (Xsession.d/0070.dtmodern).
 dttouchpad_SOURCES = dttouchpad.c Touchpad.c Touchpad.h

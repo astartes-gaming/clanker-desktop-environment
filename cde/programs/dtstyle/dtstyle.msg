@@ -187,6 +187,11 @@ $ Messages 59-60 are replacements for messages 51-52
 59 A
 60 About Style Manager
 
+$ Style Manager buttons for the Network, Bluetooth and Updates panels
+61 Network
+62 Bluetooth
+63 Updates
+
 $set 5
 $ _DtMessage set 5 is for the Font dialog
 $ Messages 1-6, 7-16 from set 5 were deleted from the message catalog
@@ -721,6 +726,48 @@ is not properly installed.
 40 Unable to get Input Method information from the selected host.
 41 Unknown error
 
+
+$set 20
+$ Network, Bluetooth and Updates panels (SysPanels.c)
+$quote "
+1 "Working..."
+2 "Style Manager - Password"
+3 "Style Manager - Network"
+4 "Wi-Fi"
+5 "Connect"
+6 "Disconnect"
+7 "Rescan"
+8 "Edit Connections..."
+10 "No Wi-Fi networks found."
+11 "NetworkManager is not running."
+12 "Connected: "
+13 "Not connected."
+14 "Network settings need NetworkManager (nmcli)."
+15 "The network command failed:"
+16 "This network needs settings this panel does not\noffer. Use Edit Connections."
+17 "Password for"
+20 "Style Manager - Bluetooth"
+21 "Bluetooth"
+22 "Scan"
+23 "Pair"
+24 "Connect"
+25 "Disconnect"
+26 "Remove"
+30 "  - connected"
+31 "  - paired"
+32 "No Bluetooth adapter found."
+33 "Bluetooth is on."
+34 "Bluetooth is off."
+35 "Bluetooth settings need BlueZ (bluetoothctl)."
+36 "The Bluetooth command failed:"
+40 "Style Manager - Updates"
+41 "Check for Updates"
+42 "updates available"
+43 "No updates found."
+44 "No supported package manager found."
+45 "Press Update Now to update this system in a terminal."
+46 "System Update"
+47 "Update Now..."
 
 $set 99
 $    DO NOT TRANSLATE THESE MESSAGES

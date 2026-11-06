@@ -1,0 +1,56 @@
+/* XPM */
+/*********************************************************************
+*  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+**********************************************************************/
+
+static char * DtNetwk [] = {
+/* width height ncolors cpp [x_hot y_hot] */
+"52 37 9 1 0 0",
+/* colors */
+" 	s none	m none	c none",
+".	s bottomShadowColor	m black	c #636363636363",
+"#	s topShadowColor	m white	c #bdbdbdbdbdbd",
+"@	s iconGray1	m white	c #dededededede",
+"O	s iconGray3	m white	c #adadadadadad",
+"+	s iconGray4	m white	c #949494949494",
+"*	s iconGray8	m black	c #212121212121",
+"B	s iconColor5	m black	c blue",
+"W	s iconColor2	m white	c white",
+/* pixels */
+"                                                    ",
+"                                                    ",
+"                                                    ",
+"                                                    ",
+"                                                    ",
+"                                                    ",
+"                                                    ",
+"  #############################.     BBBBBBBBB      ",
+"  #@@@@@@@@@@@@@@@@@@@@@@@@@@@@.  BBBBBBBBBBBBBBB   ",
+"  #@OOOOOOOOOOOOOOOOOOOOOOOOOOO.BBBBBB       BBBBBB ",
+"  #@O************************OOBBBB             BBBB",
+"  #@O*BBBBBBBBBBBBBBBBBBBBBB*OOBBB               BBB",
+"  #@O*BBBBBBBBBBBBBBBBBBBBBB*OOB      BBBBBBB      B",
+"  #@O*BBBBBBBBBBBBBBBBBBBBBB*OO.   BBBBBBBBBBBBB    ",
+"  #@O*BBWWWWWWWWWWWWWBBBBBBB*OO.  BBBBB     BBBBB   ",
+"  #@O*BBBBBBBBBBBBBBBBBBBBBB*OO.  BBB         BBB   ",
+"  #@O*BBBBBBBBBBBBBBBBBBBBBB*OO.                    ",
+"  #@O*BBWWWWWWWWWBBBBBBBBBBB*OO.       BBBBB        ",
+"  #@O*BBBBBBBBBBBBBBBBBBBBBB*OO.     BBBBBBBBB      ",
+"  #@O*BBBBBBBBBBBBBBBBBBBBBB*OO.      BB   BB       ",
+"  #@O*BBBBBBBBBBBBBBBBBBBBBB*OO.                    ",
+"  #@O*BBBBBBBBBBBBBBBBBBBBBB*OO.                    ",
+"  #@O*BBBBBBBBBBBBBBBBBBBBBB*OO.        BBB         ",
+"  #@O*BBBBBBBBBBBBBBBBBBBBBB*OO.        BBB         ",
+"  #@O************************OO.        BBB         ",
+"  #@OOOOOOOOOOOOOOOOOOOOOOOOOOO.                    ",
+"  #@OOOOOOOOOOOOOOOOOOOOOOOOOOO.                    ",
+"  #.............................                    ",
+"             ++++++++                               ",
+"             ++++++++                               ",
+"             ++++++++                               ",
+"        #################.                          ",
+"        #OOOOOOOOOOOOOOOO.                          ",
+"        #.................                          ",
+"                                                    ",
+"                                                    ",
+"                                                    "};
