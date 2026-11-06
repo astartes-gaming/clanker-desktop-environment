@@ -1913,7 +1913,11 @@ RestoreClients( void )
     }
     
     linec = 0;
-    displayName = strdup(smGD.display->display_name);
+    /* +2: room for a '.' added below */
+    displayName = malloc(strlen(smGD.display->display_name) + 2);
+    if (displayName == NULL)
+	return(-1);
+    strcpy(displayName, smGD.display->display_name);
     remoteDisplay = (unsigned char *)
       SM_MALLOC(sizeof(unsigned char) * (strlen(displayName) + 101));
 
@@ -1941,6 +1945,17 @@ RestoreClients( void )
 	    break;
 	}
 	pch++;
+    }
+
+    /*
+     * The screen number is appended at execution time, so the name must
+     * end in '.': ":1" would otherwise become ":10", the wrong display
+     * (":0" only worked because ":00" is display 0 as well).
+     */
+    if (dispPtr && pch > displayName && pch[-1] != '.')
+    {
+	*pch++ = '.';
+	*pch = '\0';
     }
 
     /*
