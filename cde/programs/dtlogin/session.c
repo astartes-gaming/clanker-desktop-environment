@@ -233,6 +233,10 @@ static char			*defaultLanguage = NULL;
 
 static sigjmp_buf	abortSession;
 
+/* Set by catchHUP(): the login screen's greeter and a pending SIGHUP. */
+static volatile pid_t greeterPid = 0;
+static volatile sig_atomic_t greeterHup = 0;
+
 #ifdef __KERBEROS
   static char krb_ticket_string[MAXPATHLEN];
 #endif /* __KERBEROS */
@@ -509,6 +513,12 @@ ManageSession( struct display *d )
 	SessionExit (d, OBEYSESS_DISPLAY);
     }
 #endif
+
+    /* A SIGHUP after the greeter ended but before the session starts */
+    if (greeterHup) {
+	Debug ("Caught SIGHUP, remanaging the display\n");
+	SessionExit (d, REMANAGE_DISPLAY);
+    }
 
     clientPid = 0;
     if (!sigsetjmp (abortSession, 1)) {
@@ -1822,23 +1832,23 @@ extern int session_set;
 
 int         response[2], request[2];
 
-/* Fixes problem with dtlogin signal handling */
-static int greeterPid = 0;
-static struct display *greeter_d = NULL;
+/*
+ * SIGHUP while the login screen is up: the display is to be managed
+ * afresh.  The handler only does what is safe in a signal handler --
+ * it passes the signal on to the greeter and notes it.  The greeter
+ * then exits, its pipe closes, and RunGreeter ends the session from
+ * normal code (SessionExit() closes the display, logs and may run
+ * PAM, none of which may happen inside a handler).
+ */
 
 static SIGVAL
 catchHUP(int arg)
 {
-    Debug("Caught SIGHUP\n");
-    if (greeterPid) 
-    {
-	Debug("Killing greeter process:  %d\n", greeterPid);
-	kill(greeterPid, SIGHUP);
-    }
-    if (greeter_d)
-      SessionExit(greeter_d, REMANAGE_DISPLAY);
-    else
-      exit(REMANAGE_DISPLAY);
+    pid_t pid = greeterPid;
+
+    greeterHup = 1;
+    if (pid > 0)
+	kill(pid, SIGHUP);
 }
 
 static void 
@@ -1901,7 +1911,7 @@ RunGreeter( struct display *d, struct greet_info *greet,
 	 * We've changed dtlogin to pass HUP's down to the children
 	 * so ignore any HUP's once the client has started.
 	 */
-	greeter_d = d;
+	greeterHup = 0;
         signal(SIGHUP, catchHUP);
 
 	/*
@@ -2074,6 +2084,8 @@ RunGreeter( struct display *d, struct greet_info *greet,
 
 	default:
 	    Debug ("Greeter started\n");
+	    if (greeterHup)	/* came before greeterPid was set */
+		kill(greeterPid, SIGHUP);
 
 	    close(response[1]); /* Close write end of response pipe */
 	    close(request[0]); /* Close read end of request pipe */
@@ -2201,12 +2213,23 @@ RunGreeter( struct display *d, struct greet_info *greet,
 	    }
 
 
+	    greeterPid = 0;
+
 	    /*
 	     *  Greeter exited. Check return code...
 	     */
 	     
 	    Debug("Greeter return status; exit = %d, signal = %d\n", 
 	    	   waitCode(status), waitSig(status));
+
+	    /*
+	     * A greeter killed by a signal has exit code 0, which would
+	     * read as NOTIFY_OK, so a hang-up is dealt with first.
+	     */
+	    if (greeterHup) {
+		Debug("Caught SIGHUP, remanaging the display\n");
+		SessionExit(d, REMANAGE_DISPLAY);
+	    }
 
 
 	    /*
@@ -2353,7 +2376,9 @@ RunGreeter( struct display *d, struct greet_info *greet,
         signal(SIGHUP, SIG_DFL);
     }
     else {
-	AbortClient(greeterPid);
+	/* killpg(0) would hit dtlogin's own group: only a live greeter */
+	if (greeterPid > 0)
+	    AbortClient(greeterPid);
 	SessionExit(d, UNMANAGE_DISPLAY);
     }
 }
