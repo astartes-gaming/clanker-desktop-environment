@@ -179,11 +179,13 @@ PanelOnlyDockWindow(Window w, int x, int y, int width, int height)
     /* left right top bottom, then start/end for each */
     long strut[12] = { 0 };
 
-    if (y + height / 2 >= sh / 2) {     /* bottom half: reserve bottom */
+    /* Reserve the edge only when the panel sits on it; a panel dragged
+     * to the middle of the screen reserves nothing. */
+    if (y + height >= sh - 2) {
         strut[3] = sh - y;
         strut[10] = x;
         strut[11] = x + width - 1;
-    } else {
+    } else if (y <= 2) {
         strut[2] = y + height;
         strut[8] = x;
         strut[9] = x + width - 1;
@@ -275,4 +277,63 @@ PanelOnlyDesktopEvent(XEvent *event)
         (void) WmDispatchWsEvent(event);
     }
     return True;
+}
+
+/*
+ * Drag the Front Panel with its handles: under another window manager
+ * dtwm's own f.move has no client to move, and window managers do not
+ * move dock windows.  Follow the pointer until the button is released,
+ * then reserve the screen edge at the new place.
+ */
+void
+PanelOnlyMovePanel(Widget shell, XEvent *event)
+{
+    Display *dpy = XtDisplay(shell);
+    Window win = XtWindow(shell), child;
+    WmScreenData *pSD = ACTIVE_PSD;
+    int sw = DisplayWidth(dpy, pSD->screen);
+    int sh = DisplayHeight(dpy, pSD->screen);
+    int x0, y0, px0, py0, x, y;
+    Window root;
+    unsigned int w, h, bw, depth;
+    XEvent ev;
+
+    if (!XGetGeometry(dpy, win, &root, &x, &y, &w, &h, &bw, &depth) ||
+        !XTranslateCoordinates(dpy, win, root, 0, 0, &x0, &y0, &child))
+        return;
+    /* from where the button went down, not where the drag began */
+    px0 = wmGD.preMove ? wmGD.preMoveX : event->xmotion.x_root;
+    py0 = wmGD.preMove ? wmGD.preMoveY : event->xmotion.y_root;
+    x = x0;
+    y = y0;
+
+    /* Grab on the handle, so its widget gets the release (below). */
+    if (XGrabPointer(dpy, event->xany.window, False,
+                     ButtonMotionMask | ButtonReleaseMask,
+                     GrabModeAsync, GrabModeAsync, None, None,
+                     CurrentTime) != GrabSuccess)
+        return;
+
+    for (;;) {
+        XMaskEvent(dpy, ButtonMotionMask | ButtonReleaseMask, &ev);
+        if (ev.type == MotionNotify) {
+            /* only the latest position matters */
+            while (XCheckTypedEvent(dpy, MotionNotify, &ev))
+                ;
+            x = x0 + ev.xmotion.x_root - px0;
+            y = y0 + ev.xmotion.y_root - py0;
+            if (x > sw - (int) w) x = sw - (int) w;
+            if (y > sh - (int) h) y = sh - (int) h;
+            if (x < 0) x = 0;
+            if (y < 0) y = 0;
+            XMoveWindow(dpy, win, x, y);
+        } else if (ev.type == ButtonRelease) {
+            break;
+        }
+    }
+    XUngrabPointer(dpy, CurrentTime);
+    /* The handle widget still has to see its button come up. */
+    XPutBackEvent(dpy, &ev);
+    PanelOnlyDockWindow(win, x, y, (int) w, (int) h);
+    XFlush(dpy);
 }
