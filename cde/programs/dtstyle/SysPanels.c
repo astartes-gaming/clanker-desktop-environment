@@ -1191,6 +1191,22 @@ AutUserDir(char *buf, size_t len)
         sprintf(buf, "%.*s/.config/autostart", (int) len - 20, style.home);
 }
 
+/* Create the config directory (0700, as the XDG spec asks) and its
+ * autostart directory if they don't exist yet. */
+static void
+AutEnsureUserDir(void)
+{
+    char dir[1100], *c = getenv("XDG_CONFIG_HOME");
+
+    if (c && *c)
+        sprintf(dir, "%.1000s", c);
+    else
+        sprintf(dir, "%.1000s/.config", style.home);
+    (void) mkdir(dir, 0700);
+    AutUserDir(dir, sizeof(dir));
+    (void) mkdir(dir, 0755);
+}
+
 typedef struct {
     char name[200];
     Boolean hidden, enabledKey, forCDE;
@@ -1389,7 +1405,7 @@ AutToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
         /* disable a system entry: an override in the user's directory */
         if (!AutFindSystem(p->keys[row], sys, sizeof(sys)))
             return;
-        (void) mkdir(dir, 0755);
+        AutEnsureUserDir();
         ok = AutWrite(sys, user, True);
     }
     else
@@ -1457,8 +1473,7 @@ AutPromptDoneCB(Widget w, XtPointer client_data, XtPointer call_data)
         strcpy(name, "command");
 
     AutUserDir(dir, sizeof(dir));
-    sprintf(file, "%.1080s", dir);
-    (void) mkdir(file, 0755);
+    AutEnsureUserDir();
     for (i = 0; i < 100; i++)
     {
         if (i)
