@@ -322,7 +322,7 @@ start_log(_DtCmsCalendar *cal, char *filename)
 	struct stat info;
 	struct passwd *pw;
 	extern void setinput(FILE *);
-	extern int yyyparse();
+	extern int yyyparse(void);
 	extern int yyywrap(FILE *);
 
 	if (cal == NULL || filename == NULL)

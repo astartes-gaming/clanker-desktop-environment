@@ -94,11 +94,11 @@ typedef struct
         unsigned char   *Uxcontainer_title;
         int     UxnumberOfTopButtons;
         unsigned char   *Uxtop_button_one_label;
-        void    (*Uxtop_button_one_cb)();
+        void    (*Uxtop_button_one_cb)(void);
         unsigned char   *Uxtop_button_two_label;
-        void    (*Uxtop_button_two_cb)();
+        void    (*Uxtop_button_two_cb)(void);
         unsigned char   *Uxtop_button_three_label;
-        void    (*Uxtop_button_three_cb)();
+        void    (*Uxtop_button_three_cb)(void);
         int     Uxuse_icon_name_field;
         unsigned char   *Uxname_field_title;
         int     UxnumberOfBottomButtons;
@@ -177,11 +177,11 @@ Widget  create_icon_selection_dialog(swidget,
                                      unsigned char *,
                                      int,
                                      unsigned char *,
-                                     void (*)(),
+                                     void (*)(void),
                                      unsigned char *,
-                                     void (*)(),
+                                     void (*)(void),
                                      unsigned char *,
-                                     void (*)(),
+                                     void (*)(void),
                                      int,
                                      unsigned char *,
                                      int,

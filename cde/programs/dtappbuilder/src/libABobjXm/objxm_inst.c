@@ -158,7 +158,7 @@ static int	formlist_append(
     		    Widget      newform
 		);
 
-static int	formlist_force_resize(
+static int	formlist_force_resize(void
 		);
 
 /*

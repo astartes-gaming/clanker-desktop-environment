@@ -197,7 +197,7 @@ extern void UpdateFilterAfterDBReread (DialogData * dialog_data);
 /* From ToolTalk.c */
 extern int InitializeToolTalkSession( Widget topLevel, int ttFd );
 extern Tt_status InitializeToolTalkProcid( int *ttFd, Widget topLevel, Boolean sendStarted );
-extern void FinalizeToolTalkSession();
+extern void FinalizeToolTalkSession(void);
 /* From Trash.c */
 void CloseTrash(Widget w, XtPointer client_data, XtPointer call_data) ;
 

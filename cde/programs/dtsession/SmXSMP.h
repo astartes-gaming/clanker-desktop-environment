@@ -165,6 +165,6 @@ void SaveYourselfReqProc (
 void CloseDownClient (
 	ClientRecPtr		client );
 
-void XSMPExit ();
+void XSMPExit(void);
 
 #endif /*_smxsmp_h*/

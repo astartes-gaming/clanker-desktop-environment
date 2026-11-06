@@ -65,7 +65,7 @@ extern void 	help_test_disable(ABObj obj);
 ** should be called by the "On Item..." item in the App Builder main Help
 ** menu.
 */
-extern Boolean	help_do_onitem_help();
+extern Boolean	help_do_onitem_help(void);
 
 /*
 ** Method to bring up the Help Editor, used as a callback for the "Help Text..."

@@ -76,16 +76,16 @@ extern void (*callback) (perwindow *);
 extern void (*init) (perwindow *);
 
 extern void GetResources(int argc, char *argv[]);
-extern void CheckResources();
+extern void CheckResources(void);
 extern void hsbramp(double h1, double s1, double b1,
         double h2, double s2, double b2,
         int count,
         u_char *red, u_char *green, u_char *blue);
 extern void error(char *, char *);
-extern long seconds();
-extern void usage();
-extern void hide_hft_ring();
-extern void unhide_hft_ring();
+extern long seconds(void);
+extern void usage(void);
+extern void hide_hft_ring(void);
+extern void unhide_hft_ring(void);
 
 
 /* System V Release 4 redefinitions of BSD functions and structures */

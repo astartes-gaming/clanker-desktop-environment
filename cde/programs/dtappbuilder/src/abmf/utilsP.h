@@ -48,9 +48,9 @@
 /*
  * Pointer to functions.
  */
-typedef int         (*PFI) ();
-typedef char       *(*PFS) ();
-typedef void        (*PFV) ();
+typedef int         (*PFI)(void);
+typedef char       *(*PFS)(void);
+typedef void        (*PFV)(void);
 
 extern STRING nlstr;	/* "\n" - keep this identifier short! */
 extern STRING nlstr2;	/* "\n\n" - keep this identifier short! */

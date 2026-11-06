@@ -153,10 +153,10 @@ extern void	abobj_sort_sel_list(
 		    int sel_count, 
 		    int sort);
 
-extern void	abobj_group_selected_objects(
+extern void	abobj_group_selected_objects(void
 		);
 
-extern void	abobj_ungroup_selected_objects(
+extern void	abobj_ungroup_selected_objects(void
 		);
 
 extern void	abobj_layout_group(
@@ -168,10 +168,10 @@ extern void	abobj_register_group_expose_handler(
 		    ABObj	obj
 		);
 
-extern void	abobj_make_panedwin(
+extern void	abobj_make_panedwin(void
 		);
 
-extern void 	abobj_unmake_panedwin(
+extern void 	abobj_unmake_panedwin(void
 		);
 
 
@@ -456,7 +456,7 @@ extern void	abobj_set_menu_item_state(
 		    Widget	menu
 		);
 
-extern void	abobj_strings_init(
+extern void	abobj_strings_init(void
 		);
 
 extern int 	abobj_project_name_extract(

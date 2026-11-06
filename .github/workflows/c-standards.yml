@@ -27,10 +27,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # autoconf >= 2.70 adds -std=gnu11 to a compiler set to C99,
+          # which would hide C11 use; tell it C11 is not available.
           - std: gnu99
             cc: gcc-14
+            extra: ac_cv_prog_cc_c11=no
           - std: gnu23
             cc: gcc-14
+            extra: ""
 
     env:
       DEBIAN_FRONTEND: noninteractive
@@ -65,7 +69,7 @@ jobs:
           set -Eeuo pipefail
           cd cde
           ./autogen.sh
-          ./configure CC="${{ matrix.cc }} -std=${{ matrix.std }}" \
+          ./configure CC="${{ matrix.cc }} -std=${{ matrix.std }}" ${{ matrix.extra }} \
             CFLAGS="-g -O1 -Wold-style-definition -Wstrict-prototypes"
 
       - name: Build
@@ -75,6 +79,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           cd cde
+          grep '^CC = ' Makefile
+          grep -q "^CC = ${{ matrix.cc }} -std=${{ matrix.std }}\$" Makefile
           make -j"$(nproc)" 2>&1 | tee "$RUNNER_TEMP/make.log"
 
       - name: No old-style C outside ksh93

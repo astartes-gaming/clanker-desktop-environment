@@ -104,7 +104,7 @@ extern void DeleteControlActionList (ControlData *);
 extern Boolean CheckOtherMonitorsOn (SubpanelData *);
 
 static void   Initialize (DtPanelShellWidget);
-static void   BoxCreate ();
+static void   BoxCreate(void);
 static Widget PanelControlCreate (Widget, char *, String);
 static void   MainControlCreate (int);
 static void   SwitchCreate (BoxData *);

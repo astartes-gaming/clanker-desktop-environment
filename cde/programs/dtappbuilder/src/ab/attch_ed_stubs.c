@@ -103,7 +103,7 @@ static int      attch_editor_apply(
                     ABObj   object
                 );
 
-static BOOL	attch_edP_pending(
+static BOOL	attch_edP_pending(void
                 );
 
 static int      attch_editor_activate(
@@ -153,7 +153,7 @@ static void	select_objlist(
 		    ABObj	obj
 		);
 
-static void	turnoff_changebars(
+static void	turnoff_changebars(void
 		);
 
 static void	get_attach_info(
@@ -316,13 +316,13 @@ static ABObj	attch_ed_get_parent(
 		    ABObj	obj
 		);
 
-static void	attch_ed_view_child_attachments(
+static void	attch_ed_view_child_attachments(void
 		);
 
-static void	attch_ed_view_parent_attachments(
+static void	attch_ed_view_parent_attachments(void
 		);
 
-static void	attch_ed_activate_parent_child_button(
+static void	attch_ed_activate_parent_child_button(void
 		);
 
 static void	attch_edP_prevent_closeCB(
@@ -344,7 +344,7 @@ static DTB_MODAL_ANSWER	get_wrn_response(
 			    ABObj		new_obj
 			);
 
-static BOOL		attch_ed_verify_props(
+static BOOL		attch_ed_verify_props(void
 			);
 
 static BOOL		verify_one_attach(

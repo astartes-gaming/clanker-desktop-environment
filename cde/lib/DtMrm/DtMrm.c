@@ -121,7 +121,10 @@ static char rcsid[] = "$TOG: DtMrm.c /main/4 1999/10/14 13:35:44 mgreess $"
 
 /*******    Macros for C23 compatability ******/
 #if XmVersion < 2004
-#define MRMCREATE(x) ((Widget (*)())(x))
+/* Motif declares the creator as "Widget (*)()", which C23 reads as
+ * taking no arguments; (void) matches it in C23 and is compatible in
+ * older C. */
+#define MRMCREATE(x) ((Widget (*)(void))(x))
 #else
 #define MRMCREATE(x) x
 #endif

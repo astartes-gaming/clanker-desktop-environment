@@ -40,7 +40,7 @@
 
 #include "isam_impl.h"
 
-extern char *_isunix_malloc();
+extern char *_isunix_malloc(void);
 
 /* 
  * _issort_create() 

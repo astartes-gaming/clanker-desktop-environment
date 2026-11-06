@@ -9534,7 +9534,7 @@ stdVerifyPrinterProc(
 	return;
 }
 
-void dtksh_init()
+void dtksh_init(void)
 {
 	ADDBUILTIN("XtMainLoop", do_XtMainLoop);
 	ADDBUILTIN("DtLoadWidget", do_DtLoadWidget);

@@ -87,7 +87,7 @@ static char		* networkIds;
 /*
  * Private functions
  */
-static void InitializeXSMPGlobals ();
+static void InitializeXSMPGlobals(void);
 
 static void PutSessionManagerOnRootWindow (
 	char			*networkIds);
@@ -95,20 +95,20 @@ static void PutSessionManagerOnRootWindow (
 static void InitializeSaveState (
 	Boolean 		startUp);
 
-static Boolean SendGetWsmClientsMessage ();
+static Boolean SendGetWsmClientsMessage(void);
 
-static int GetCurrentWorkspaceNumber ();
+static int GetCurrentWorkspaceNumber(void);
 
 static void ProcessInteract (
 	ClientRecPtr		client,
 	Boolean			getWsmClientOK);
 
-static void CancelShutdown ();
+static void CancelShutdown(void);
 
 static void FreeProps (
 	PropertyRecPtr		pProp);
 
-static void ProcessSaveYourselfResponses ();
+static void ProcessSaveYourselfResponses(void);
 
 
 /*
@@ -122,7 +122,7 @@ Atom 			XaSmClientId;
 /*
  * Public functins
  */
-void InstallIOErrorHandler ();
+void InstallIOErrorHandler(void);
 
 Status NewClientProc (
 	SmsConn         	smsConn,
@@ -175,7 +175,7 @@ void CloseConnectionProc (
 	int			count,
 	char 			**reasonMsgs);
 
-void CompleteXSMPSave ();
+void CompleteXSMPSave(void);
 
 void CloseDownClient (
 	ClientRecPtr		client );

@@ -57,7 +57,7 @@ struct cW_struct {                 /* Choice widget structure. */
   Widget *choices ;                /* xmToggleButtonWidgetClass. */
   int maxno ;                      /* Number of choice elements. */
   int isexclusive ;                /* Exclusive choice. */
-  void (*func)() ;                 /* Callback (if any) for this choice. */
+  void (*func)(void) ;                 /* Callback (if any) for this choice. */
 } ;
 
 struct tW_struct {                 /* Text widget structure. */
@@ -69,7 +69,7 @@ struct tW_struct {                 /* Text widget structure. */
 int get_choice(struct cW_struct *, enum choice_type);
 
 struct cW_struct *make_choiceW(Widget, char *, char **, int, int,
-                                   int, void (*)());
+                                   int, void (*)(void));
 struct tW_struct *make_textW(Widget,  char *);
  
 Widget make_butW(Widget, char *);

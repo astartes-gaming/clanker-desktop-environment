@@ -183,7 +183,7 @@ extern void		brws_register_actions(
                             XtAppContext app
                         );
 
-extern ABBrowser	brws_create (
+extern ABBrowser	brws_create (void
                         );
 
 extern void		brws_destroy (
@@ -347,7 +347,7 @@ extern void		setup_vwr_graphics(
 			    Vwr		v
 			);
 
-extern BrowserUiObj	aob_create_ui_obj();
+extern BrowserUiObj	aob_create_ui_obj(void);
 
 extern void		brws_switch_module(
 			    Widget	widget,
@@ -389,6 +389,6 @@ extern void		brws_center_on_obj(
 			    ABObj	obj
 			);
 
-extern void		brws_init(
+extern void		brws_init(void
 			);
 #endif /* _brws_h */

@@ -129,7 +129,7 @@ static XrmOptionDescRec option_list[] =
 
 
 extern Widget mainForm, iconForm, fileMenu_quit_pb;
-extern void GetSessionInfo();
+extern void GetSessionInfo(void);
 extern char start_file[];
 extern char dummy[];
 
@@ -213,12 +213,12 @@ main(
         /*-----------------------------------------------------------*/
         /* Interface function declaration                            */
         /*-----------------------------------------------------------*/
-        Widget  create_dtIconShell();
-        Widget  create_newIconDialog();
-        Widget  create_queryDialog();
-        Widget  create_stdErrDialog();
-        Widget  create_fileIODialog();
-        void    GetMarginData();
+        Widget  create_dtIconShell(void);
+        Widget  create_newIconDialog(void);
+        Widget  create_queryDialog(void);
+        Widget  create_stdErrDialog(void);
+        Widget  create_fileIODialog(void);
+        void    GetMarginData(void);
 
 
         /* ------------------------*/

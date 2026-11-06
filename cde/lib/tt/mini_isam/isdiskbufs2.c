@@ -42,7 +42,7 @@
 
 #include "isam_impl.h"
 
-extern struct dlink *_isdln_next(), *_isdln_first();
+extern struct dlink *_isdln_next(void), *_isdln_first(void);
 
 #define ISMAXBUFFERS	200		     /* Use 20 buffers */
 #define ISHASHHDRS	256		     /* Must be a power of two */
@@ -272,7 +272,7 @@ _isdisk_refix(Bufhdr *p, int newmode)
 void
 _isdisk_sync(void)
 {
-    extern time_t _istimeget();
+    extern time_t _istimeget(void);
     Bufhdr *p;
     struct dlink	   *e;
     
@@ -287,7 +287,7 @@ _isdisk_sync(void)
 void
 _isdisk_inval(void)
 {
-    extern time_t _istimeget();
+    extern time_t _istimeget(void);
     Bufhdr *p;
     struct dlink	   *e;
     

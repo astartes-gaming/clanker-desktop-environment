@@ -67,7 +67,7 @@ typedef struct _XeSymbol {
 This type is used for the XeRegisterFunction() routine.
 */
 
-typedef void (*XeAnyFunction) ();
+typedef void (*XeAnyFunction)(void);
 
 
 /*

@@ -56,7 +56,7 @@ extern void _DtCm_free_appt4(Appt_4 *a);
 
 extern void _DtCm_free_abbrev_appt4(Abb_Appt_4 *a);
 
-extern Attribute_4 * _DtCm_make_attr4();
+extern Attribute_4 * _DtCm_make_attr4(void);
 
 extern void _DtCm_free_attr4(Attribute_4 *a);
 
@@ -74,6 +74,6 @@ extern void _DtCm_free_access_list4(Access_Entry_4 *l);
 
 extern void _DtCm_free_excpt4(Except_4 *e);
 
-extern char * _DtCm_get_default_what_string();
+extern char * _DtCm_get_default_what_string(void);
 
 #endif

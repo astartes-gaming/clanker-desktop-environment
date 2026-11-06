@@ -171,7 +171,7 @@ static int	object_was_updated(
 		    ObjEvUpdateInfo	info
 		);
 
-static void	clear_editor_fields(
+static void	clear_editor_fields(void
 		);
 
 static void	fetch_help_attrs(
@@ -196,7 +196,7 @@ static BOOL	help_obj_is_target_type(
 		    ABObj obj
 		);
 
-static void	help_test_onitem_help(
+static void	help_test_onitem_help(void
 		);
 
 static void	verify_closeCB(
@@ -222,7 +222,7 @@ static void	update_object_menu_from_obj(
 		    ABObj	obj
 		);
 
-static ABObj	find_toplevel_obj(
+static ABObj	find_toplevel_obj(void
 		);
 
 static BOOL

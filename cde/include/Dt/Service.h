@@ -56,7 +56,7 @@ typedef DtMsgContext		DtSvcMsgContext;
 /************* CALLBACK PROTOTYPES ******************************
  */
 
-typedef void (*DtSvcReceiveProc) ();
+typedef void (*DtSvcReceiveProc)(void);
 /*
     DtSvcHandle	service,
     DtSvcMsgContext	reply_context,
@@ -81,7 +81,7 @@ typedef void (*DtSvcReceiveProc) ();
  *			array.
  */
 
-typedef void (*DtSvcMessageProc) ();
+typedef void (*DtSvcMessageProc)(void);
 /*
     DtSvcHandle	service,
     Pointer		client_data,
@@ -101,7 +101,7 @@ typedef void (*DtSvcMessageProc) ();
  *			array.
  */
 
-typedef void (*DtSvcStatusProc) ();
+typedef void (*DtSvcStatusProc)(void);
 /*
     DtSvcHandle	service,
     int			status,

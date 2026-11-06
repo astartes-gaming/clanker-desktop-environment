@@ -51,7 +51,7 @@ typedef	struct _compressInfo{
     int     size;
 } CECompressInfo, *CECompressInfoPtr;
 
-extern BufFilePtr   __DtBufFileCreate ();
+extern BufFilePtr   __DtBufFileCreate(void);
 extern BufFilePtr   _DtHelpCeBufFilePushZ (BufFilePtr f);
 extern BufFilePtr   _DtHelpCeBufFileOpenWr (int fd);
 extern int	    _DtHelpCeBufFileFlush (BufFilePtr f, int doClose);

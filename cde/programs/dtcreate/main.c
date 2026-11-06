@@ -1358,9 +1358,9 @@ main(int argc, char *argv[])
 #endif
 
         Widget          mainIface;
-        extern swidget  create_OpenFile();
-        extern swidget  create_Confirmed();
-        extern Widget   create_ErrorDialog();
+        extern swidget  create_OpenFile(void);
+        extern swidget  create_Confirmed(void);
+        extern Widget   create_ErrorDialog(void);
         int             rc;
         Atom            xa_WM_SAVE_YOURSELF;
         char            *ptr;

@@ -68,12 +68,12 @@ extern XtPointer _XmStringUngenerate (XmString string,
 #endif
 
 
-typedef Uil_continue_type(*UIL_CB)();
+typedef Uil_continue_type(*UIL_CB)(void);
 
 /***** Macro for supporting newer versions of Motif *****/
 #if XmVersion < 2004
-typedef Uil_continue_type (*uil_message_cb_t)();
-typedef Uil_continue_type (*uil_status_cb_t)();
+typedef Uil_continue_type (*uil_message_cb_t)(void);
+typedef Uil_continue_type (*uil_status_cb_t)(void);
 #endif
 
 

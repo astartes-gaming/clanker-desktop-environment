@@ -45,7 +45,7 @@
 extern int monthdays[12];
 extern RepeatEvent      *_DtCm_repeat_info;
 extern char             *_DtCm_rule_buf;
-extern void 		 _DtCm_rule_parser();
+extern void 		 _DtCm_rule_parser(void);
 extern char 		*ReToString(RepeatEvent *);
 
 

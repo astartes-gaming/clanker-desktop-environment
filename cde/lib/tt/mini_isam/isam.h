@@ -56,7 +56,7 @@ extern short ldint(char *);
 extern long ldlong(char *);
 extern float ldfloat(char *);
 extern double lddbl(char *);
-extern short ldshort();
+extern short ldshort(void);
 extern int ldchar(char *, int, char *);
 extern int stchar(char *, char *, int);
 extern int stlong(long, char *);

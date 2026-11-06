@@ -90,7 +90,7 @@ void init_AddFiletype (FiletypeData *);
 void free_Filetypedata(FiletypeData *);
 void init_AddFiletype_dialog_fields(FiletypeData *pFtD);
 void clear_AddFiletype_dialog_fields(void);
-void AddFiletypeToList();
+void AddFiletypeToList(void);
 void UpdateFiletypeDataArray(FiletypeData *pFtD);
 Boolean AddFiletypeCheckFields(void);
 

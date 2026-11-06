@@ -278,7 +278,7 @@ extern int db_oflag;
 #define INTERNAL_FIXED    PASCAL
 #define INTERNAL_VARIABLE CDECL
 
-typedef int (PASCAL *FARPROC)();
+typedef int (PASCAL *FARPROC)(void);
 typedef char *HANDLE;
 
 #define LOCK_DESC /**/
