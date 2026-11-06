@@ -70,8 +70,19 @@ fi
 #####################################################################
 section "Session"
 check "dtsession is running"        pgrep -u $U -x dtsession
-check "dtwm is running"             pgrep -u $U -x dtwm
 sp=`pgrep -u $U -x dtsession | head -1`
+# The session's window manager: xfwm4 when installed (dtwm then only
+# draws the Front Panel), or dtwm (DT_WINDOW_MANAGER=dtwm).
+WM=`tr '\0' '\n' < /proc/$sp/environ 2>/dev/null |
+    sed -n 's/^DT_WINDOW_MANAGER=//p'`
+WM=`basename "${WM:-dtwm}"`
+if [ "$WM" = dtwm ]; then
+    check "dtwm is running"         pgrep -u $U -x dtwm
+else
+    check "$WM manages the windows"  pgrep -u $U -x "$WM"
+    check "dtwm -panelonly draws the Front Panel" \
+          pgrep -u $U -f 'dtwm -panelonly'
+fi
 envf=/tmp/selftest-env.$$
 tr '\0' '\n' < /proc/$sp/environ > $envf 2>/dev/null
 check "session has XDG_RUNTIME_DIR (PAM env)" \
@@ -164,8 +175,12 @@ check "no key-binding warnings in errorlog" \
 
 #####################################################################
 section "Window snapping"
+# Also the test window of the RandR section, which closes it.
 xbg xterm -geometry 40x10+300+200 -title selftest-snap -e sleep 900
 sleep 3
+if [ "$WM" != dtwm ]; then
+    skp "window snapping (a dtwm feature; $WM manages the windows)"
+else
 set -- `geom selftest-snap`
 if [ -n "$3" ]; then
     x xdotool mousemove $(($1 + 20)) $(($2 + 20)) click 1
@@ -181,6 +196,7 @@ if [ -n "$3" ]; then
     x xdotool key super+Down; sleep 1
 else
     bad "test window did not appear"
+fi
 fi
 
 #####################################################################
@@ -350,7 +366,9 @@ rm -rf $d
 
 #####################################################################
 section "Compositor"
-if x /usr/dt/bin/dtcompositor available; then
+if [ "$WM" != dtwm ]; then
+    skp "compositor ($WM composites itself)"
+elif x /usr/dt/bin/dtcompositor available; then
     x /usr/dt/bin/dtcompositor start
     check "compositor started"      x /usr/dt/bin/dtcompositor status
     echo "      (`pgrep -a -u $U -x picom || pgrep -a -u $U -x xcompmgr`)"
@@ -372,6 +390,45 @@ if x /usr/dt/bin/dtcompositor available; then
     x /usr/dt/bin/dtcompositor stop
 else
     skp "compositor (none installed)"
+fi
+
+#####################################################################
+section "Front Panel under $WM"
+if [ "$WM" = dtwm ]; then
+    skp "the session runs dtwm"
+else
+    root() { x xprop -root "$1" | sed 's/.* = //'; }
+    dtcur() {
+        x xprop -id `x xprop -root _MOTIF_WM_INFO | awk '{print $NF}'` \
+            _DT_WORKSPACE_CURRENT | awk '{print $NF}'
+    }
+    fp=`x xdotool search --classname FrontPanel 2>/dev/null | while read w; do
+        x xprop -id $w _NET_WM_WINDOW_TYPE | grep -q DOCK && echo $w; done |
+        head -1`
+    check "the Front Panel is a dock" test -n "$fp"
+    viewable() { x xwininfo -id "$1" 2>/dev/null | grep -q IsViewable; }
+    check "the panel is visible" viewable ${fp:-0}
+    nd=`root _NET_NUMBER_OF_DESKTOPS`
+    check "$WM has the 4 workspaces as desktops ($nd)" test "$nd" = 4
+    names() { x xprop -root _NET_DESKTOP_NAMES | grep -q '"One", "Two"'; }
+    check "desktop names are the workspace names" names
+    x xdotool set_desktop 2; sleep 2
+    check "switching in $WM switches the panel (`dtcur`)" test "`dtcur`" = ws2
+    # The "Two" button of the default panel, relative to its corner
+    set -- `x xwininfo -id ${fp:-0} | awk '/Absolute upper-left [XY]/ {print $4}'`
+    if [ -n "$2" ]; then
+        x xdotool mousemove $(($1 + 568)) $(($2 + 20)) click 1; sleep 2
+        check "the panel's workspace buttons switch $WM (`root _NET_CURRENT_DESKTOP`)" \
+              test "`root _NET_CURRENT_DESKTOP`" = 1
+    fi
+    x xdotool set_desktop 0; sleep 2
+    # The menu is an override-redirect window without a class.
+    before=`x xdotool search --onlyvisible --name '' | wc -l`
+    x xdotool mousemove 300 300 click 3; sleep 2
+    after=`x xdotool search --onlyvisible --name '' | wc -l`
+    check "right-clicking the desktop posts the Workspace menu" \
+          test "$after" -gt "$before"
+    x xdotool key Escape; sleep 1
 fi
 
 #####################################################################

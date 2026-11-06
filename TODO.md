@@ -54,6 +54,9 @@ features stay optional or detected at run time.
   - [ ] libtt session messages over D-Bus, with ToolTalk as the
         fallback when no session bus is running.
 
+- [ ] Under xfwm4: hide the dtwm-only Workspace menu entries (Shuffle,
+      Minimize/Restore Front Panel) and let the panel's handles move it.
+
 ## Code health
 
 - [ ] Work down the compiler warnings (about 6,090 sites with
@@ -66,6 +69,9 @@ features stay optional or detected at run time.
 - The whole tree builds as C99 and as C23 (GCC 15's default) with no
   old-style definitions or prototype-less declarations; CI checks both
   (`c-standards.yml`).
+- xfwm4 manages the windows when installed (opt out with
+  `DT_WINDOW_MANAGER=dtwm`); `dtwm -panelonly` keeps the Front Panel,
+  backdrops and Workspace menu, with workspaces and desktops in step.
 - C99 is the language baseline; configure stops with a clear message
   on a compiler without a C99 mode (GCC 3+, Clang, Oracle Studio 12+
   and XL C 10+ all have one).

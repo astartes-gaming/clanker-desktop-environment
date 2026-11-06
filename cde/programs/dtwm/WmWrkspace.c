@@ -61,6 +61,7 @@
 /* internally defined functions */
 
 #include "WmWrkspace.h"
+#include "WmPanelOnly.h"
 
 /********    Static Function Declarations    ********/
 
@@ -245,6 +246,9 @@ ChangeToWorkspace(
     /* send workspace change broadcast message */
     dtSendWorkspaceModifyNotification(pSD, (Atom) pNewWS->id,
 				DtWSM_REASON_CURRENT);
+
+    if (wmGD.panelOnly)
+	PanelOnlyWorkspaceChanged (pNewWS);
 
 } /* END OF FUNCTION ChangeToWorkspace */
 

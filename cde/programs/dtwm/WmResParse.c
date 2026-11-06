@@ -5145,6 +5145,7 @@ static void ProcessAccelText (unsigned char *startP, unsigned char *endP,
  *************************************<->***********************************/
 #define SCREENS_OPT		"-screens"
 #define MULTI_SCREEN_OPT	"-multiscreen"
+#define PANEL_ONLY_OPT		"-panelonly"
 
 void ProcessCommandLine (int argc,  char *argv[])
 {
@@ -5165,6 +5166,11 @@ void ProcessCommandLine (int argc,  char *argv[])
 	    wmGD.multiScreen = True;
 	    wmGD.numScreens = ScreenCount (DISPLAY);
         }
+	else if (!strcmp((char *)string, PANEL_ONLY_OPT))
+	{
+	    /* Front Panel, backdrops and Workspace menu only (WmPanelOnly.c) */
+	    wmGD.panelOnly = True;
+	}
 	else if (!strcmp((char *)string, SCREENS_OPT))
 	{
 	    argnum++;		/* skip to next arg */

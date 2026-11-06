@@ -39,6 +39,7 @@
  */
 
 #include "WmGlobal.h"
+#include "WmPanelOnly.h"
 #include "WmResNames.h"
 #include "WmHelp.h"
 #include "WmICCC.h"
@@ -635,7 +636,9 @@ void InitWmGlobal (int argc, char *argv [], char *environ [])
     else 
     {
 
-	sAttributes.event_mask = SubstructureRedirectMask;
+	/* With -panelonly another window manager has the root window. */
+	sAttributes.event_mask = wmGD.panelOnly ? PropertyChangeMask :
+						  SubstructureRedirectMask;
 
 	for (scr=0; scr<wmGD.numScreens; scr++) 
 	{
@@ -1003,7 +1006,8 @@ void InitWmGlobal (int argc, char *argv [], char *environ [])
     SetupWmICCC ();
 
     /* setup EWMH handling */
-    SetupWmEwmh ();
+    if (!wmGD.panelOnly)	/* the other window manager does EWMH */
+	SetupWmEwmh ();
 
     /*
      * Use the WM_SAVE_YOURSELF protocol
@@ -1042,7 +1046,8 @@ void InitWmGlobal (int argc, char *argv [], char *environ [])
 		 * Adopt client windows that exist before wm startup:
 		 */
 
-		AdoptInitialClients (pSD);
+		if (!wmGD.panelOnly)
+		    AdoptInitialClients (pSD);
 
 		/*
 		 * Setup initial keyboard focus and colormap focus:
@@ -1071,6 +1076,8 @@ void InitWmGlobal (int argc, char *argv [], char *environ [])
 		{
 		    SetWorkspaceInfoProperty (&(pSD->pWS[iws]));
 		}
+		if (wmGD.panelOnly)
+		    PanelOnlyInit (pSD);
 
 
 XFlush (DISPLAY);

@@ -35,6 +35,7 @@
  */
 
 #include "WmGlobal.h"
+#include "WmPanelOnly.h"
 
 #include <locale.h>
 #include <Dt/Message.h>
@@ -190,6 +191,11 @@ main (int argc, char *argv [], char *environ [])
 	if (dispatchEvent && HandleScreenChangeEvent (&event))
 	{
 	    dispatchEvent = False;	/* RandR: monitors changed */
+	}
+
+	if (dispatchEvent && wmGD.panelOnly && PanelOnlyDesktopEvent (&event))
+	{
+	    dispatchEvent = False;	/* clicks on the desktop window */
 	}
 
 	if (dispatchEvent)
