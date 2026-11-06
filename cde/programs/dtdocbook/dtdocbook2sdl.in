@@ -156,6 +156,12 @@ else
     SGML_CATALOG_FILES="${SGML_CATALOG_FILES}:${sgml_dir}/catalog"
 fi
 
+# sdl/catalog first: DtHelp's special characters as SDATA (bullets,
+# accented letters ...), which the help viewer draws in any locale.
+# It has to be on the command line: the parser prefers the catalog
+# next to docbook.dcl over SGML_CATALOG_FILES.
+catfiles="m ${sgml_dir}/sdl/catalog${catfiles:+ -$catfiles}"
+
 
 export PATH="${PATH}:@bindir@"
 export SP_CHARSET_FIXED=1

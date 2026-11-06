@@ -1,0 +1,13 @@
+  -- Help volumes (dtdocbook2sdl): the ISO entity sets with DtHelp's
+     special characters as SDATA (see mksdata.sh).  dtdocbook2sdl
+     passes this catalog first on the parser's command line, so these
+     win for help volumes only. --
+
+PUBLIC "ISO 8879:1986//ENTITIES Added Math Symbols: Arrow Relations//EN" isoamsa.gml
+PUBLIC "ISO 8879:1986//ENTITIES Added Math Symbols: Binary Operators//EN" isoamsb.gml
+PUBLIC "ISO 8879:1986//ENTITIES Added Math Symbols: Ordinary//EN" isoamso.gml
+PUBLIC "ISO 8879:1986//ENTITIES Greek Symbols//EN" isogrk3.gml
+PUBLIC "ISO 8879:1986//ENTITIES Added Latin 1//EN" isolat1.gml
+PUBLIC "ISO 8879:1986//ENTITIES Numeric and Special Graphic//EN" isonum.gml
+PUBLIC "ISO 8879:1986//ENTITIES Publishing//EN" isopub.gml
+PUBLIC "ISO 8879:1986//ENTITIES General Technical//EN" isotech.gml
