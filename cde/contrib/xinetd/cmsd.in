@@ -1,6 +1,8 @@
 service cmsd
 {
-    disable     = no
+    # Off by default: rpc.cmsd runs as root and has a long history of
+    # remote exploits.  Enable it only if you use Calendar.
+    disable     = yes
     type 	= RPC UNLISTED
     rpc_number	= 100068
     rpc_version	= 2-5
@@ -9,5 +11,8 @@ service cmsd
     wait	= yes
     user	= root
     server	= @CDE_BINDIR@/rpc.cmsd
-    only_from 	= 127.0.0.1/0
+    # Local clients only.  (This used to read "127.0.0.1/0", and a /0
+    # netmask matches every address.)
+    only_from 	= 127.0.0.1
+    bind		= 127.0.0.1
 }
