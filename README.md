@@ -145,23 +145,27 @@ To turn a session feature off, set the variable in `~/.dtprofile`:
 | `DT_NO_LOCK_ON_SLEEP=1` | locking before suspend |
 | `DT_NO_COMPOSITOR=1` | the compositor, even if turned on |
 | `DT_NO_SYSTEMD_SESSION=1` | `graphical-session.target` |
+| `DT_WINDOW_MANAGER=dtwm` | xfwm4 (use dtwm for everything) |
 | `TT_ALLOW_REMOTE=1` | (re-enables) ToolTalk over the network |
 | `DT_ICE_TCP=1` | (re-enables) the session manager over TCP |
 
 Window snapping is set with dtwm resources: `Dtwm*snapDistance`,
 `Dtwm*snapToWindows` and `Dtwm*edgeTiling`.
 
-### Another window manager
+### Window manager
 
-To run xfwm4 (or any other window manager) instead of dtwm, add this
-line to `~/.Xdefaults` and log in again:
+When xfwm4 (Xfce's window manager) is installed it manages the windows,
+and dtwm still draws the Front Panel, the backdrops and the Workspace
+menu (`dtwm -panelonly`); the four workspaces are xfwm4's desktops.
+Without xfwm4, or with this line in `~/.dtprofile`, dtwm does
+everything as before:
 
-    Dtsession*wmStartupCommand: /usr/dt/bin/dtaltwm /usr/bin/xfwm4
+    DT_WINDOW_MANAGER=dtwm
 
-`dtaltwm` restarts the window manager if it crashes and falls back to
-dtwm if it is not installed or keeps failing. For now the Front Panel,
-the Workspace menu and the backdrops are drawn by dtwm, so they are
-missing under another window manager.
+`DT_WINDOW_MANAGER` can also name another EWMH window manager. It is
+started by `dtaltwm`, which restarts it if it crashes and falls back
+to dtwm if it is missing or keeps failing. Window snapping and the
+optional picom compositor are dtwm features; xfwm4 has its own.
 
 ## Test it
 
