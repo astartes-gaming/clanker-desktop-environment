@@ -230,6 +230,17 @@ CONTROL Trash
   HELP_VOLUME		FPanel
 }
 
+CONTROL Tray
+{
+  TYPE			systray
+  CONTAINER_NAME	Top
+  CONTAINER_TYPE	BOX
+  POSITION_HINTS	14
+  ICON			Fpblank
+  HELP_TOPIC		FPOnItemFrontPanel
+  HELP_VOLUME		FPanel
+}
+
 
 SWITCH           Switch
 {
@@ -264,7 +275,8 @@ CONTROL Busy
   POSITION_HINTS	2
   ICON			Fplite
   ALTERNATE_ICON	FpliteY
-  LABEL			%|nls-18012-#Busy#|
+  LABEL			%|nls-18033-#Task Manager#|
+  PUSH_ACTION		TaskManager
   HELP_TOPIC		FPOnItemBusy
   HELP_VOLUME		FPanel
 }

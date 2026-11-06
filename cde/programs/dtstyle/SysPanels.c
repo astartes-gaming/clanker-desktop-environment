@@ -1550,33 +1550,64 @@ popup_autostartBB(Widget shell)
 /* ------------------------------------------------------------------ */
 
 /*
- * The main panel's buttons come from dtwm.fp.  A changed button is
- * written to ~/.dt/types/clanker-panel.fp as a DELETE of the original
- * control plus a new control in its place, whose action (in
- * clanker-panel.dt) runs the chosen application; dtwm is restarted to
- * show it.  "#@ control<TAB>label<TAB>command" lines in the .fp file
- * remember the choices.
+ * The main panel's buttons, and the items in their drawers (subpanels),
+ * come from dtwm.fp.  Changes are written to ~/.dt/types/clanker-panel.fp
+ * and clanker-panel.dt, and dtwm is restarted to show them:
+ *
+ *   a changed button    a CONTROL of the same name, which replaces the
+ *                       system one (its drawer stays attached), running
+ *                       action ClankerPanel<name>;
+ *   an added item       a CONTROL in the button's drawer, running action
+ *                       ClankerItem<n>; a button without a drawer gets
+ *                       one (SUBPANEL Clanker<name>Drawer);
+ *   a removed item      the system CONTROL with DELETE True.
+ *
+ * Comment lines in the .fp file remember the choices:
+ *   "#@ control<TAB>label<TAB>command"
+ *   "#@+ button<TAB>label<TAB>command<TAB>icon"
+ *   "#@- control<TAB>subpanel"
  */
 
-#define FP_MAX 32
+#define FP_MAX 64
 #define FP_APPS_MAX 1000
 
 typedef struct {
-    char name[64], label[128], icon[128], pos[16], action[128];
-} FpControl;
+    char name[64], label[128], icon[256], pos[16], action[128], sub[64];
+} FpControl;				/* a main panel button */
+
+typedef struct {
+    char name[64], sub[64], label[128];
+} FpItem;				/* a system drawer item */
 
 typedef struct {
     char control[64], label[128], exec[1024];
-} FpChoice;
+} FpChoice;				/* a changed button */
+
+typedef struct {
+    char parent[64], label[128], exec[1024], icon[256];
+} FpAdd;				/* an added drawer item */
+
+typedef struct {
+    char name[64], sub[64];
+} FpDel;				/* a removed drawer item */
 
 static Panel    *fpPanel = NULL;
 static Widget    fpChooser = NULL;
 static FpControl fpControls[FP_MAX];
 static int       fpNControls;
+static FpItem    fpItems[FP_MAX];
+static int       fpNItems;
 static FpChoice  fpChoices[FP_MAX];
 static int       fpNChoices;
-static char     *fpAppName[FP_APPS_MAX], *fpAppExec[FP_APPS_MAX];
+static FpAdd     fpAdds[FP_MAX];
+static int       fpNAdds;
+static FpDel     fpDels[FP_MAX];
+static int       fpNDels;
+static char     *fpAppName[FP_APPS_MAX], *fpAppExec[FP_APPS_MAX],
+                *fpAppIcon[FP_APPS_MAX];
 static int       fpNApps;
+static Boolean   fpChooseAdd;		/* the chooser adds to a drawer */
+static char      fpChooseFor[64];	/* ...of this button */
 
 static void
 FpUserFile(char *buf, size_t len, const char *ext)
@@ -1623,16 +1654,19 @@ FpOpenSystem(void)
     return NULL;
 }
 
-/* The main panel's buttons that run an action. */
+/* The main panel's buttons that run an action, their drawers, and the
+ * items in those drawers. */
 static void
 FpReadControls(void)
 {
     FILE *fp = FpOpenSystem();
     char  line[512], *t, *v;
-    FpControl c;
-    Boolean in = False, top = False, icon = False;
+    char  kind = 0, name[64], container[64], ctype[32], type[32],
+          label[128], icon[256], pos[16], action[128];
+    char  subName[FP_MAX][64], subParent[FP_MAX][64];
+    int   nSubs = 0, i, j;
 
-    fpNControls = 0;
+    fpNControls = fpNItems = 0;
     if (!fp)
         return;
     while (fgets(line, sizeof(line), fp))
@@ -1640,20 +1674,49 @@ FpReadControls(void)
         t = FpTrim(line);
         if (*t == '#' || !*t)
             continue;
-        if (strncmp(t, "CONTROL ", 8) == 0)
+        if (strncmp(t, "CONTROL ", 8) == 0 || strncmp(t, "SUBPANEL ", 9) == 0)
         {
-            memset(&c, 0, sizeof(c));
-            snprintf(c.name, sizeof(c.name), "%s", FpTrim(t + 8));
-            in = True; top = False; icon = False;
+            kind = *t;
+            snprintf(name, sizeof(name), "%s", FpTrim(strchr(t, ' ') + 1));
+            container[0] = ctype[0] = type[0] = label[0] = icon[0] =
+                pos[0] = action[0] = '\0';
             continue;
         }
-        if (!in)
+        if (!kind)
             continue;
         if (*t == '}')
         {
-            if (top && icon && c.action[0] && fpNControls < FP_MAX)
-                fpControls[fpNControls++] = c;
-            in = False;
+            if (kind == 'S' && nSubs < FP_MAX)
+            {
+                snprintf(subName[nSubs], 64, "%s", name);
+                snprintf(subParent[nSubs], 64, "%s", container);
+                nSubs++;
+            }
+            else if (kind == 'C' && strcmp(ctype, "SUBPANEL") == 0 &&
+                     fpNItems < FP_MAX)
+            {
+                FpItem *it = &fpItems[fpNItems++];
+
+                snprintf(it->name, sizeof(it->name), "%s", name);
+                snprintf(it->sub, sizeof(it->sub), "%s", container);
+                snprintf(it->label, sizeof(it->label), "%s",
+                         label[0] ? label : name);
+            }
+            else if (kind == 'C' && strcmp(container, "Top") == 0 &&
+                     strcmp(type, "icon") == 0 && action[0] &&
+                     fpNControls < FP_MAX)
+            {
+                FpControl *c = &fpControls[fpNControls++];
+
+                memset(c, 0, sizeof(*c));
+                snprintf(c->name, sizeof(c->name), "%s", name);
+                snprintf(c->label, sizeof(c->label), "%s",
+                         label[0] ? label : name);
+                snprintf(c->icon, sizeof(c->icon), "%s", icon);
+                snprintf(c->pos, sizeof(c->pos), "%s", pos);
+                snprintf(c->action, sizeof(c->action), "%s", action);
+            }
+            kind = 0;
             continue;
         }
         for (v = t; *v && *v != ' ' && *v != '\t'; v++)
@@ -1662,53 +1725,89 @@ FpReadControls(void)
             *v++ = '\0';
         v = FpTrim(v);
         if (strcmp(t, "CONTAINER_NAME") == 0)
-            top = (strcmp(v, "Top") == 0);
+            snprintf(container, sizeof(container), "%s", v);
+        else if (strcmp(t, "CONTAINER_TYPE") == 0)
+            snprintf(ctype, sizeof(ctype), "%s", v);
         else if (strcmp(t, "TYPE") == 0)
-            icon = (strcmp(v, "icon") == 0);
+            snprintf(type, sizeof(type), "%s", v);
         else if (strcmp(t, "LABEL") == 0)
-            snprintf(c.label, sizeof(c.label), "%s", v);
+            snprintf(label, sizeof(label), "%s", v);
         else if (strcmp(t, "ICON") == 0)
-            snprintf(c.icon, sizeof(c.icon), "%s", v);
+            snprintf(icon, sizeof(icon), "%s", v);
         else if (strcmp(t, "POSITION_HINTS") == 0)
-            snprintf(c.pos, sizeof(c.pos), "%s", v);
+            snprintf(pos, sizeof(pos), "%s", v);
         else if (strcmp(t, "PUSH_ACTION") == 0)
-            snprintf(c.action, sizeof(c.action), "%s", v);
+            snprintf(action, sizeof(action), "%s", v);
     }
     fclose(fp);
+
+    for (i = 0; i < fpNControls; i++)
+        for (j = 0; j < nSubs; j++)
+            if (strcmp(subParent[j], fpControls[i].name) == 0)
+                snprintf(fpControls[i].sub, 64, "%s", subName[j]);
+}
+
+/* Split "a<TAB>b<TAB>..." into n fields; False if there are fewer. */
+static Boolean
+FpFields(char *t, char **f, int n)
+{
+    int i;
+
+    for (i = 0; i < n; i++)
+    {
+        f[i] = t;
+        t = strchr(t, '\t');
+        if (t)
+            *t++ = '\0';
+        else if (i < n - 1)
+            return False;
+    }
+    return True;
 }
 
 static void
 FpReadChoices(void)
 {
-    char  path[1100], line[1400], *f[3], *t;
+    char  path[1100], line[1600], *f[4], *t;
     FILE *fp;
-    int   i;
 
-    fpNChoices = 0;
+    fpNChoices = fpNAdds = fpNDels = 0;
     FpUserFile(path, sizeof(path), "fp");
     if ((fp = fopen(path, "r")) == NULL)
         return;
-    while (fgets(line, sizeof(line), fp) && fpNChoices < FP_MAX)
+    while (fgets(line, sizeof(line), fp))
     {
-        if (strncmp(line, "#@ ", 3) != 0)
-            continue;
-        t = line + 3;
-        t[strcspn(t, "\r\n")] = '\0';
-        for (i = 0; i < 3; i++)
+        line[strcspn(line, "\r\n")] = '\0';
+        if (strncmp(line, "#@+ ", 4) == 0 && fpNAdds < FP_MAX)
         {
-            f[i] = t;
-            t = strchr(t, '\t');
-            if (t)
-                *t++ = '\0';
-            else if (i < 2)
-                break;
+            FpAdd *a = &fpAdds[fpNAdds];
+
+            if (!FpFields(line + 4, f, 4))
+                continue;
+            snprintf(a->parent, sizeof(a->parent), "%s", f[0]);
+            snprintf(a->label, sizeof(a->label), "%s", f[1]);
+            snprintf(a->exec, sizeof(a->exec), "%s", f[2]);
+            snprintf(a->icon, sizeof(a->icon), "%s", f[3]);
+            fpNAdds++;
         }
-        if (i < 3)
-            continue;
-        snprintf(fpChoices[fpNChoices].control, 64, "%s", f[0]);
-        snprintf(fpChoices[fpNChoices].label, 128, "%s", f[1]);
-        snprintf(fpChoices[fpNChoices].exec, 1024, "%s", f[2]);
-        fpNChoices++;
+        else if (strncmp(line, "#@- ", 4) == 0 && fpNDels < FP_MAX)
+        {
+            if (!FpFields(line + 4, f, 2))
+                continue;
+            snprintf(fpDels[fpNDels].name, 64, "%s", f[0]);
+            snprintf(fpDels[fpNDels].sub, 64, "%s", f[1]);
+            fpNDels++;
+        }
+        else if (strncmp(line, "#@ ", 3) == 0 && fpNChoices < FP_MAX)
+        {
+            t = line + 3;
+            if (!FpFields(t, f, 3))
+                continue;
+            snprintf(fpChoices[fpNChoices].control, 64, "%s", f[0]);
+            snprintf(fpChoices[fpNChoices].label, 128, "%s", f[1]);
+            snprintf(fpChoices[fpNChoices].exec, 1024, "%s", f[2]);
+            fpNChoices++;
+        }
     }
     fclose(fp);
 }
@@ -1735,19 +1834,51 @@ FpControlNamed(const char *name)
     return NULL;
 }
 
+static FpItem *
+FpItemNamed(const char *name)
+{
+    int i;
+
+    for (i = 0; i < fpNItems; i++)
+        if (strcmp(fpItems[i].name, name) == 0)
+            return &fpItems[i];
+    return NULL;
+}
+
+static int
+FpDelIndex(const char *name)
+{
+    int i;
+
+    for (i = 0; i < fpNDels; i++)
+        if (strcmp(fpDels[i].name, name) == 0)
+            return i;
+    return -1;
+}
+
+/* The drawer of a button: the system one, or the one we add. */
+static void
+FpDrawerName(FpControl *c, char *buf, size_t len)
+{
+    if (c->sub[0])
+        snprintf(buf, len, "%s", c->sub);
+    else
+        snprintf(buf, len, "Clanker%sDrawer", c->name);
+}
+
 /* Write both files (temporary file, then rename), or remove them when
  * nothing is changed. */
 static Boolean
 FpWriteChoices(void)
 {
-    char  fpPath[1100], dtPath[1100], tmp[1120], dir[1100];
+    char  fpPath[1100], dtPath[1100], tmp[1120], tmp2[1120], dir[1100],
+          sub[96];
     FILE *fp, *dt;
-    int   i, fd1, fd2;
-    char  tmp2[1120];
+    int   i, j, fd1, fd2;
 
     FpUserFile(fpPath, sizeof(fpPath), "fp");
     FpUserFile(dtPath, sizeof(dtPath), "dt");
-    if (fpNChoices == 0)
+    if (fpNChoices == 0 && fpNAdds == 0 && fpNDels == 0)
     {
         unlink(fpPath);
         unlink(dtPath);
@@ -1773,10 +1904,13 @@ FpWriteChoices(void)
         return False;
     }
 
-    fprintf(fp, "# Front Panel buttons changed in Style Manager > Front Panel.\n"
+    fprintf(fp, "# Front Panel changed in Style Manager > Front Panel.\n"
                 "# Written by dtstyle; the #@ lines record the choices.\n\n");
-    fprintf(dt, "# Actions for the Front Panel buttons changed in Style Manager.\n"
+    fprintf(dt, "# Actions for the Front Panel changed in Style Manager.\n"
                 "# Written by dtstyle.\n\n");
+
+    /* Changed buttons: same name, so the system one is replaced and
+     * its drawer stays attached. */
     for (i = 0; i < fpNChoices; i++)
     {
         FpChoice  *ch = &fpChoices[i];
@@ -1787,9 +1921,6 @@ FpWriteChoices(void)
         fprintf(fp, "#@ %s\t%s\t%s\n", ch->control, ch->label, ch->exec);
         fprintf(fp, "CONTROL %s\n{\n  TYPE\t\t\ticon\n"
                     "  CONTAINER_NAME\tTop\n  CONTAINER_TYPE\tBOX\n"
-                    "  DELETE\t\tTrue\n}\n", c->name);
-        fprintf(fp, "CONTROL Clanker%s\n{\n  TYPE\t\t\ticon\n"
-                    "  CONTAINER_NAME\tTop\n  CONTAINER_TYPE\tBOX\n"
                     "  POSITION_HINTS\t%s\n  ICON\t\t\t%s\n  LABEL\t\t\t%s\n"
                     "  PUSH_ACTION\t\tClankerPanel%s\n"
                     "  DROP_ACTION\t\tClankerPanel%s\n}\n\n",
@@ -1799,6 +1930,45 @@ FpWriteChoices(void)
                     "  EXEC_STRING\t%s %%Args%%\n}\n\n",
                 c->name, ch->label, ch->exec);
     }
+
+    /* Removed drawer items */
+    for (i = 0; i < fpNDels; i++)
+    {
+        fprintf(fp, "#@- %s\t%s\n", fpDels[i].name, fpDels[i].sub);
+        fprintf(fp, "CONTROL %s\n{\n  TYPE\t\t\ticon\n"
+                    "  CONTAINER_NAME\t%s\n  CONTAINER_TYPE\tSUBPANEL\n"
+                    "  DELETE\t\tTrue\n}\n\n", fpDels[i].name, fpDels[i].sub);
+    }
+
+    /* Added drawer items, and drawers for buttons without one */
+    for (i = 0; i < fpNAdds; i++)
+    {
+        FpAdd     *a = &fpAdds[i];
+        FpControl *c = FpControlNamed(a->parent);
+
+        if (!c)
+            continue;
+        FpDrawerName(c, sub, sizeof(sub));
+        for (j = 0; j < i; j++)		/* first item for this button? */
+            if (strcmp(fpAdds[j].parent, a->parent) == 0)
+                break;
+        if (j == i && !c->sub[0])
+            fprintf(fp, "SUBPANEL %s\n{\n  CONTAINER_NAME\t%s\n"
+                        "  TITLE\t\t\t%s\n}\n\n", sub, c->name, c->label);
+        fprintf(fp, "#@+ %s\t%s\t%s\t%s\n", a->parent, a->label, a->exec,
+                a->icon);
+        fprintf(fp, "CONTROL ClankerItem%d\n{\n  TYPE\t\t\ticon\n"
+                    "  CONTAINER_NAME\t%s\n  CONTAINER_TYPE\tSUBPANEL\n"
+                    "  POSITION_HINTS\t%d\n  ICON\t\t\t%s\n  LABEL\t\t\t%s\n"
+                    "  PUSH_ACTION\t\tClankerItem%d\n"
+                    "  DROP_ACTION\t\tClankerItem%d\n}\n\n",
+                i + 1, sub, 50 + i, a->icon, a->label, i + 1, i + 1);
+        fprintf(dt, "ACTION ClankerItem%d\n{\n  LABEL\t\t%s\n"
+                    "  TYPE\t\tCOMMAND\n  WINDOW_TYPE\tNO_STDIO\n"
+                    "  EXEC_STRING\t%s %%Args%%\n}\n\n",
+                i + 1, a->label, a->exec);
+    }
+
     fchmod(fd1, 0644);
     fchmod(fd2, 0644);
     if (fclose(fp) != 0 || fclose(dt) != 0 ||
@@ -1836,12 +2006,60 @@ FpExecToCommand(const char *exec, char *out, size_t len)
     out[n] = '\0';
 }
 
+/* An application's icon as a file dtwm can show (XPM, or PNG where
+ * Motif reads it), else CDE's generic action icon. */
+static void
+FpIconFile(const char *icon, char *out, size_t len)
+{
+    static const char *sizes[] = { "32x32", "48x48", "24x24", "64x64" };
+    static const char *exts[] = { ".xpm", ".png" };
+    char  dirs[1100], path[1400], *t, *c;
+    int   i;
+    size_t n;
+
+    snprintf(out, len, "Dtactn");
+    if (!icon || !*icon || strchr(icon, '\t'))
+        return;
+    n = strlen(icon);
+    if (icon[0] == '/')
+    {
+        if (n > 4 && (strcmp(icon + n - 4, ".png") == 0 ||
+                      strcmp(icon + n - 4, ".xpm") == 0) &&
+            access(icon, R_OK) == 0)
+            snprintf(out, len, "%s", icon);
+        return;
+    }
+    c = getenv("XDG_DATA_DIRS");
+    snprintf(dirs, sizeof(dirs), "%s/.local/share:%s", style.home,
+             (c && *c) ? c : "/usr/local/share:/usr/share");
+    for (t = strtok(dirs, ":"); t; t = strtok(NULL, ":"))
+        for (i = 0; i < (int) XtNumber(sizes); i++)
+        {
+            snprintf(path, sizeof(path), "%s/icons/hicolor/%s/apps/%s.png",
+                     t, sizes[i], icon);
+            if (access(path, R_OK) == 0)
+            {
+                snprintf(out, len, "%s", path);
+                return;
+            }
+        }
+    for (i = 0; i < (int) XtNumber(exts); i++)
+    {
+        snprintf(path, sizeof(path), "/usr/share/pixmaps/%s%s", icon, exts[i]);
+        if (access(path, R_OK) == 0)
+        {
+            snprintf(out, len, "%s", path);
+            return;
+        }
+    }
+}
+
 static void
 FpAddAppsFrom(const char *dir)
 {
     DIR  *d = opendir(dir);
     struct dirent *e;
-    char  path[1200], line[1024], name[128], exec[1024], *v;
+    char  path[1200], line[1024], name[128], exec[1024], icon[256], *v;
     FILE *fp;
     size_t len;
     int   i;
@@ -1857,7 +2075,7 @@ FpAddAppsFrom(const char *dir)
         snprintf(path, sizeof(path), "%s/%s", dir, e->d_name);
         if ((fp = fopen(path, "r")) == NULL)
             continue;
-        name[0] = exec[0] = '\0';
+        name[0] = exec[0] = icon[0] = '\0';
         in = hide = app = False;
         while (fgets(line, sizeof(line), fp))
         {
@@ -1874,6 +2092,8 @@ FpAddAppsFrom(const char *dir)
                 snprintf(name, sizeof(name), "%s", v);
             else if (strcmp(line, "Exec") == 0)
                 FpExecToCommand(v, exec, sizeof(exec));
+            else if (strcmp(line, "Icon") == 0)
+                snprintf(icon, sizeof(icon), "%s", v);
             else if (strcmp(line, "Type") == 0)
                 app = (strcmp(v, "Application") == 0);
             else if ((strcmp(line, "NoDisplay") == 0 ||
@@ -1890,6 +2110,7 @@ FpAddAppsFrom(const char *dir)
             continue;
         fpAppName[fpNApps] = XtNewString(name);
         fpAppExec[fpNApps] = XtNewString(exec);
+        fpAppIcon[fpNApps] = XtNewString(icon);
         fpNApps++;
     }
     closedir(d);
@@ -1914,6 +2135,7 @@ FpReadApps(void)
     {
         XtFree(fpAppName[i]);
         XtFree(fpAppExec[i]);
+        XtFree(fpAppIcon[i]);
     }
     fpNApps = 0;
     c = getenv("XDG_DATA_HOME");
@@ -1932,11 +2154,16 @@ FpReadApps(void)
     }
 }
 
+/*
+ * One row per button ("t:<control>"), followed by the items of its
+ * drawer, indented: system items ("s:<control>", or "x:<control>" when
+ * removed) and added ones ("a:<index>").
+ */
 static void
 FpRefresh(Panel *p)
 {
-    char label[400];
-    int  i;
+    char label[400], key[80];
+    int  i, j;
 
     FpReadControls();
     FpReadChoices();
@@ -1951,12 +2178,37 @@ FpRefresh(Panel *p)
                      ch->label, MSG(66, "(changed)"));
         else
             snprintf(label, sizeof(label), "%s:  %s", c->label, c->action);
-        PanelAddItem(p, label, c->name, ch ? "c" : "s");
+        snprintf(key, sizeof(key), "t:%s", c->name);
+        PanelAddItem(p, label, key, ch ? "c" : "s");
+
+        for (j = 0; c->sub[0] && j < fpNItems; j++)
+        {
+            FpItem *it = &fpItems[j];
+            Boolean removed;
+
+            if (strcmp(it->sub, c->sub) != 0)
+                continue;
+            removed = FpDelIndex(it->name) >= 0;
+            snprintf(label, sizeof(label), "        %s%s%s", it->label,
+                     removed ? "  " : "", removed ? MSG(90, "(removed)") : "");
+            snprintf(key, sizeof(key), "%c:%s", removed ? 'x' : 's',
+                     it->name);
+            PanelAddItem(p, label, key, "d");
+        }
+        for (j = 0; j < fpNAdds; j++)
+        {
+            if (strcmp(fpAdds[j].parent, c->name) != 0)
+                continue;
+            snprintf(label, sizeof(label), "        %s  %s", fpAdds[j].label,
+                     MSG(89, "(added)"));
+            snprintf(key, sizeof(key), "a:%d", j);
+            PanelAddItem(p, label, key, "d");
+        }
     }
     PanelBusy(p, False);
     if (fpNControls)
-        PanelSetStatus(p, MSG(61,
-            "Front Panel buttons and what they open:"));
+        PanelSetStatus(p, MSG(91,
+            "Front Panel buttons, each followed by the items in its drawer:"));
     else
         PanelSetStatus(p, MSG(67, "The Front Panel definition was not found."));
 }
@@ -1975,20 +2227,28 @@ FpApply(Panel *p)
     FpRefresh(p);
 }
 
+/* The button a row belongs to: itself, or the button above it. */
+static const char *
+FpRowButton(Panel *p, int row)
+{
+    for (; row >= 0; row--)
+        if (strncmp(p->keys[row], "t:", 2) == 0)
+            return p->keys[row] + 2;
+    return NULL;
+}
+
 static void
 FpChooserDoneCB(Widget w, XtPointer client_data, XtPointer call_data)
 {
     Panel *p = fpPanel;
     XmSelectionBoxCallbackStruct *cb =
         (XmSelectionBoxCallbackStruct *) call_data;
-    int    row;
-    char  *text = NULL, *t, label[128], exec[1024], *s;
+    char  *text = NULL, *t, label[128], exec[1024], icon[256], *s;
     FpChoice *ch;
     int    i;
 
     XtUnmanageChild(fpChooser);
-    row = PanelSelected(p);
-    if (cb->reason != XmCR_OK || row < 0 ||
+    if (cb->reason != XmCR_OK || !fpChooseFor[0] ||
         !XmStringGetLtoR(cb->value, XmFONTLIST_DEFAULT_TAG, &text) || !text)
         return;
     t = FpTrim(text);
@@ -2005,6 +2265,7 @@ FpChooserDoneCB(Widget w, XtPointer client_data, XtPointer call_data)
     {
         snprintf(label, sizeof(label), "%s", fpAppName[i]);
         snprintf(exec, sizeof(exec), "%s", fpAppExec[i]);
+        FpIconFile(fpAppIcon[i], icon, sizeof(icon));
     }
     else
     {
@@ -2012,18 +2273,34 @@ FpChooserDoneCB(Widget w, XtPointer client_data, XtPointer call_data)
         s = strrchr(exec, '/');
         snprintf(label, sizeof(label), "%.*s",
                  (int) strcspn(s ? s + 1 : exec, " "), s ? s + 1 : exec);
+        FpIconFile(label, icon, sizeof(icon));
     }
     XtFree(text);
     if (!exec[0])
         return;
 
-    ch = FpChoiceFor(p->keys[row]);
+    if (fpChooseAdd)
+    {
+        FpAdd *a;
+
+        if (fpNAdds >= FP_MAX)
+            return;
+        a = &fpAdds[fpNAdds++];
+        snprintf(a->parent, sizeof(a->parent), "%s", fpChooseFor);
+        snprintf(a->label, sizeof(a->label), "%s", label);
+        snprintf(a->exec, sizeof(a->exec), "%s", exec);
+        snprintf(a->icon, sizeof(a->icon), "%s", icon);
+        FpApply(p);
+        return;
+    }
+
+    ch = FpChoiceFor(fpChooseFor);
     if (!ch)
     {
         if (fpNChoices >= FP_MAX)
             return;
         ch = &fpChoices[fpNChoices++];
-        snprintf(ch->control, sizeof(ch->control), "%s", p->keys[row]);
+        snprintf(ch->control, sizeof(ch->control), "%s", fpChooseFor);
     }
     snprintf(ch->label, sizeof(ch->label), "%s", label);
     snprintf(ch->exec, sizeof(ch->exec), "%s", exec);
@@ -2031,21 +2308,20 @@ FpChooserDoneCB(Widget w, XtPointer client_data, XtPointer call_data)
 }
 
 static void
-FpChangeCB(Widget w, XtPointer client_data, XtPointer call_data)
+FpChoose(Panel *p, const char *button, Boolean add)
 {
-    Panel   *p = (Panel *) client_data;
-    int      row = PanelSelected(p), i, *order;
+    int       i, *order;
     XmString *items, s;
+    char      title[300];
+    FpControl *c = FpControlNamed(button);
 
-    if (row < 0)
-        return;
+    snprintf(fpChooseFor, sizeof(fpChooseFor), "%s", button);
+    fpChooseAdd = add;
     FpReadApps();
     if (!fpChooser)
     {
         fpChooser = XmCreateSelectionDialog(style.shell, "frontPanelChoose",
                                             NULL, 0);
-        XtVaSetValues(XtParent(fpChooser), XmNtitle,
-                      MSG(62, "Style Manager - Choose Application"), NULL);
         s = CMPSTR(MSG(63, "Application, or a command to run:"));
         XtVaSetValues(fpChooser, XmNselectionLabelString, s, NULL);
         XmStringFree(s);
@@ -2059,6 +2335,15 @@ FpChangeCB(Widget w, XtPointer client_data, XtPointer call_data)
         XtUnmanageChild(XmSelectionBoxGetChild(fpChooser,
                                                XmDIALOG_APPLY_BUTTON));
     }
+    if (add)
+        snprintf(title, sizeof(title), "%s - %s",
+                 MSG(92, "Style Manager - Add to Drawer"),
+                 c ? c->label : button);
+    else
+        snprintf(title, sizeof(title), "%s",
+                 MSG(62, "Style Manager - Choose Application"));
+    XtVaSetValues(XtParent(fpChooser), XmNtitle, title, NULL);
+
     order = (int *) XtMalloc((fpNApps ? fpNApps : 1) * sizeof(int));
     for (i = 0; i < fpNApps; i++)
         order[i] = i;
@@ -2077,16 +2362,98 @@ FpChangeCB(Widget w, XtPointer client_data, XtPointer call_data)
     XtManageChild(fpChooser);
 }
 
+/* Change...: what a button opens (a drawer row changes its button). */
+static void
+FpChangeCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    Panel      *p = (Panel *) client_data;
+    int         row = PanelSelected(p);
+    const char *button;
+
+    if (row < 0 || !(button = FpRowButton(p, row)))
+        return;
+    if (strncmp(p->keys[row], "t:", 2) != 0)
+    {
+        PanelSetStatus(p, MSG(93,
+            "Drawer items: use Add to Drawer and Remove."));
+        return;
+    }
+    FpChoose(p, button, False);
+}
+
+/* Add to Drawer...: into the drawer of the selected button (or of the
+ * button whose drawer item is selected). */
+static void
+FpAddCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    Panel      *p = (Panel *) client_data;
+    int         row = PanelSelected(p);
+    const char *button;
+
+    if (row < 0 || !(button = FpRowButton(p, row)))
+    {
+        PanelSetStatus(p, MSG(94, "Select a Front Panel button first."));
+        return;
+    }
+    FpChoose(p, button, True);
+}
+
+/* Remove: a drawer item (an added one is forgotten, a system one is
+ * hidden until Reset). */
+static void
+FpRemoveCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    Panel  *p = (Panel *) client_data;
+    int     row = PanelSelected(p), i;
+    const char *key;
+    FpItem *it;
+
+    if (row < 0)
+        return;
+    key = p->keys[row];
+    if (key[0] == 'a')
+    {
+        i = atoi(key + 2);
+        if (i < 0 || i >= fpNAdds)
+            return;
+        memmove(&fpAdds[i], &fpAdds[i + 1], (fpNAdds - i - 1) * sizeof(FpAdd));
+        fpNAdds--;
+        FpApply(p);
+    }
+    else if (key[0] == 's' && (it = FpItemNamed(key + 2)) != NULL &&
+             fpNDels < FP_MAX)
+    {
+        snprintf(fpDels[fpNDels].name, 64, "%s", it->name);
+        snprintf(fpDels[fpNDels].sub, 64, "%s", it->sub);
+        fpNDels++;
+        FpApply(p);
+    }
+    else if (key[0] == 't')
+        PanelSetStatus(p, MSG(95,
+            "Buttons stay on the panel; Reset undoes a change."));
+}
+
+/* Reset: a changed button, or a removed system drawer item. */
 static void
 FpResetCB(Widget w, XtPointer client_data, XtPointer call_data)
 {
     Panel *p = (Panel *) client_data;
     int    row = PanelSelected(p), i;
+    const char *key;
 
     if (row < 0)
         return;
+    key = p->keys[row];
+    if (key[0] == 'x' && (i = FpDelIndex(key + 2)) >= 0)
+    {
+        fpDels[i] = fpDels[--fpNDels];
+        FpApply(p);
+        return;
+    }
+    if (key[0] != 't')
+        return;
     for (i = 0; i < fpNChoices; i++)
-        if (strcmp(fpChoices[i].control, p->keys[row]) == 0)
+        if (strcmp(fpChoices[i].control, key + 2) == 0)
         {
             fpChoices[i] = fpChoices[--fpNChoices];
             FpApply(p);
@@ -2103,6 +2470,8 @@ popup_frontPanelBB(Widget shell)
                               MSG(60, "Style Manager - Front Panel"), NULL);
         fpPanel->refresh = FpRefresh;
         PanelButton(fpPanel, MSG(64, "Change..."), FpChangeCB);
+        PanelButton(fpPanel, MSG(88, "Add to Drawer..."), FpAddCB);
+        PanelButton(fpPanel, MSG(59, "Remove"), FpRemoveCB);
         PanelButton(fpPanel, MSG(68, "Reset"), FpResetCB);
         XtAddCallback(fpPanel->list, XmNdefaultActionCallback, FpChangeCB,
                       (XtPointer) fpPanel);

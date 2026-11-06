@@ -63,6 +63,18 @@ features stay optional or detected at run time.
 
 ## Done
 
+- Front Panel system tray (a `systray` control, freedesktop System Tray
+  protocol over XEMBED) after Trash; works under dtwm and xfwm4.
+- The busy light above Exit opens a task manager (dttaskmgr: the first
+  of xfce4-taskmanager, lxtask, MATE/GNOME/KDE monitors, else htop/top).
+- Under xfwm4 the window menu (and tooltips) use the CDE-wm GTK
+  stylesheet made from the palette by dtxfwmtheme.
+- Style Manager > Front Panel: add applications to any button's drawer
+  (a drawer is created if it has none), remove or restore drawer items.
+  A changed button now keeps its drawer.
+- A panel-only dtwm quits on SIGTERM/SIGHUP without a confirmation box
+  it could not show.
+
 - Under xfwm4, Motif-style title bars and frames in the CDE palette
   (dtxfwmtheme), following palette changes.
 - Style Manager > Front Panel: choose which application each main panel

@@ -167,7 +167,18 @@ xfwm4 theme, made from the current palette and remade when you change
 it in Style Manager > Color), with the window menu button on the left
 and minimize and maximize on the right. A theme or button layout you
 choose in xfwm4's own settings is kept; these settings are shared with
-Xfce sessions.
+Xfce sessions. xfwm4's window menu is drawn in the same colors with
+Motif bevels (the "CDE-wm" GTK stylesheet; `DT_XFWM_GTK_THEME` in
+`~/.dtprofile` picks another GTK theme for it).
+
+The Front Panel has a system tray after Trash for applications' tray
+icons (`DT_NO_SYSTRAY=1` turns it off; if another tray program is
+already running, it keeps the icons). The busy light above Exit opens a
+task manager: the first one installed of xfce4-taskmanager, lxtask and
+the MATE, GNOME and KDE system monitors, else `htop` or `top` in a
+terminal; `DT_TASKMANAGER` in `~/.dtprofile` picks another command.
+Style Manager > Front Panel changes what a button opens and adds
+applications to (or removes items from) each button's drawer.
 
 `DT_WINDOW_MANAGER` can also name another EWMH window manager. It is
 started by `dtaltwm`, which restarts it if it crashes and falls back

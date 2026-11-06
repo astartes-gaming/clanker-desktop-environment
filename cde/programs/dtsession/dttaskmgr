@@ -1,0 +1,25 @@
+#!/bin/sh
+#####################################################################
+##  dttaskmgr - open a task manager (the Front Panel's busy light).
+##
+##  Uses $DT_TASKMANAGER if set, else the first process viewer found,
+##  else htop or top in a terminal.  Plain POSIX sh.
+#####################################################################
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+if [ -n "$DT_TASKMANAGER" ]; then
+    exec sh -c "$DT_TASKMANAGER"
+fi
+
+for p in xfce4-taskmanager lxtask mate-system-monitor gnome-system-monitor \
+         plasma-systemmonitor ksysguard qps; do
+    if have $p; then exec $p; fi
+done
+
+# No graphical one: a terminal running htop, or top.
+if have htop; then cmd=htop; else cmd=top; fi
+if have dtterm; then
+    exec dtterm -title "Task Manager" -name dttaskmgr -e $cmd
+fi
+exec xterm -title "Task Manager" -e $cmd

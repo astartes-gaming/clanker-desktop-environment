@@ -79,6 +79,7 @@
 #include "WmWinList.h"
 #include "WmWinState.h"
 #include "WmXSMP.h"
+#include "WmSysTray.h"
 
 #include <Xm/RowColumnP.h> /* for MS_LastManagedMenuTime */
 extern XmMenuState _XmGetMenuState(Widget);
@@ -3264,6 +3265,7 @@ void RestartWm (long startupFlags)
      */
 
     XSetInputFocus (DISPLAY, PointerRoot, RevertToPointerRoot, CurrentTime);
+    SysTrayShutdown ();		/* the new dtwm's tray takes them back */
     XSync (DISPLAY, False);
 
     CLOSE_FILES_ON_EXEC();

@@ -6,7 +6,7 @@ bin_SCRIPTS = dtsession_res
 
 # Laptop keys and lock-before-sleep (see Xsession.d/0070.dtmodern)
 dist_bin_SCRIPTS = dthwkeys dtsleeplock dtcompositor dtpower dtaltwm dtwayland \
-		   dtxfwmtheme
+		   dtxfwmtheme dttaskmgr
 
 # xfwm4 defaults for CDE sessions (Xsession.d/0070.dtmodern)
 xfconfdir = $(CDE_INSTALLATION_TOP)/config/xdg/xfce4/xfconf/xfce-perchannel-xml

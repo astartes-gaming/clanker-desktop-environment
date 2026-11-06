@@ -809,6 +809,14 @@ $quote "
 85 "Session options in ~/.dtprofile (used at the next login):"
 86 "~/.dtprofile could not be changed."
 87 "Change"
+88 "Add to Drawer..."
+89 "(added)"
+90 "(removed)"
+91 "Front Panel buttons, each followed by the items in its drawer:"
+92 "Style Manager - Add to Drawer"
+93 "Drawer items: use Add to Drawer and Remove."
+94 "Select a Front Panel button first."
+95 "Buttons stay on the panel; Reset undoes a change."
 
 $set 99
 $    DO NOT TRANSLATE THESE MESSAGES

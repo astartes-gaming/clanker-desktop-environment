@@ -454,6 +454,43 @@ else
 fi
 
 #####################################################################
+section "System tray, Task Manager, window menu"
+# A test icon docks into the Front Panel's tray.
+if x python3 -c 'import ctypes' 2>/dev/null; then
+    # (the test user cannot read this directory)
+    cp $P/trayicon.py /tmp/selftest-trayicon.py; chmod 644 /tmp/selftest-trayicon.py
+    out=`x python3 /tmp/selftest-trayicon.py 2266CC 3 2>&1`
+    rm -f /tmp/selftest-trayicon.py
+    check "the Front Panel owns the system tray" \
+          sh -c "echo '$out' | grep -q 'tray owner 0x[1-9a-f]'"
+    check "a tray icon docks into the panel" \
+          sh -c "echo '$out' | grep -q '^docked'"
+else
+    skp "system tray (no python3)"
+fi
+# The busy light, above Exit, opens a task manager.
+fp=`x xdotool search --classname FrontPanel 2>/dev/null | while read w; do
+    x xprop -id $w _NET_WM_WINDOW_TYPE | grep -q DOCK && echo $w; done | head -1`
+set -- `x xwininfo -id ${fp:-0} 2>/dev/null | awk '/Absolute upper-left [XY]/ {print $4}'`
+if [ -n "$2" ]; then
+    x xdotool mousemove $(($1 + 649)) $(($2 + 15)) click 1; sleep 6
+    tm=`x xdotool search --onlyvisible --name '^Task Manager' 2>/dev/null | head -1`
+    check "the busy light opens the Task Manager" test -n "$tm"
+    [ -n "$tm" ] && x xdotool windowclose $tm 2>/dev/null
+    [ -n "$tm" ] && x xdotool windowkill $tm 2>/dev/null
+else
+    skp "busy light (no Front Panel)"
+fi
+if [ "$WM" = xfwm4 ]; then
+    wmpid=`pgrep -u $U -x xfwm4 | head -1`
+    check "xfwm4's window menu uses the CDE-wm stylesheet" \
+          sh -c "tr '\\0' '\\n' < /proc/$wmpid/environ | grep -qx GTK_THEME=CDE-wm"
+    check "the stylesheet is in the palette's colors" \
+          grep -q '@define-color cde_bg #' \
+          /home/$U/.local/share/themes/CDE-wm/gtk-3.0/gtk.css
+fi
+
+#####################################################################
 section "Resources"
 free -m | awk 'NR==2 {printf "      memory: %s MB used of %s MB\n", $3, $2}'
 df -h / | awk 'NR==2 {printf "      disk:   %s used of %s\n", $3, $2}'

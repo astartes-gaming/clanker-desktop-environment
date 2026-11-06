@@ -230,7 +230,9 @@ void SetupWmSignalHandlers (int dummy)
 
 void QuitWmSignalHandler (int dummy)
 {
-    if (wmGD.showFeedback & WM_SHOW_FB_KILL)
+    /* A panel-only dtwm is not the window manager: it cannot run its
+     * own confirmation box (its input goes unhandled), so it just quits. */
+    if (!wmGD.panelOnly && (wmGD.showFeedback & WM_SHOW_FB_KILL))
     {
 	ConfirmAction (ACTIVE_PSD, QUIT_MWM_ACTION);
 	XFlush(DISPLAY);
