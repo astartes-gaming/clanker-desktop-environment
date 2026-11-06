@@ -745,6 +745,59 @@ if test -n "$MISSING_PROGS"; then
    AC_MSG_ERROR([Please install the following REQUIRED programs: ${MISSING_PROGS}])
 fi
 
+dnl Memory-safety hardening.  Every flag is used only if this compiler
+dnl and linker accept it, so old toolchains build as before.
+dnl --disable-hardening turns it all off.  (Position-independent
+dnl executables are not forced: compilers that support them make them by
+dnl default, and forcing -pie breaks libtool's shared libraries.)
+AC_ARG_ENABLE([hardening],
+    AS_HELP_STRING([--disable-hardening],
+        [do not build with stack protection, _FORTIFY_SOURCE and RELRO]),
+    [], [enable_hardening=yes])
+if test "x$enable_hardening" = xyes; then
+    C_FLAG_CHECK([-fstack-protector-strong])
+    if test "$cc_flag_check" != yes; then
+        C_FLAG_CHECK([-fstack-protector])
+    fi
+    CXX_FLAG_CHECK([-fstack-protector-strong])
+    C_FLAG_CHECK([-fstack-clash-protection])
+    CXX_FLAG_CHECK([-fstack-clash-protection])
+    C_FLAG_CHECK([-fcf-protection])
+    CXX_FLAG_CHECK([-fcf-protection])
+
+    dnl _FORTIFY_SOURCE needs optimization; skip it if the build (e.g.
+    dnl dpkg-buildflags) already defines it.
+    AC_MSG_CHECKING([whether to define _FORTIFY_SOURCE])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#if !defined(__OPTIMIZE__) || defined(_FORTIFY_SOURCE) || !defined(__GNUC__)
+#error no
+#endif
+]])], [CPP_COMPILER_FLAGS="${CPP_COMPILER_FLAGS} -D_FORTIFY_SOURCE=2"
+        AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no])])
+
+    for cde_ldflag in "-Wl,-z,relro" "-Wl,-z,now"; do
+        AC_MSG_CHECKING([if the linker accepts $cde_ldflag])
+        cde_saved_ldflags="$LDFLAGS"
+        LDFLAGS="$LDFLAGS $cde_ldflag"
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([])],
+            [AC_MSG_RESULT([yes])],
+            [AC_MSG_RESULT([no]); LDFLAGS="$cde_saved_ldflags"])
+    done
+fi
+
+dnl Optional memory allocator for every CDE program, e.g.
+dnl --with-malloc=mimalloc, hardened_malloc or jemalloc.  The library
+dnl replaces malloc() when linked in.  Default: the system allocator.
+AC_ARG_WITH([malloc],
+    AS_HELP_STRING([--with-malloc=LIB],
+        [link every program with allocator libLIB (mimalloc, hardened_malloc, jemalloc...)]),
+    [], [with_malloc=no])
+if test "x$with_malloc" != xno && test "x$with_malloc" != x; then
+    AC_CHECK_LIB([$with_malloc], [malloc],
+        [EXTRA_LIBS="-l$with_malloc ${EXTRA_LIBS}"],
+        [AC_MSG_ERROR([--with-malloc: lib$with_malloc not found])])
+fi
+
 dnl set CPPFLAGS, CFLAGS, and CXXFLAGS.
 dnl The Autoconf manual says that these are user variables and
 dnl shouldn't be modified.  It suggests that you create a special
