@@ -569,4 +569,11 @@ StartFirst()
 
 $dtdbcacherm		# remove the actions/datatypes cachefile
 
+XCOMM End the systemd --user graphical session started by
+XCOMM Xsession.d/0070.dtmodern, so its services stop with the desktop.
+if [ -n "$XDG_RUNTIME_DIR" ] &&
+   [ -f "$XDG_RUNTIME_DIR/systemd/user/cde-session.target" ]; then
+  systemctl --user stop cde-session.target >/dev/null 2>&1
+fi
+
 XCOMM ####################         eof      #################################

@@ -191,6 +191,7 @@ $ Style Manager buttons for the Network, Bluetooth and Updates panels
 61 Network
 62 Bluetooth
 63 Updates
+64 Autostart
 
 $set 5
 $ _DtMessage set 5 is for the Font dialog
@@ -768,6 +769,16 @@ $quote "
 45 "Press Update Now to update this system in a terminal."
 46 "System Update"
 47 "Update Now..."
+50 "Style Manager - Autostart"
+51 "Applications started when you log in ([x] = on):"
+52 "Turn On/Off"
+53 "Style Manager - Add Application"
+54 "Command to run when you log in:"
+55 "Add..."
+56 "   (other desktops only)"
+57 "The autostart entry could not be changed."
+58 "This entry comes with the system: turn it\noff instead of removing it."
+59 "Remove"
 
 $set 99
 $    DO NOT TRANSLATE THESE MESSAGES

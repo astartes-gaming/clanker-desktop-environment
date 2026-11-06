@@ -59,6 +59,11 @@ $ *--------------------------------------------------------------------------*
      no-label				f.separator\n\
     "Restart Workspace Manager..."	f.restart\n\
      no-label				f.separator\n\
+    "Lock Screen"			f.exec "dtpower lock"\n\
+    "Suspend"				f.exec "dtpower suspend"\n\
+    "Restart..."			f.exec "dtpower reboot"\n\
+    "Shut Down..."			f.exec "dtpower poweroff"\n\
+     no-label				f.separator\n\
     "Log out..."			f.action ExitSession
 $ *
 $ * #DtPanelMenu#

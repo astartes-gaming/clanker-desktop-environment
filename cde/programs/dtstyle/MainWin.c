@@ -564,6 +564,12 @@ ProcessComponentList(
 	  dtIcon = _DtGetIconFileName(style.screen, BLUETOOTH_ICON, NULL, NULL, 0);
           helpTag = HELP_MAIN_WINDOW;
       }
+      else if (strcmp(string, AUTOSTART) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 64, "Autostart"));
+	  dtIcon = _DtGetIconFileName(style.screen, AUTOSTART_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
       else if (strcmp(string, UPDATES) == 0)
       {
           cmp_string = CMPSTR(GETMESSAGE(4, 63, "Updates"));
@@ -747,6 +753,9 @@ activateCB(
 
   else if (strcmp(cd, UPDATES) == 0)
     popup_updatesBB(style.shell);
+
+  else if (strcmp(cd, AUTOSTART) == 0)
+    popup_autostartBB(style.shell);
 
 }
 

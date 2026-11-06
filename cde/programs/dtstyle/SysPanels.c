@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dirent.h>
 
 #include <Xm/Xm.h>
 #include <Xm/Form.h>
@@ -1169,4 +1170,359 @@ popup_updatesBB(Widget shell)
     else
         XtManageChild(upd->dialog);
     XMapRaised(style.display, XtWindow(XtParent(upd->dialog)));
+}
+
+/* ------------------------------------------------------------------ */
+/* Autostart (XDG autostart entries, like other session managers)     */
+/* ------------------------------------------------------------------ */
+
+static Panel *aut = NULL;
+static Widget autPrompt = NULL;
+
+/* $XDG_CONFIG_HOME/autostart, else ~/.config/autostart */
+static void
+AutUserDir(char *buf, size_t len)
+{
+    char *c = getenv("XDG_CONFIG_HOME");
+
+    if (c && *c && strlen(c) + 12 < len)
+        sprintf(buf, "%s/autostart", c);
+    else
+        sprintf(buf, "%.*s/.config/autostart", (int) len - 20, style.home);
+}
+
+typedef struct {
+    char name[200];
+    Boolean hidden, enabledKey, forCDE;
+} AutInfo;
+
+/* Is CDE in a "A;B;C" list? */
+static Boolean
+AutListHasCDE(const char *list)
+{
+    char buf[512], *t;
+
+    sprintf(buf, "%.500s", list);
+    for (t = strtok(buf, ";"); t; t = strtok(NULL, ";"))
+        if (strcmp(t, "CDE") == 0)
+            return True;
+    return False;
+}
+
+static Boolean
+AutRead(const char *path, AutInfo *ai)
+{
+    FILE *fp = fopen(path, "r");
+    char  line[1024], *v;
+    Boolean inEntry = False;
+
+    memset(ai, 0, sizeof(*ai));
+    ai->enabledKey = True;
+    ai->forCDE = True;
+    if (!fp)
+        return False;
+    while (fgets(line, sizeof(line), fp))
+    {
+        line[strcspn(line, "\r\n")] = '\0';
+        if (line[0] == '[')
+        {
+            inEntry = (strcmp(line, "[Desktop Entry]") == 0);
+            continue;
+        }
+        if (!inEntry || !(v = strchr(line, '=')))
+            continue;
+        *v++ = '\0';
+        if (strcmp(line, "Name") == 0)
+            sprintf(ai->name, "%.190s", v);
+        else if (strcmp(line, "Hidden") == 0)
+            ai->hidden = (strcmp(v, "true") == 0);
+        else if (strcmp(line, "X-GNOME-Autostart-enabled") == 0)
+            ai->enabledKey = (strcmp(v, "false") != 0);
+        else if (strcmp(line, "OnlyShowIn") == 0)
+            ai->forCDE = ai->forCDE && AutListHasCDE(v);
+        else if (strcmp(line, "NotShowIn") == 0)
+            ai->forCDE = ai->forCDE && !AutListHasCDE(v);
+    }
+    fclose(fp);
+    return True;
+}
+
+/* Copy 'from' (or nothing) to 'to', with Hidden= set to 'hidden';
+ * written to a temporary file and renamed. */
+static Boolean
+AutWrite(const char *from, const char *to, Boolean hidden)
+{
+    char  tmp[1100], line[1024];
+    FILE *in = from ? fopen(from, "r") : NULL, *out;
+    int   fd;
+    Boolean inEntry = False, done = False;
+
+    sprintf(tmp, "%.1080s.XXXXXX", to);
+    if ((fd = mkstemp(tmp)) < 0 || (out = fdopen(fd, "w")) == NULL)
+    {
+        if (fd >= 0) close(fd);
+        if (in) fclose(in);
+        return False;
+    }
+    while (in && fgets(line, sizeof(line), in))
+    {
+        if (line[0] == '[')
+        {
+            if (inEntry && !done)
+            {
+                fprintf(out, "Hidden=%s\n", hidden ? "true" : "false");
+                done = True;
+            }
+            inEntry = (strncmp(line, "[Desktop Entry]", 15) == 0);
+        }
+        else if (inEntry && strncmp(line, "Hidden=", 7) == 0)
+            continue;
+        fputs(line, out);
+    }
+    if (!done)
+        fprintf(out, "Hidden=%s\n", hidden ? "true" : "false");
+    if (in)
+        fclose(in);
+    fchmod(fd, 0644);
+    if (fclose(out) != 0 || rename(tmp, to) != 0)
+    {
+        unlink(tmp);
+        return False;
+    }
+    return True;
+}
+
+/* keys[]: file name; extra[]: "u" user-only, "s" system-only,
+ * "o" user override of a system entry. */
+static void
+AutAddDir(Panel *p, const char *dir, const char *kind)
+{
+    DIR *d = opendir(dir);
+    struct dirent *e;
+    char path[1200], label[400];
+    AutInfo ai;
+    int i;
+    size_t len;
+
+    if (!d)
+        return;
+    while ((e = readdir(d)) != NULL)
+    {
+        len = strlen(e->d_name);
+        if (len < 9 || strcmp(e->d_name + len - 8, ".desktop") != 0)
+            continue;
+        for (i = 0; i < p->nItems; i++)
+            if (strcmp(p->keys[i], e->d_name) == 0)
+                break;
+        if (i < p->nItems)
+        {
+            if (strcmp(kind, "s") == 0 && strcmp(p->extra[i], "u") == 0)
+            {
+                XtFree(p->extra[i]);
+                p->extra[i] = XtNewString("o");
+            }
+            continue;		/* the user's copy wins */
+        }
+        sprintf(path, "%.1000s/%.190s", dir, e->d_name);
+        if (!AutRead(path, &ai))
+            continue;
+        sprintf(label, "[%s] %.190s%s",
+                (!ai.hidden && ai.enabledKey) ? "x" : " ",
+                ai.name[0] ? ai.name : e->d_name,
+                ai.forCDE ? "" : MSG(56, "   (other desktops only)"));
+        PanelAddItem(p, label, e->d_name, kind);
+    }
+    closedir(d);
+}
+
+static void
+AutRefresh(Panel *p)
+{
+    char dir[1100], dirs[1100], *t;
+    char *c = getenv("XDG_CONFIG_DIRS");
+
+    PanelClearItems(p);
+    AutUserDir(dir, sizeof(dir));
+    AutAddDir(p, dir, "u");
+    sprintf(dirs, "%.1000s", (c && *c) ? c : "/etc/xdg");
+    for (t = strtok(dirs, ":"); t; t = strtok(NULL, ":"))
+    {
+        sprintf(dir, "%.1000s/autostart", t);
+        AutAddDir(p, dir, "s");
+    }
+    PanelBusy(p, False);
+    PanelSetStatus(p, MSG(51,
+        "Applications started when you log in ([x] = on):"));
+}
+
+/* Path of entry 'row': the user's copy if there is one. */
+static Boolean
+AutFindSystem(const char *file, char *path, size_t len)
+{
+    char dirs[1100], *t, *c = getenv("XDG_CONFIG_DIRS");
+
+    sprintf(dirs, "%.1000s", (c && *c) ? c : "/etc/xdg");
+    for (t = strtok(dirs, ":"); t; t = strtok(NULL, ":"))
+    {
+        sprintf(path, "%.900s/autostart/%.190s", t, file);
+        if (access(path, R_OK) == 0)
+            return True;
+    }
+    return False;
+}
+
+static void
+AutToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    Panel  *p = (Panel *) client_data;
+    int     row = PanelSelected(p);
+    char    dir[1100], user[1300], sys[1300];
+    AutInfo ai;
+    Boolean ok;
+
+    if (row < 0)
+        return;
+    AutUserDir(dir, sizeof(dir));
+    sprintf(user, "%.1080s/%.190s", dir, p->keys[row]);
+    if (strcmp(p->extra[row], "s") == 0)
+    {
+        /* disable a system entry: an override in the user's directory */
+        if (!AutFindSystem(p->keys[row], sys, sizeof(sys)))
+            return;
+        (void) mkdir(dir, 0755);
+        ok = AutWrite(sys, user, True);
+    }
+    else
+    {
+        AutRead(user, &ai);
+        ok = AutWrite(user, user, !ai.hidden);
+    }
+    if (!ok)
+        ErrDialog(MSG(57, "The autostart entry could not be changed."),
+                  style.shell);
+    AutRefresh(p);
+}
+
+static void
+AutRemoveCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    Panel *p = (Panel *) client_data;
+    int    row = PanelSelected(p);
+    char   dir[1100], user[1300];
+
+    if (row < 0)
+        return;
+    if (strcmp(p->extra[row], "u") != 0)
+    {
+        ErrDialog(MSG(58, "This entry comes with the system: turn it\n"
+                          "off instead of removing it."), style.shell);
+        return;
+    }
+    AutUserDir(dir, sizeof(dir));
+    sprintf(user, "%.1080s/%.190s", dir, p->keys[row]);
+    unlink(user);
+    AutRefresh(p);
+}
+
+static void
+AutPromptDoneCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    Panel *p = (Panel *) client_data;
+    XmSelectionBoxCallbackStruct *cb =
+        (XmSelectionBoxCallbackStruct *) call_data;
+    char *cmd = NULL, dir[1100], file[1300], name[64], tmp[1310], *s;
+    FILE *fp;
+    int   fd, i, n;
+
+    XtUnmanageChild(autPrompt);
+    if (cb->reason != XmCR_OK ||
+        !XmStringGetLtoR(cb->value, XmFONTLIST_DEFAULT_TAG, &cmd) ||
+        !cmd || !*cmd || strchr(cmd, '\n'))
+    {
+        XtFree(cmd);
+        return;
+    }
+    /* file name from the program name: letters, digits, "-_." */
+    s = cmd + strspn(cmd, " \t");
+    for (n = 0; *s && *s != ' ' && n < 40; s++)
+    {
+        if (*s == '/')
+            n = 0;
+        else if ((*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z') ||
+                 (*s >= '0' && *s <= '9') || *s == '-' || *s == '_')
+            name[n++] = *s;
+    }
+    name[n] = '\0';
+    if (!n)
+        strcpy(name, "command");
+
+    AutUserDir(dir, sizeof(dir));
+    sprintf(file, "%.1080s", dir);
+    (void) mkdir(file, 0755);
+    for (i = 0; i < 100; i++)
+    {
+        if (i)
+            sprintf(file, "%.1080s/%s-%d.desktop", dir, name, i);
+        else
+            sprintf(file, "%.1080s/%s.desktop", dir, name);
+        if (access(file, F_OK) != 0)
+            break;
+    }
+    sprintf(tmp, "%s.XXXXXX", file);
+    if ((fd = mkstemp(tmp)) >= 0 && (fp = fdopen(fd, "w")) != NULL)
+    {
+        fprintf(fp, "[Desktop Entry]\nType=Application\nName=%s\n"
+                    "Exec=%s\nX-CDE-Added=true\n", name, cmd);
+        fchmod(fd, 0644);
+        if (fclose(fp) != 0 || rename(tmp, file) != 0)
+            unlink(tmp);
+    }
+    else if (fd >= 0)
+        close(fd);
+    XtFree(cmd);
+    AutRefresh(p);
+}
+
+static void
+AutAddCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    XmString s;
+
+    if (!autPrompt)
+    {
+        autPrompt = XmCreatePromptDialog(style.shell, "autostartAdd",
+                                         NULL, 0);
+        XtVaSetValues(XtParent(autPrompt), XmNtitle,
+                      MSG(53, "Style Manager - Add Application"), NULL);
+        s = CMPSTR(MSG(54, "Command to run when you log in:"));
+        XtVaSetValues(autPrompt, XmNselectionLabelString, s, NULL);
+        XmStringFree(s);
+        XtAddCallback(autPrompt, XmNokCallback, AutPromptDoneCB, client_data);
+        XtAddCallback(autPrompt, XmNcancelCallback, AutPromptDoneCB,
+                      client_data);
+        XtUnmanageChild(XmSelectionBoxGetChild(autPrompt,
+                                               XmDIALOG_HELP_BUTTON));
+    }
+    XtManageChild(autPrompt);
+}
+
+void
+popup_autostartBB(Widget shell)
+{
+    if (!aut)
+    {
+        aut = PanelCreate(shell, "autostartDialog",
+                          MSG(50, "Style Manager - Autostart"), NULL);
+        aut->refresh = AutRefresh;
+        PanelButton(aut, MSG(52, "Turn On/Off"), AutToggleCB);
+        PanelButton(aut, MSG(55, "Add..."), AutAddCB);
+        PanelButton(aut, MSG(59, "Remove"), AutRemoveCB);
+        XtAddCallback(aut->list, XmNdefaultActionCallback, AutToggleCB,
+                      (XtPointer) aut);
+    }
+    if (XtIsManaged(aut->dialog))
+        AutRefresh(aut);
+    else
+        XtManageChild(aut->dialog);
+    XMapRaised(style.display, XtWindow(XtParent(aut->dialog)));
 }
