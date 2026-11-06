@@ -167,6 +167,20 @@ started by `dtaltwm`, which restarts it if it crashes and falls back
 to dtwm if it is missing or keeps failing. Window snapping and the
 optional picom compositor are dtwm features; xfwm4 has its own.
 
+### Wayland
+
+On Linux, CDE can also run on Wayland the way Xfce 4.20 first did: as
+an X11 desktop in a rootful Xwayland inside a small Wayland compositor
+(cage, or labwc). Install `cage` (or `labwc`) and `xwayland`, then
+choose **CDE (Xwayland)** in a Wayland display manager, or run
+`/usr/dt/bin/dtwayland` from a text console. For source builds, copy
+the session entry:
+
+    sudo cp cde/contrib/desktopentry/cde-xwayland.desktop /usr/share/wayland-sessions/
+
+The X display is private to the session (its own cookie, no TCP).
+Inside an existing Wayland session `dtwayland` opens CDE in a window.
+
 ## Test it
 
 `tools/vm/` builds a small Debian VM without root and runs an end-to-end

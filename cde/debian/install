@@ -1,1 +1,2 @@
 contrib/desktopentry/cde.desktop /usr/share/xsessions/
+contrib/desktopentry/cde-xwayland.desktop /usr/share/wayland-sessions/

@@ -1242,6 +1242,7 @@ include/Dt/Dt.h
 lib/tt/bin/ttauth/ttauth.man
 
 contrib/desktopentry/cde.desktop
+contrib/desktopentry/cde-xwayland.desktop
 contrib/rc/systemd/dtlogin.service
 contrib/rc/linux/dtlogin
 contrib/rc/freebsd/dtlogin

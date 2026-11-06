@@ -1,0 +1,113 @@
+#!/bin/sh
+#####################################################################
+##  dtwayland - run the CDE session on Wayland.
+##
+##  Usage: dtwayland
+##
+##  Like Xfce 4.20's first Wayland session, CDE stays an X11 desktop:
+##  it runs in a rootful, full-screen Xwayland inside a small Wayland
+##  compositor.  Display managers list it as "CDE (Xwayland)"
+##  (cde-xwayland.desktop in /usr/share/wayland-sessions); it can
+##  also be started from a text console.
+##
+##  The compositor is cage, else labwc (DT_WAYLAND_COMPOSITOR names
+##  another; it must run its arguments as the session command).  When
+##  started inside a Wayland session already ($WAYLAND_DISPLAY set),
+##  Xwayland opens there as a window instead.
+##
+##  The X display is private: a fresh xauth cookie, no TCP.
+##
+##  Linux only (Wayland).  Bourne shell, no $(...).
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+BIN=`dirname "$0"`
+case $BIN in /*) ;; *) BIN=`cd "$BIN" && pwd` ;; esac
+
+have() { type "$1" >/dev/null 2>&1; }
+die() { echo "dtwayland: $*" >&2; exit 1; }
+
+# Inside the compositor: start Xwayland and the CDE session in it.
+inside() {
+    have Xwayland || die "Xwayland is not installed"
+    have xauth || die "xauth is not installed"
+
+    n=1
+    while [ -e /tmp/.X11-unix/X$n ] || [ -e /tmp/.X$n-lock ]; do
+        n=`expr $n + 1`
+    done
+    DISPLAY=:$n
+
+    dir=${XDG_RUNTIME_DIR:-$HOME}
+    XAUTHORITY=$dir/dtwayland-Xauthority.$n
+    umask 077
+    rm -f "$XAUTHORITY"
+    : > "$XAUTHORITY"
+    if have mcookie; then
+        cookie=`mcookie`
+    else
+        cookie=`od -An -N16 -tx1 /dev/urandom | tr -d ' \n'`
+    fi
+    [ -n "$cookie" ] || die "cannot make an X authorization cookie"
+    xauth -q -f "$XAUTHORITY" add "$DISPLAY" . "$cookie" || die "xauth failed"
+    umask 022
+
+    # Rootful Xwayland follows the size of its window.  A kiosk
+    # compositor (cage) makes that window fill the screen; anywhere
+    # else it is a normal, decorated, resizable window.  (-fullscreen
+    # would keep a 640x480 screen and scale it.)
+    if [ "$DTWAYLAND_KIOSK" = 1 ]; then
+        look=
+    else
+        look=-decorate
+    fi
+    unset DTWAYLAND_KIOSK
+    Xwayland $DISPLAY $look -auth "$XAUTHORITY" -nolisten tcp -noreset &
+    xpid=$!
+    i=0
+    while [ ! -e /tmp/.X11-unix/X$n ]; do
+        i=`expr $i + 1`
+        [ $i -gt 100 ] && { kill $xpid 2>/dev/null; die "Xwayland did not start"; }
+        kill -0 $xpid 2>/dev/null || die "Xwayland exited"
+        sleep 0.1 2>/dev/null || sleep 1
+    done
+
+    # Applications belong in the CDE desktop, not beside it on the
+    # compositor.
+    unset WAYLAND_DISPLAY WAYLAND_SOCKET
+    XDG_SESSION_TYPE=x11
+    GDK_BACKEND=x11
+    QT_QPA_PLATFORM=xcb
+    SDL_VIDEODRIVER=x11
+    export DISPLAY XAUTHORITY XDG_SESSION_TYPE GDK_BACKEND QT_QPA_PLATFORM \
+        SDL_VIDEODRIVER
+
+    "$BIN/Xsession"
+    status=$?
+    kill $xpid 2>/dev/null
+    rm -f "$XAUTHORITY"
+    exit $status
+}
+
+[ "$1" = --inside ] && inside
+
+# Already in a Wayland session: just open Xwayland there.
+[ -n "$WAYLAND_DISPLAY" ] && exec "$0" --inside
+
+# Software rendering where there is no GPU render node (virtual
+# machines); wlroots compositors otherwise fail to start.
+if ! ls /dev/dri/renderD* >/dev/null 2>&1; then
+    : ${WLR_RENDERER:=pixman}
+    export WLR_RENDERER
+fi
+
+for c in $DT_WAYLAND_COMPOSITOR cage labwc; do
+    have "$c" || continue
+    case `basename "$c"` in
+        cage)  DTWAYLAND_KIOSK=1; export DTWAYLAND_KIOSK
+               exec "$c" -s -- "$0" --inside ;;     # -s: allow VT switching
+        labwc) exec "$c" -s "$0 --inside" ;;
+        *)     exec "$c" "$0" --inside ;;
+    esac
+done
+die "no Wayland compositor found (install cage or labwc)"
