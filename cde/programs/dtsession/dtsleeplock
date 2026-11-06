@@ -22,6 +22,13 @@
 have() { type "$1" >/dev/null 2>&1; }
 
 have dbus-monitor && have dbus-send && have xprop && have dtaction || exit 0
+
+# Xsession.d runs us before it sets the CDE search paths; without them
+# dtaction looks for LockDisplay only under appconfig/types/$LANG (no
+# such directory for C.UTF-8, the default on a text-console login).
+if [ -z "$DTDATABASESEARCHPATH" ] && have dtsearchpath; then
+    eval "`dtsearchpath -ksh 2>/dev/null`"
+fi
 [ -n "$DISPLAY" ] && [ -d "${XDG_RUNTIME_DIR:-/nonexistent}" ] || exit 0
 
 LOGIND=org.freedesktop.login1
