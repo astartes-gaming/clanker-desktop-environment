@@ -39,6 +39,7 @@
  */
 
 #include "WmGlobal.h"
+#include "WmPanelOnly.h"
 /*
  * include extern functions
  */
@@ -135,7 +136,26 @@ void InitEventHandling (void)
     {
 	pSD = &(wmGD.Screens[scr]);
 
-        if (pSD->managed) 
+        if (pSD->managed && wmGD.panelOnly)
+        {
+	    /*
+	     * Another window manager has the root window: follow its
+	     * current desktop, and post the Workspace menu on clicks on
+	     * the desktop if it does not want them itself.  Of the key
+	     * bindings only those that run commands are grabbed.
+	     */
+	    XSync (DISPLAY, False);
+	    wmGD.errorFlag = False;
+	    XSelectInput (DISPLAY, pSD->rootWindow, PropertyChangeMask |
+			  ButtonPressMask | ButtonReleaseMask);
+	    XSync (DISPLAY, False);
+	    if (wmGD.errorFlag)
+		XSelectInput (DISPLAY, pSD->rootWindow, PropertyChangeMask);
+	    if (pSD->keySpecs)		/* only commands, see SetupKeyBindings */
+		SetupKeyBindings (pSD->keySpecs, pSD->rootWindow,
+				  GrabModeSync, F_CONTEXT_ALL);
+	}
+        else if (pSD->managed) 
         {
 	    setAttributes.event_mask = base_mask;
 
@@ -476,6 +496,17 @@ int SetupKeyBindings (KeySpec *keySpecs, Window grabWindow, int keyboardMode, lo
     keySpec = keySpecs;
     while (keySpec)
     {
+	/*
+	 * Under another window manager (-panelonly) only grab keys that
+	 * run commands (laptop volume and brightness keys, launchers);
+	 * window management keys belong to that window manager.
+	 */
+	if (wmGD.panelOnly && keySpec->wmFunction != F_Exec &&
+	    keySpec->wmFunction != F_Action)
+	{
+	    keySpec = keySpec->nextKeySpec;
+	    continue;
+	}
 #ifdef OLD_CODE
 	if (((keySpec->context == F_CONTEXT_ICON) && iconContext) ||
 	    ((keySpec->context != F_CONTEXT_ICON) && !iconContext))
@@ -957,6 +988,13 @@ Boolean WmDispatchWsEvent (XEvent *event)
 
 	case FocusOut:
 	{
+	    break;
+	}
+
+	case PropertyNotify:
+	{
+	    if (wmGD.panelOnly)
+		(void) PanelOnlyRootProperty ((XPropertyEvent *)event);
 	    break;
 	}
 

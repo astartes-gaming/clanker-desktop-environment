@@ -23,7 +23,7 @@ endif
 
 dtwm_SOURCES = WmCDInfo.c      WmCDecor.c      WmCEvent.c \
                WmCPlace.c      WmColormap.c    WmError.c \
-               WmEvent.c       WmEwmh.c        WmFeedback.c \
+               WmEvent.c       WmEwmh.c WmPanelOnly.c        WmFeedback.c \
                WmFunction.c    WmGraphics.c    WmIDecor.c \
                WmIPlace.c      WmIconBox.c     WmImage.c \
                WmInitWs.c      WmKeyFocus.c    WmMain.c \

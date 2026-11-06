@@ -191,6 +191,7 @@ WmHeadInfo_t *GetHeadInfoById(int id) {
 #include "WmBackdrop.h"
 #include "WmFunction.h"
 #include "WmSnap.h"
+#include "WmPanelOnly.h"
 
 static int randrEventBase = -1;
 
@@ -295,6 +296,8 @@ Boolean HandleScreenChangeEvent(XEvent *event)
 
     if (pSD)
         ScreenChanged(pSD, oldW, oldH, time);
+    if (pSD && wmGD.panelOnly)
+        PanelOnlyScreenChanged(pSD);
     return True;
 #else
     return False;

@@ -2075,6 +2075,7 @@ typedef struct _WmGlobalData
     int		quitTimeout;			/* resource */
     Boolean     raiseKeyFocus;                  /* resource */
     Boolean     multiScreen;                  	/* resource */
+    Boolean     panelOnly;	/* -panelonly: another window manager runs */
     String	screenList;			/* resource */
     int		showFeedback;			/* resource */
     Boolean	refreshByClearing;		/* resource */
