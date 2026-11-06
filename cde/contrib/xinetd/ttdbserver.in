@@ -9,5 +9,8 @@ service ttdbserver
     wait	= yes
     user	= root
     server	= @CDE_BINDIR@/rpc.ttdbserver
-    only_from 	= 127.0.0.1/0
+    # Local clients only.  (This used to read "127.0.0.1/0", and a /0
+    # netmask matches every address.)
+    only_from 	= 127.0.0.1
+    bind		= 127.0.0.1
 }

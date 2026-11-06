@@ -203,6 +203,8 @@ void UnixEnvironment::setUserId
 
     if (name && name[0]) {
 	struct passwd * pwent = getpwnam(name);
+	if (!pwent)
+	    return;
 	uid = pwent->pw_uid;
     }
     else if (name == 0)
@@ -241,7 +243,8 @@ void UnixEnvironment::changeOwnerGroup
     if (owner) {
 	if (owner[0]) {
 	    struct passwd * pwent = getpwnam(owner);
-	    uid = pwent->pw_uid;
+	    if (pwent)
+		uid = pwent->pw_uid;
 	}
 	else
 	    uid = getuid();
@@ -249,7 +252,8 @@ void UnixEnvironment::changeOwnerGroup
     if (group) {
 	if (group[0]) {
 	    struct group * grent = getgrnam(group);
-	    gid = grent->gr_gid;
+	    if (grent)
+		gid = grent->gr_gid;
 	}
 	else
 	    gid = getgid();
@@ -266,45 +270,40 @@ void UnixEnvironment::removeDirectory
 	const CString & dirspec
 	)
 {
-#ifdef sun
-    removeFiles(dirspec, ".~*");
-    removeFiles(dirspec, "*");
-#else
-    removeFiles(dirspec, "[.]~*");
-    removeFiles(dirspec, "[.]*");
-#endif
+    removeFiles(dirspec, ".");		/* every entry */
     if (rmdir (dirspec.data()) == -1) {
 	CString errorStr("removeDirectory: " + dirspec + "| ");
 	perror(errorStr.data());
     }
 }
 
+/*
+ * Remove the entries of dirspec whose names match the regular
+ * expression filespec.  (The Solaris version used to build an "rm -f"
+ * command line with system(): with a user-controlled directory name in
+ * a setuid program that was a root shell injection.)
+ */
 void UnixEnvironment::removeFiles 
 	(
 	const CString & dirspec,
 	const CString & filespec
 	)
 {
-#if defined(sun)
-char buffer[100];
-    sprintf(buffer,"rm -f %s/%s", dirspec.data(),filespec.data());
-    system(buffer);
-#else
+    regex_t re;
+
+    if (regcomp (&re, filespec.data(), REG_NOSUB) != 0)
+	return;
 
     DirectoryIterator dir(dirspec);
     struct dirent * direntry;
-    while (direntry = dir()) {
-        /*# ifdef should_be_sun_but_this_dont_work*/
-	regex_t re;
-	regcomp (&re, filespec.data(), 0);
-	if (regexec (&re, direntry->d_name, 0, NULL, 0) == 0) {
-	    if (strcmp(direntry->d_name,".") == 0 ||
-		strcmp(direntry->d_name,"..") == 0)
-		continue;
+    while ((direntry = dir()) != NULL) {
+	if (strcmp(direntry->d_name,".") == 0 ||
+	    strcmp(direntry->d_name,"..") == 0)
+	    continue;
+	if (regexec (&re, direntry->d_name, 0, NULL, 0) == 0)
 	    removeFile(dirspec + "/" + direntry->d_name);
-	}
     }
-#endif
+    regfree (&re);
 }
 
 void UnixEnvironment::removeFile 

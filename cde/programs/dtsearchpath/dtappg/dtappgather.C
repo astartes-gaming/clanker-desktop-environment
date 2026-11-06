@@ -75,9 +75,51 @@
 #include "dtappgather.h"
 #include "DirIterator.h"
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <iostream>
 
 Options * options;
+
+/*
+ * The per-session directory name comes from $DTUSERSESSION, which the
+ * user controls.  Accept only a plain name: letters, digits, ".", "_",
+ * "-" and ":", and never "." or "..".
+ */
+static int SafeSessionName(const char * name)
+{
+    const char * p;
+
+    if (!name || !*name || strlen(name) > 200 ||
+        strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
+        return 0;
+    for (p = name; *p; p++)
+        if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') ||
+              (*p >= '0' && *p <= '9') ||
+              *p == '.' || *p == '_' || *p == '-' || *p == ':'))
+            return 0;
+    return 1;
+}
+
+/*
+ * Shared directories that every user's session writes into.  Like /tmp
+ * they are world-writable with the sticky bit, so dtappgather does not
+ * need root to create a user's own subdirectory.
+ */
+static void EnsureSharedDir(const char * path, mode_t mode)
+{
+    struct stat st;
+
+    if (lstat(path, &st) != 0) {
+        if (mkdir(path, mode) == 0)
+            (void) chmod(path, mode);
+    }
+    else if (S_ISDIR(st.st_mode) && st.st_uid == 0 &&
+             (st.st_mode & 07777) != mode)
+        (void) chmod(path, mode);
+}
 
 void LegacyCleanUp
 	(
@@ -111,17 +153,10 @@ AppManagerDirectory::AppManagerDirectory
 
     CString userhostdir = user->UserHostDir();
 
-    if (userhostdir.isNull())
-	userhostdir = "generic-display-0";
-
-    // else if dir is non-NULL and there is a / in DTUSERSESSION, 
-    // dtappgather creates /var/dt/appconfig/appmanager/DTUSERSESSION.
-    // This is a possible security hole, so
-    // prevent creation of directories of the form
-    // /var/dt/appconfig/appmanager/directory1/directory2 
-    //
-
-    else if ((char *)strstr(userhostdir.data(),"/"))
+    // DTUSERSESSION names a directory under
+    // /var/dt/appconfig/appmanager: anything but a plain name ("/",
+    // "..", shell characters) would let it reach elsewhere.
+    if (userhostdir.isNull() || !SafeSessionName(userhostdir.data()))
 	userhostdir = "generic-display-0";
 
     dirname_ = CDE_LOGFILES_TOP "/appconfig/appmanager/";
@@ -132,18 +167,10 @@ AppManagerDirectory::AppManagerDirectory
 
 	user->OS()->changeOwnerGroup(dirname_,"","");
 	user->OS()->changePermissions(dirname_,0755);
-#ifdef sun
-	user->OS()->removeFiles(dirname_, ".~*");
-#else
-	user->OS()->removeFiles(dirname_, "[.]~*");
-#endif
+	user->OS()->removeFiles(dirname_, "^[.]~");
 	user->OS()->removeDeadLinks(dirname_);
 	if (!options->Retain())
-#ifdef sun
-	    user->OS()->removeFiles(dirname_,"*");
-#else
-	    user->OS()->removeFiles(dirname_,"[.]*");
-#endif
+	    user->OS()->removeFiles(dirname_, ".");
     }
     else {
 
@@ -301,6 +328,24 @@ void AppManagerDirectory::GatherAppsFromASearchElement
 
 int main (int argc, char **argv)
 {
+    /*
+     * Old installations made dtappgather setuid root.  It now needs root
+     * only to create the shared directories (sticky, world-writable), so
+     * do that and drop root for good before reading the environment or
+     * touching anything the user can influence.
+     */
+    if (geteuid() == 0 && getuid() != 0) {
+        EnsureSharedDir(CDE_LOGFILES_TOP, 0755);
+        EnsureSharedDir(CDE_LOGFILES_TOP "/appconfig", 0755);
+        EnsureSharedDir(CDE_LOGFILES_TOP "/appconfig/appmanager", 01777);
+        EnsureSharedDir(CDE_LOGFILES_TOP "/tmp", 01777);
+        if (setgid(getgid()) != 0 || setuid(getuid()) != 0 ||
+            setuid(0) == 0) {
+            std::cerr << "dtappgather: cannot drop privileges" << std::endl;
+            return 1;
+        }
+    }
+
     options = new Options(argc, argv);
 
     UnixEnvironment * os = new UnixEnvironment;
