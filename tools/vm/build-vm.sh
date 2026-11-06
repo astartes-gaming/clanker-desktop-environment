@@ -66,6 +66,9 @@ cc -O2 -o "$PAY/wsmbackdrop" "$HERE/wsmbackdrop.c" \
     -L"$CDE/lib/DtXinerama/.libs" \
     -lDtSvc -ltt -lDtXinerama -lXinerama -lXm -lXt -lX11 -ltirpc ||
     echo "warning: wsmbackdrop not built; wallpaper checks will be skipped"
+cc -O2 -o "$PAY/ssinhibit" "$HERE/ssinhibit.c" \
+    `pkg-config --cflags --libs dbus-1` ||
+    echo "warning: ssinhibit not built; inhibit checks will be skipped"
 if [ ! -f "$OUT/credentials" ]; then
     pw=$(head -c 12 /dev/urandom | base64 | tr -d '/+=' | cut -c1-12)
     rpw=$(head -c 12 /dev/urandom | base64 | tr -d '/+=' | cut -c1-12)
@@ -73,6 +76,13 @@ if [ ! -f "$OUT/credentials" ]; then
     chmod 600 "$OUT/credentials"
 fi
 sed -n 's/^password=//p' "$OUT/credentials" >"$PAY/tester-password"
+# Packages the VM cannot download itself (flaky mirror connections):
+# VM_DEBS=dir puts dir/*.deb in the payload; provision.sh installs them.
+rm -rf "$PAY/debs"
+if [ -n "${VM_DEBS:-}" ]; then
+    mkdir -p "$PAY/debs"
+    cp "$VM_DEBS"/*.deb "$PAY/debs/"
+fi
 tar -C "$PAY" -cf "$OUT/payload.tar" .
 
 if [ "${1:-}" = "--payload-only" ]; then

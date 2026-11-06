@@ -48,18 +48,29 @@ features stay optional or detected at run time.
       inside a small compositor (cage or labwc), the way Xfce 4.20
       started. Optional, Linux only, off by default.
 - [ ] Replace ToolTalk with D-Bus where both are available, keeping
-      ToolTalk for old systems.
+      ToolTalk for old systems. Stage 1 is done (see below); still to do:
+  - [ ] dtfile provides `org.freedesktop.FileManager1` (ShowFolders,
+        ShowItems), so browsers' "Show in folder" opens dtfile.
+  - [ ] DtSvc actions (`DtActionInvoke`) and dtexec over D-Bus.
+  - [ ] libtt session messages over D-Bus, with ToolTalk as the
+        fallback when no session bus is running.
 
 ## Code health
 
 - [ ] Work down the compiler warnings (about 6,090 sites with
       `-Wall -Wextra`), starting with the root and setuid programs.
-- [ ] Decide whether new code may use C99 (`stdint.h`, `//`, mixed
-      declarations), and on which compilers that would drop support.
-      Until then, new code stays C89.
+- [ ] Move touched code to C99 idioms (`stdbool.h`, `stdint.h`,
+      declarations where used) as it is worked on; no mass rewrites.
 
 ## Done
 
+- C99 is the language baseline; configure stops with a clear message
+  on a compiler without a C99 mode (GCC 3+, Clang, Oracle Studio 12+
+  and XL C 10+ all have one).
+- D-Bus stage 1: a shared D-Bus layer in DtSvc driven by the Xt main
+  loop, and dtsession provides `org.freedesktop.ScreenSaver`, so
+  browsers and video players keep the screen from locking. Optional
+  (`--without-dbus`) and skipped when no session bus is running.
 - Phase 1: temp-file and privilege fixes, undefined-behaviour fixes,
   GTK/Qt theming, logind/D-Bus/XDG session integration, window
   snapping (PR #1).

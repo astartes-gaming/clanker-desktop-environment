@@ -28,4 +28,5 @@ nobase_include_HEADERS = Dt/Editor.h \
 	Dt/Search.h \
 	Dt/Mmdb.h \
 	Dt/DtXinerama.h \
-	Dt/SvcPam.h
+	Dt/SvcPam.h \
+	Dt/SvcDbus.h

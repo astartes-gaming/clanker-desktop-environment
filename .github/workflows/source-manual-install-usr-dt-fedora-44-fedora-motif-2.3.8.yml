@@ -72,6 +72,7 @@ jobs:
             libXpm-devel \
             libXrender-devel \
             libXScrnSaver-devel \
+            dbus-devel \
             libXt-devel \
             libjpeg-turbo-devel \
             libtirpc-devel \

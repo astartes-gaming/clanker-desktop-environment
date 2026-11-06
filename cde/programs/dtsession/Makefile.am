@@ -22,7 +22,7 @@ dtsession_SOURCES = SmMain.c SmHelp.c SmGlobals.c SmCommun.c		\
 	SmError.c SmProperty.c SmProtocol.c SmSave.c SmScreen.c		\
 	SmRestore.c SmUI.c SmWindow.c SmLock.c SrvPalette.c		\
 	SrvFile_io.c SmStrDefs.c SmConMgmt.c SmXSMP.c SmAuth.c		\
-	SmWatch.c SmProp.c SmDB.c OWsync.h SmGlobals.h SmProperty.h	\
+	SmWatch.c SmProp.c SmDB.c SmDbus.c SmDbus.h OWsync.h SmGlobals.h SmProperty.h	\
 	SmScreen.h SmXSMP.h SmAuth.h Sm.h SmProp.h SmUI.h		\
 	SrvFile_io.h SmCommun.h SmHelp.h SmProtocol.h SmWatch.h Srv.h	\
 	SmConMgmt.h SmHftRing.h SmResource.h SmWindow.h SrvPalette.h	\
@@ -31,6 +31,12 @@ dtsession_SOURCES = SmMain.c SmHelp.c SmGlobals.c SmCommun.c		\
 
 
 dtsession_LDADD = $(DTCLIENTLIBS) $(XTOOLLIB) $(DTPAMSVCLIB)
+
+# org.freedesktop.ScreenSaver on the session bus (optional)
+if HAVE_DBUS
+dtsession_CFLAGS += $(DBUS_CFLAGS)
+dtsession_LDADD += $(DBUS_LIBS)
+endif
 
 if SOLARIS
 dtsession_SOURCES += OWsync.c
