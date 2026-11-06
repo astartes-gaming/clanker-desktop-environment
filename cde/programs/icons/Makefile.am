@@ -3,6 +3,9 @@ MAINTAINERCLEANFILES = Makefile.in
 icondir = $(CDE_DATA_TOP)/appconfig/icons/C
 
 dist_icon_DATA = \
+DtNetwk.pm DtNetwk.bm DtNetwk_m.bm \
+DtBlue.pm DtBlue.bm DtBlue_m.bm \
+DtUpdat.pm DtUpdat.bm DtUpdat_m.bm \
 acroread.l.pm                   Dtmanpg.t.pm \
 acroread.m.pm                   Dtmanvw.m.bm \
 acroread.t.pm                   Dtmanvw.m_m.bm \

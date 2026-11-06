@@ -23,6 +23,7 @@
 ##      DT_NO_TOUCHPAD=1        don't apply Style Manager touchpad settings
 ##      DT_NO_LOCK_ON_SLEEP=1   don't lock the screen before suspend
 ##      DT_NO_COMPOSITOR=1      don't start the compositor even if enabled
+##      DT_NO_SYSTEMD_SESSION=1 don't start graphical-session.target
 ##
 ##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
 #####################################################################
@@ -137,5 +138,29 @@ if [ -z "$DT_NO_COMPOSITOR" ] && [ -f "$HOME/.dt/compositor" ] &&
   "$_dtm_bin/dtcompositor" start >/dev/null 2>&1 &
 fi
 unset _dtm_bin
+
+#
+# 9. systemd --user: start graphical-session.target for this session, so
+#    user services that belong to a graphical session (portals,
+#    notification daemons...) start now and stop at logout (Xsession
+#    stops cde-session.target).  The unit goes in the per-login runtime
+#    directory, which systemd reads and logind removes at logout.
+#
+if [ -z "$DT_NO_SYSTEMD_SESSION" ] && [ -n "$XDG_RUNTIME_DIR" ] &&
+   _dtm_have systemctl &&
+   systemctl --user show-environment >/dev/null 2>&1; then
+  _dtm_units="$XDG_RUNTIME_DIR/systemd/user"
+  mkdir -p "$_dtm_units" 2>/dev/null
+  cat > "$_dtm_units/cde-session.target" 2>/dev/null <<'_DTM_EOF'
+[Unit]
+Description=CDE desktop session
+BindsTo=graphical-session.target
+Wants=graphical-session-pre.target
+After=graphical-session-pre.target
+_DTM_EOF
+  systemctl --user daemon-reload >/dev/null 2>&1
+  systemctl --user start cde-session.target >/dev/null 2>&1 &
+  unset _dtm_units
+fi
 
 unset -f _dtm_have 2>/dev/null

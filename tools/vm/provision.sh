@@ -31,7 +31,6 @@ apt-get -o Acquire::Retries=5 install -y -q --no-install-recommends \
 # The staged CDE tree (built on the host with make install DESTDIR=...).
 tar -xzf "$P/cde-stage.tar.gz" -C /
 chown -R root:root /usr/dt /etc/pam.d/dtlogin /etc/pam.d/dtsession 2>/dev/null || true
-chmod 4755 /usr/dt/bin/dtappgather 2>/dev/null || true
 echo /usr/dt/lib > /etc/ld.so.conf.d/cde.conf
 ldconfig
 install -d -m 0755 /var/dt /var/dt/appconfig

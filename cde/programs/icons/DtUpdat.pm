@@ -1,0 +1,55 @@
+/* XPM */
+/*********************************************************************
+*  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+**********************************************************************/
+
+static char * DtUpdat [] = {
+/* width height ncolors cpp [x_hot y_hot] */
+"48 37 8 1 0 0",
+/* colors */
+" 	s none	m none	c none",
+".	s bottomShadowColor	m black	c #636363636363",
+"#	s topShadowColor	m white	c #bdbdbdbdbdbd",
+"@	s iconGray1	m white	c #dededededede",
+"o	s iconGray2	m white	c #bdbdbdbdbdbd",
+"O	s iconGray3	m white	c #adadadadadad",
+"+	s iconGray4	m white	c #949494949494",
+"G	s iconColor4	m white	c green",
+/* pixels */
+"                                                ",
+"                                                ",
+"                                          G G   ",
+"                                           GG   ",
+"                                  GGGGGGG GGG   ",
+"                                GGGGGGGGGGGGG   ",
+"                               GGGG     GGGGG   ",
+"                              GGGG       GGGG   ",
+"                              GGG     GGGGGGG   ",
+"                             GGG           GGG  ",
+"  #############+++++#########GG#.     GGGGGGG   ",
+"  #oooooooooooo+++++oooooooooGGo.               ",
+"  #oooooooooooo+++++oooooooooGGo.               ",
+"  #oooooooooooo+++++oooooooooGGo.               ",
+"  #............+++++.........GG..               ",
+"    #@@@@@@@@@@+++++@@@@@@@@@GGG                ",
+"    #OOOOOOOOOO+++++OOOOOOOOOOGGG         G     ",
+"    #OOOOOOOOOO+++++OOOOOOOOOOGGGG       GGG    ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.GGGG     GGGG    ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO. GGGGGGGGGGG     ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.   GGGGGGG       ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #OOOOOOOOOO+++++OOOOOOOOOO.                 ",
+"    #..........+++++...........                 ",
+"                                                ",
+"                                                ",
+"                                                "};

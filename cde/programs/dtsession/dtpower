@@ -1,0 +1,97 @@
+#!/bin/sh
+#####################################################################
+##  dtpower - lock, suspend, hibernate, restart or shut down from the
+##  CDE desktop (Workspace menu).
+##
+##  Usage: dtpower lock | suspend | hibernate | reboot | poweroff
+##
+##  Restart and shut down ask for confirmation first (a Motif dialog
+##  through dtksh).  Uses systemd-logind or elogind when available,
+##  which lets the user of the active local session do this without a
+##  password; otherwise the BSD tools.  If the system refuses, a dialog
+##  says so.
+##
+##  Bourne shell only (no $(...)).
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+have() { type "$1" >/dev/null 2>&1; }
+
+DTBIN=`dirname "$0"`
+PATH="$DTBIN:$PATH"; export PATH
+
+# confirm TITLE MESSAGE BUTTON -> 0 if the user pressed BUTTON
+confirm() {
+    have dtksh || return 0
+    dtksh -c '
+        okCB()     { exit 0; }
+        cancelCB() { exit 1; }
+        XtInitialize TOP dtPower DtPower
+        XmCreateQuestionDialog DIALOG $TOP dialog \
+            dialogTitle:"$1" messageString:"$2" okLabelString:"$3" \
+            dialogStyle:DIALOG_FULL_APPLICATION_MODAL
+        XmMessageBoxGetChild HELP $DIALOG DIALOG_HELP_BUTTON
+        XtUnmanageChild $HELP
+        XtAddCallback $DIALOG okCallback okCB
+        XtAddCallback $DIALOG cancelCallback cancelCB
+        XtManageChild $DIALOG
+        XtMainLoop' dtpower "$1" "$2" "$3"
+}
+
+failed() {
+    if have dtksh; then
+        dtksh -c '
+            okCB() { exit 0; }
+            XtInitialize TOP dtPower DtPower
+            XmCreateErrorDialog DIALOG $TOP dialog \
+                dialogTitle:"Desktop" messageString:"$1"
+            XmMessageBoxGetChild CANCEL $DIALOG DIALOG_CANCEL_BUTTON
+            XmMessageBoxGetChild HELP $DIALOG DIALOG_HELP_BUTTON
+            XtUnmanageChild $CANCEL
+            XtUnmanageChild $HELP
+            XtAddCallback $DIALOG okCallback okCB
+            XtManageChild $DIALOG
+            XtMainLoop' dtpower "$1"
+    fi
+    exit 1
+}
+
+# logind ACTION, through systemctl or loginctl (elogind provides both)
+logind() {
+    if have systemctl && systemctl "$1" >/dev/null 2>&1; then return 0; fi
+    if have loginctl && loginctl "$1" >/dev/null 2>&1; then return 0; fi
+    return 1
+}
+
+case $1 in
+lock)
+    exec dtaction LockDisplay ;;
+
+suspend)
+    logind suspend && exit 0
+    if have zzz && zzz >/dev/null 2>&1; then exit 0; fi       # BSDs
+    failed "This system could not be suspended." ;;
+
+hibernate)
+    logind hibernate && exit 0
+    if have ZZZ && ZZZ >/dev/null 2>&1; then exit 0; fi       # OpenBSD
+    failed "This system could not hibernate." ;;
+
+reboot)
+    confirm "Restart" \
+        "Restart the computer?  Unsaved work in open applications will be lost." \
+        "Restart" || exit 0
+    logind reboot && exit 0
+    failed "The computer could not be restarted.  Ask your administrator, or use: shutdown -r now" ;;
+
+poweroff)
+    confirm "Shut Down" \
+        "Shut down the computer?  Unsaved work in open applications will be lost." \
+        "Shut Down" || exit 0
+    logind poweroff && exit 0
+    failed "The computer could not be shut down.  Ask your administrator, or use: shutdown -p now" ;;
+
+*)
+    echo "usage: dtpower lock | suspend | hibernate | reboot | poweroff" >&2
+    exit 2 ;;
+esac
