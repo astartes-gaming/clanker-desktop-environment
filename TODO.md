@@ -48,9 +48,8 @@ features stay optional or detected at run time.
       inside a small compositor (cage or labwc), the way Xfce 4.20
       started. Optional, Linux only, off by default.
 - [ ] Replace ToolTalk with D-Bus where both are available, keeping
-      ToolTalk for old systems. Stage 1 is done (see below); still to do:
-  - [ ] dtfile provides `org.freedesktop.FileManager1` (ShowFolders,
-        ShowItems), so browsers' "Show in folder" opens dtfile.
+      ToolTalk for old systems. Stages 1 and 2 are done (see below); still
+      to do:
   - [ ] DtSvc actions (`DtActionInvoke`) and dtexec over D-Bus.
   - [ ] libtt session messages over D-Bus, with ToolTalk as the
         fallback when no session bus is running.
@@ -71,6 +70,8 @@ features stay optional or detected at run time.
   loop, and dtsession provides `org.freedesktop.ScreenSaver`, so
   browsers and video players keep the screen from locking. Optional
   (`--without-dbus`) and skipped when no session bus is running.
+- D-Bus stage 2: dtfile provides `org.freedesktop.FileManager1`, so
+  "Show in folder" opens a File Manager view with the item selected.
 - Phase 1: temp-file and privilege fixes, undefined-behaviour fixes,
   GTK/Qt theming, logind/D-Bus/XDG session integration, window
   snapping (PR #1).
