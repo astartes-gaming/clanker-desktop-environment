@@ -14,5 +14,6 @@ extern void PanelOnlySetBackdrop(WmScreenData *pSD, Pixmap pixmap, Pixel pixel,
                                  Boolean usePixmap);
 extern void PanelOnlyScreenChanged(WmScreenData *pSD);
 extern Boolean PanelOnlyDesktopEvent(XEvent *event);
+extern void PanelOnlyMovePanel(Widget shell, XEvent *event);
 
 #endif /* _WmPanelOnly_h */

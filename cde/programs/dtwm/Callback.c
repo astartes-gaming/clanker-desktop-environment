@@ -68,6 +68,7 @@
 #include "UI.h"
 
 #include "WmGlobal.h"
+#include "WmPanelOnly.h"
 #include "WmHelp.h"
 #include "WmResNames.h"
 #include "WmResParse.h"
@@ -332,7 +333,10 @@ HandleInputCB (Widget    w,
       {
          XUngrabPointer (XtDisplay (w), motionEvent->time);
          XSync (XtDisplay (w), FALSE);
-         CallWmFunction (F_Move, NULL, panel.shell, event);
+         if (wmGD.panelOnly)
+            PanelOnlyMovePanel (panel.shell, event);
+         else
+            CallWmFunction (F_Move, NULL, panel.shell, event);
          wmGD.preMove = False;
       }
    }

@@ -51,7 +51,6 @@ features stay optional or detected at run time.
   - [ ] libtt session messages over D-Bus, with ToolTalk as the
         fallback when no session bus is running.
 
-- [ ] Under xfwm4: let the Front Panel's handles move it.
 - [ ] UTF-8 locales: Motif warns "Missing charsets in String to FontSet
       conversion" at start (cosmetic).
 
@@ -70,6 +69,9 @@ features stay optional or detected at run time.
   button opens (an installed application or a command).
 - Style Manager > Session: the ~/.dtprofile options (D-Bus, autostart,
   window manager, ...) as switches.
+- Under xfwm4 the Front Panel's handles move it (it reserves its screen
+  edge only while it sits on one).  tools/vm/selftest-wayland.sh tests
+  the Wayland session headless (cage, no login needed).
 - Help volumes show bullets, accented letters, (c) and other symbols
   again, in C and UTF-8 locales (DtHelp's own glyphs via <SPC>).
 - The whole tree builds as C99 and as C23 (GCC 15's default) with no
