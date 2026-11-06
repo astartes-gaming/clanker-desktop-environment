@@ -570,6 +570,18 @@ ProcessComponentList(
 	  dtIcon = _DtGetIconFileName(style.screen, AUTOSTART_ICON, NULL, NULL, 0);
           helpTag = HELP_MAIN_WINDOW;
       }
+      else if (strcmp(string, SESSION) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 66, "Session"));
+	  dtIcon = _DtGetIconFileName(style.screen, SESSION_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, FRONTPANEL) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 65, "Front Panel"));
+	  dtIcon = _DtGetIconFileName(style.screen, FRONTPANEL_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
       else if (strcmp(string, UPDATES) == 0)
       {
           cmp_string = CMPSTR(GETMESSAGE(4, 63, "Updates"));
@@ -756,6 +768,12 @@ activateCB(
 
   else if (strcmp(cd, AUTOSTART) == 0)
     popup_autostartBB(style.shell);
+
+  else if (strcmp(cd, FRONTPANEL) == 0)
+    popup_frontPanelBB(style.shell);
+
+  else if (strcmp(cd, SESSION) == 0)
+    popup_sessionBB(style.shell);
 
 }
 

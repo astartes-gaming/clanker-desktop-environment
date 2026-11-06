@@ -450,6 +450,12 @@ _DtWmRestart(
 	Display *display,
 	Window root) ;
 
+/* Same as _DtWmRestart, without asking the user first. */
+extern int
+_DtWmRestartNoConfirm(
+	Display *display,
+	Window root) ;
+
 /*************************************<->*************************************
  *
  *  int _DtWsmChangeBackdrop (display, root, path, pixmap, imageType)

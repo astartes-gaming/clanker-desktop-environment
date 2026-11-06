@@ -64,6 +64,10 @@ features stay optional or detected at run time.
 
 ## Done
 
+- Style Manager > Front Panel: choose which application each main panel
+  button opens (an installed application or a command).
+- Style Manager > Session: the ~/.dtprofile options (D-Bus, autostart,
+  window manager, ...) as switches.
 - Help volumes show bullets, accented letters, (c) and other symbols
   again, in C and UTF-8 locales (DtHelp's own glyphs via <SPC>).
 - The whole tree builds as C99 and as C23 (GCC 15's default) with no

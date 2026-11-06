@@ -192,6 +192,8 @@ $ Style Manager buttons for the Network, Bluetooth and Updates panels
 62 Bluetooth
 63 Updates
 64 Autostart
+65 Front Panel
+66 Session
 
 $set 5
 $ _DtMessage set 5 is for the Font dialog
@@ -779,6 +781,34 @@ $quote "
 57 "The autostart entry could not be changed."
 58 "This entry comes with the system: turn it\noff instead of removing it."
 59 "Remove"
+60 "Style Manager - Front Panel"
+61 "Front Panel buttons and what they open:"
+62 "Style Manager - Choose Application"
+63 "Application, or a command to run:"
+64 "Change..."
+65 "The Front Panel could not be changed."
+66 "(changed)"
+67 "The Front Panel definition was not found."
+68 "Reset"
+69 "Installed applications:"
+70 "Style Manager - Session"
+71 "Start a D-Bus session bus"
+72 "Run autostart applications"
+73 "Apply the touchpad settings"
+74 "Lock the screen before suspend"
+75 "Allow the compositor"
+76 "Start systemd's graphical session"
+77 "Front Panel under other window managers"
+78 "Read ~/.profile at login"
+79 "Allow ToolTalk from other computers"
+80 "Session manager over TCP (other computers)"
+81 "Window manager"
+82 "automatic (xfwm4 when installed)"
+83 "dtwm (CDE)"
+84 "xfwm4 (Xfce)"
+85 "Session options in ~/.dtprofile (used at the next login):"
+86 "~/.dtprofile could not be changed."
+87 "Change"
 
 $set 99
 $    DO NOT TRANSLATE THESE MESSAGES
