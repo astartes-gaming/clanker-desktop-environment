@@ -1,0 +1,87 @@
+#!/bin/sh
+#####################################################################
+##  dtaltwm - run another window manager in the CDE session.
+##
+##  Usage: dtaltwm WINDOW-MANAGER [ARGUMENTS...]
+##
+##  Set it as the session's window manager in $HOME/.Xdefaults:
+##
+##      Dtsession*wmStartupCommand: /usr/dt/bin/dtaltwm /usr/bin/xfwm4
+##
+##  The window manager is restarted when it crashes; some (xfwm4) can
+##  crash at login while windows come and go under them.  After five
+##  crashes in a row within 30 seconds of starting, or when the window
+##  manager is not installed, dtwm runs instead, so the session always
+##  has a window manager.  A window manager that exits normally (it was
+##  asked to quit) is not restarted.
+##
+##  The Front Panel, the backdrops and the Workspace menu still come
+##  from dtwm, run as "dtwm -panelonly" next to the window manager
+##  (set DT_ALTWM_NO_PANEL=1 in ~/.dtprofile to leave it out).  It
+##  keeps the workspaces and the window manager's desktops in step.
+##
+##  Bourne shell only (no $(...), no date +%s).
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+DTWM=${DTWM:-/usr/dt/bin/dtwm}
+QUICK=30            # a crash within this many seconds counts as quick
+MAXQUICK=5
+
+usage() {
+    echo "usage: dtaltwm WINDOW-MANAGER [ARGUMENTS...]" >&2
+    exit 2
+}
+[ $# -ge 1 ] || usage
+
+wm=$1
+case $wm in
+    /*) [ -x "$wm" ] || wm= ;;
+    *)  type "$wm" >/dev/null 2>&1 || wm= ;;
+esac
+if [ -z "$wm" ]; then
+    echo "dtaltwm: $1 is not installed; starting dtwm" >&2
+    exec $DTWM
+fi
+
+panel=
+if [ -z "$DT_ALTWM_NO_PANEL" ]; then
+    # Give the window manager a moment to take the screen, so it
+    # receives the panel's desktop setup.
+    ( sleep 2; exec $DTWM -panelonly ) &
+    panel=$!
+fi
+fulldtwm() {
+    [ -n "$panel" ] && kill $panel 2>/dev/null
+    exec $DTWM
+}
+
+quick=0
+while :; do
+    # Still running when the window manager exits => it was a quick
+    # exit.
+    sleep $QUICK &
+    timer=$!
+
+    "$@"
+    status=$?
+
+    if kill -0 $timer 2>/dev/null; then
+        kill $timer 2>/dev/null
+        quick=`expr $quick + 1`
+    else
+        quick=0
+    fi
+    wait $timer 2>/dev/null
+
+    if [ $status -eq 0 ]; then
+        [ -n "$panel" ] && kill $panel 2>/dev/null
+        exit 0
+    fi
+    if [ $quick -ge $MAXQUICK ]; then
+        echo "dtaltwm: $1 keeps failing (status $status); starting dtwm" >&2
+        fulldtwm
+    fi
+    echo "dtaltwm: $1 exited with status $status; restarting it" >&2
+    sleep 1
+done

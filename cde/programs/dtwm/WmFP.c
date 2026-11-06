@@ -38,6 +38,7 @@
 
 
 #include "WmGlobal.h"
+#include "WmPanelOnly.h"
 
 
 #include <Dt/DtP.h>
@@ -863,6 +864,12 @@ WmPanelistShow (Widget w)
    vHints.flags = DtWM_HINTS_BEHAVIORS;
    vHints.behaviors = DtWM_BEHAVIOR_PANEL;
    _DtWsmSetDtWmHints (XtDisplay(panel.shell), XtWindow (panel.shell), &vHints);
+
+   /*  Under another window manager the panel is an EWMH dock.  */
+
+   if (wmGD.panelOnly)
+      PanelOnlyDockWindow (XtWindow (panel.shell), x, y,
+                           XtWidth (panel.shell), XtHeight (panel.shell));
 
 
    /*  Set the subpanel's transientShell to update transientFor and  */

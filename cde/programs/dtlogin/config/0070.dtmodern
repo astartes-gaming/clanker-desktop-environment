@@ -24,6 +24,8 @@
 ##      DT_NO_LOCK_ON_SLEEP=1   don't lock the screen before suspend
 ##      DT_NO_COMPOSITOR=1      don't start the compositor even if enabled
 ##      DT_NO_SYSTEMD_SESSION=1 don't start graphical-session.target
+##      DT_WINDOW_MANAGER=dtwm  use dtwm even if xfwm4 is installed
+##                              (or name another window manager)
 ##
 ##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
 #####################################################################
@@ -38,6 +40,21 @@ _dtm_have() { type "$1" >/dev/null 2>&1; }
 : ${DESKTOP_SESSION:=cde}
 : ${XDG_SESSION_TYPE:=x11}
 export XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP DESKTOP_SESSION XDG_SESSION_TYPE
+
+#
+# 1b. Window manager.  xfwm4 when installed (it manages the windows;
+#     dtwm still draws the Front Panel, backdrops and Workspace menu),
+#     otherwise dtwm.  dtsession reads DT_WINDOW_MANAGER unless the
+#     wmStartupCommand resource is set.
+#
+if [ -z "$DT_WINDOW_MANAGER" ]; then
+  if _dtm_have xfwm4; then
+    DT_WINDOW_MANAGER=xfwm4
+  else
+    DT_WINDOW_MANAGER=dtwm
+  fi
+fi
+export DT_WINDOW_MANAGER
 
 #
 # 2. GTK/Qt theming written by Style Manager > Color
@@ -133,7 +150,10 @@ fi
 # 8. Compositor (GPU-accelerated, tear-free drawing), when turned on in
 #    Style Manager > Window ($HOME/.dt/compositor) and one is installed.
 #
+#    xfwm4 has its own compositor.
+#
 if [ -z "$DT_NO_COMPOSITOR" ] && [ -f "$HOME/.dt/compositor" ] &&
+   [ "$DT_WINDOW_MANAGER" = dtwm ] &&
    [ -x "$_dtm_bin/dtcompositor" ]; then
   "$_dtm_bin/dtcompositor" start >/dev/null 2>&1 &
 fi

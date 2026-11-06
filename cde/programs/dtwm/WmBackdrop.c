@@ -38,6 +38,7 @@
 #include <Dt/UserMsg.h>
 
 #include "WmGlobal.h"
+#include "WmPanelOnly.h"
 #include "WmResource.h"
 #include "WmResNames.h"
 #include "WmWrkspace.h"
@@ -126,7 +127,34 @@ ChangeBackdrop(
         WmWorkspaceData *pWS )
 {
     int iwin;
+    Boolean picture = (pWS->backdrop.window &&
+		       (pWS->backdrop.flags & BACKDROP_BITMAP) &&
+		       pWS->backdrop.imagePixmap != XmUNSPECIFIED_PIXMAP);
 
+    if (wmGD.panelOnly)
+    {
+	/*
+	 * Under another window manager draw the backdrop on the root
+	 * window: a full-screen override-redirect window would be
+	 * painted over everything by compositing window managers
+	 * (xfwm4 "unredirects" it).
+	 */
+	Window root = pWS->pSD->rootWindow;
+
+	if (picture)
+	    XSetWindowBackgroundPixmap (DISPLAY, root,
+					pWS->backdrop.imagePixmap);
+	else if (pWS->backdrop.window)
+	    XSetWindowBackground (DISPLAY, root, pWS->backdrop.background);
+	XClearWindow (DISPLAY, root);
+	PanelOnlySetBackdrop (pWS->pSD, pWS->backdrop.imagePixmap,
+			      pWS->backdrop.window ? pWS->backdrop.background :
+			      BlackPixel (DISPLAY, pWS->pSD->screen), picture);
+	pWS->pSD->lastBackdropWin = pWS->backdrop.window;
+	WallpaperSetRootProperty (pWS->pSD,
+				  picture ? pWS->backdrop.imagePixmap : None);
+	return;
+    }
 
     if (pWS->backdrop.window) 
     {
@@ -157,9 +185,7 @@ ChangeBackdrop(
     pWS->pSD->lastBackdropWin = pWS->backdrop.window;
 
     WallpaperSetRootProperty (pWS->pSD,
-	(pWS->backdrop.window && (pWS->backdrop.flags & BACKDROP_BITMAP) &&
-	 pWS->backdrop.imagePixmap != XmUNSPECIFIED_PIXMAP) ?
-	    pWS->backdrop.imagePixmap : None);
+	picture ? pWS->backdrop.imagePixmap : None);
 }
 
 
