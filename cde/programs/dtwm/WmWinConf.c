@@ -1510,6 +1510,26 @@ DrawSegments (Display *dpy, Window win, GC gc, XSegment *outline, int nsegs)
 } /* END OF FUNCTION  DrawSegments */
 
 
+/*
+ * A compositing manager (picom, xcompmgr...) owns _NET_WM_CM_S<screen>.
+ * It draws windows from offscreen copies, so XOR outlines drawn on the
+ * root window are invisible, and grabbing the server stops it from
+ * drawing at all.  While one is running, interactive moves and resizes
+ * use the window-based outline without a server grab.
+ */
+static Boolean compositorActive = False;	/* during this move/resize */
+static Boolean serverGrabbed = False;
+
+static Boolean
+CompositorActive (int screen)
+{
+    char name[32];
+
+    sprintf (name, "_NET_WM_CM_S%d", screen);
+    return (XGetSelectionOwner (DISPLAY,
+		XInternAtom (DISPLAY, name, False)) != None);
+}
+
 /*************************************<->*************************************
  *
  *  MoveOutline (x, y, width, height)
@@ -1538,7 +1558,11 @@ DrawSegments (Display *dpy, Window win, GC gc, XSegment *outline, int nsegs)
  *************************************<->***********************************/
 void MoveOutline (int x, int y, unsigned int width, unsigned int height)
 {
-    if (wmGD.freezeOnConfig)
+    if (compositorActive)
+    {
+	WindowOutline(x, y, width, height);	/* XOR would be invisible */
+    }
+    else if (wmGD.freezeOnConfig)
     {
 	DrawOutline (x, y, width, height);
     }
@@ -2717,13 +2741,17 @@ Boolean DoGrabs (Window grab_win, Cursor cursor, unsigned int pmask, Time grabTi
     }
     
     
-    if (wmGD.freezeOnConfig) 
+    compositorActive =
+	CompositorActive (pCD ? pCD->pSD->screen : ACTIVE_PSD->screen);
+
+    if (wmGD.freezeOnConfig && !compositorActive) 
 	
     {
 	if (!pCD || ((pCD->pSD->moveOpaque && alwaysGrab) ||
 	           (!(pCD->pSD->moveOpaque))))
 	{
 	    XGrabServer(DISPLAY);
+	    serverGrabbed = True;
         }
     }
     
@@ -2759,8 +2787,9 @@ void UndoGrabs (void)
     XSync (DISPLAY, FALSE /*don't discard events*/);
 
     /* give up grabs */
-    if (wmGD.freezeOnConfig) {
+    if (serverGrabbed) {
 	XUngrabServer(DISPLAY);
+	serverGrabbed = False;
     }
 
     /*
@@ -2772,6 +2801,8 @@ void UndoGrabs (void)
 
     XUngrabPointer (DISPLAY, CurrentTime);	/* event time NOT used */
     XFlush (DISPLAY);
+
+    compositorActive = False;
 
 } /* END OF FUNCTION UndoGrabs  */
 

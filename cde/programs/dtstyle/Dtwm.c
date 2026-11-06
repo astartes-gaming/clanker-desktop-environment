@@ -75,6 +75,60 @@
 /* include extern functions              */
 /*+++++++++++++++++++++++++++++++++++++++*/
 #include "Dtwm.h"
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/stat.h>
+
+/*
+ * "Use Compositor": runs a compositing manager (picom, compton or
+ * xcompmgr, see dtcompositor) for GPU-accelerated, tear-free drawing.
+ * Enabled by the file $HOME/.dt/compositor, which Xsession.d/
+ * 0070.dtmodern checks at login.
+ */
+#define DTCOMPOSITOR CDE_INSTALLATION_TOP "/bin/dtcompositor"
+
+static char *
+CompositorFlagFile( void )
+{
+    static char *path = NULL;
+
+    if (!path)
+    {
+        path = XtMalloc(strlen(style.home) + 20);
+        sprintf(path, "%s/.dt/compositor", style.home);
+    }
+    return path;
+}
+
+static Boolean
+CompositorEnabled( void )
+{
+    return access(CompositorFlagFile(), F_OK) == 0;
+}
+
+static Boolean
+CompositorAvailable( void )
+{
+    return system(DTCOMPOSITOR " available >/dev/null 2>&1") == 0;
+}
+
+static void
+SetCompositor( Boolean on )
+{
+    FILE *fp;
+
+    if (on)
+    {
+        if ((fp = fopen(CompositorFlagFile(), "w")) != NULL)
+            fclose(fp);
+        (void) system(DTCOMPOSITOR " start >/dev/null 2>&1 &");
+    }
+    else
+    {
+        (void) unlink(CompositorFlagFile());
+        (void) system(DTCOMPOSITOR " stop >/dev/null 2>&1");
+    }
+}
 
 // DtUtil1/WmRestart.c
 int _DtWmRestartNoConfirm (Display *display, Window root);
@@ -130,6 +184,7 @@ typedef struct {
     Widget      autoRaiseTG;
     Widget      secStackTG;
     Widget      moveOpaqueTG;
+    Widget      compositorTG;
     Widget      iconPlacementTB;
     Widget      useIconBoxRC;
     Widget      pointerTG;
@@ -142,6 +197,7 @@ typedef struct {
     int         origSecStack;
     int         origMoveOpaque;
     int         origUseIconBox;
+    Boolean     origCompositor;
     Widget      warnDialog;
 } Dtwm, *DtwmPtr;
 
@@ -360,6 +416,10 @@ getDtwmValues(void)
                 dtwm.origMoveOpaque, True);
     }
 
+    dtwm.origCompositor = CompositorEnabled();
+    XmToggleButtonGadgetSetState (dtwm.compositorTG, dtwm.origCompositor,
+                                  False);
+
 }
 
 /*+++++++++++++++++++++++++++++++++++++++*/
@@ -522,6 +582,17 @@ build_dtwmDlg(
     XmStringFree(string);
 
     n = 0;
+    string = CMPSTR((char *)GETMESSAGE(18, 30,
+        "Use Compositor (GPU-Accelerated, Tear-Free)"));
+    XtSetArg(args[n], XmNnavigationType, XmTAB_GROUP); n++;  
+    XtSetArg(args[n], XmNlabelString, string);  n++;
+    XtSetArg(args[n], XmNalignment, XmALIGNMENT_BEGINNING);  n++;
+    XtSetArg(args[n], XmNsensitive, CompositorAvailable());  n++;
+    dtwm.compositorTG = 
+        XmCreateToggleButtonGadget(windowFocusForm, "compositorTG", args, n);
+    XmStringFree(string);
+
+    n = 0;
     XtSetArg(args[n], XmNmarginWidth, 0); n++;
     XtSetArg(args[n], XmNmarginHeight, 0); n++;
     dtwm.useIconBoxRC = 
@@ -560,6 +631,7 @@ build_dtwmDlg(
     XtManageChild(dtwm.autoRaiseTG);
     XtManageChild(dtwm.secStackTG);
     XtManageChild(dtwm.moveOpaqueTG);
+    XtManageChild(dtwm.compositorTG);
 
     XtManageChild(dtwm.useIconBoxRC);
     XtManageChild(dtwm.iconBoxTG);
@@ -680,13 +752,24 @@ formLayoutCB(
     XtSetArg(args[n], XmNtopAttachment,      XmATTACH_WIDGET);       n++;
     XtSetArg(args[n], XmNtopWidget,          dtwm.secStackTG);     n++;
     XtSetArg(args[n], XmNtopOffset,          style.verticalSpacing-3); n++;
+    XtSetArg(args[n], XmNleftAttachment,     XmATTACH_FORM);         n++;
+    XtSetArg(args[n], XmNleftOffset,         0);  n++;
+    XtSetArg(args[n], XmNrightAttachment,    XmATTACH_FORM);         n++;
+    XtSetArg(args[n], XmNrightOffset,        0);  n++;
+    XtSetValues (dtwm.moveOpaqueTG, args, n);
+
+    /* Compositor TG */
+    n=0;
+    XtSetArg(args[n], XmNtopAttachment,      XmATTACH_WIDGET);       n++;
+    XtSetArg(args[n], XmNtopWidget,          dtwm.moveOpaqueTG);     n++;
+    XtSetArg(args[n], XmNtopOffset,          style.verticalSpacing-3); n++;
     XtSetArg(args[n], XmNbottomAttachment,   XmATTACH_FORM);         n++;
     XtSetArg(args[n], XmNbottomOffset,       style.verticalSpacing); n++;
     XtSetArg(args[n], XmNleftAttachment,     XmATTACH_FORM);         n++;
     XtSetArg(args[n], XmNleftOffset,         0);  n++;
     XtSetArg(args[n], XmNrightAttachment,    XmATTACH_FORM);         n++;
     XtSetArg(args[n], XmNrightOffset,        0);  n++;
-    XtSetValues (dtwm.moveOpaqueTG, args, n);
+    XtSetValues (dtwm.compositorTG, args, n);
 
     /* Use Icon Box RC */
     n=0;
@@ -755,6 +838,9 @@ systemDefaultCB(
     /* OpaqueMove:  False */
     XmToggleButtonGadgetSetState (dtwm.moveOpaqueTG, False, True); 
 
+    /* Compositor:  off */
+    XmToggleButtonGadgetSetState (dtwm.compositorTG, False, False); 
+
     /* PlaceOnDesktop:  True */
     XmToggleButtonGadgetSetState (dtwm.desktopTG, True, True); 
 
@@ -782,6 +868,14 @@ ButtonCB(
     case OK_BUTTON:
       
       XtUnmanageChild (w);
+
+      /* The compositor runs beside dtwm: no restart needed. */
+      state = XmToggleButtonGadgetGetState (dtwm.compositorTG);
+      if (state != dtwm.origCompositor)
+        {
+          SetCompositor(state);
+          dtwm.origCompositor = state;
+        }
       
       /* create the Dtwm resource specs for xrdb */
       
@@ -880,6 +974,9 @@ ButtonCB(
       
       XmToggleButtonGadgetSetState (dtwm.moveOpaqueTG, 
 				    dtwm.origMoveOpaque ? True : False , True); 
+
+      XmToggleButtonGadgetSetState (dtwm.compositorTG, 
+				    dtwm.origCompositor, False); 
       
       XmToggleButtonGadgetSetState (dtwm.iconBoxTG, 
 				    dtwm.origUseIconBox ? True : False , True); 

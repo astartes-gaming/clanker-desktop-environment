@@ -153,7 +153,7 @@ jobs:
           rpm -ql motif-devel | grep '/Xm/.*[.]h$' | LC_ALL=C sort | sed -n '1,100p' || true
           echo '=== dynamic linker view of libXm ==='
           ldconfig -p | grep -E 'libXm[.]so'
-          libxm="$(ldconfig -p | awk '/libXm[.]so[.]4 .*x86-64/ {print $NF; exit} /libXm[.]so/ {candidate=$NF} END {if (candidate) print candidate}')"
+          libxm="$(ldconfig -p | awk '/libXm[.]so[.]4 .*x86-64/ && !best {best=$NF} /libXm[.]so/ {candidate=$NF} END {if (best) print best; else if (candidate) print candidate}')"
           test -n "$libxm"
           test -e "$libxm"
           printf 'libXm: %s\n' "$libxm"
@@ -209,7 +209,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           locale -a | grep -i '^en_US'
-          locale -a | grep -Eiq '^en_US[.]utf-?8$'
+          locale -a | grep -Ei '^en_US[.]utf-?8$' >/dev/null
           {
             echo 'LANG=en_US.UTF-8'
             echo 'LC_ALL=en_US.UTF-8'
@@ -350,7 +350,7 @@ jobs:
           done
           elf_count=0
           while IFS= read -r -d '' candidate; do
-            file -b "$candidate" | grep -q '^ELF ' || continue
+            file -b "$candidate" | grep '^ELF ' >/dev/null || continue
             ((elf_count += 1))
             dependencies="$(ldd "$candidate" 2>&1 || true)"
             if grep -q '=> not found' <<<"$dependencies"; then
@@ -380,7 +380,7 @@ jobs:
           set -Eeuo pipefail
           ldd /usr/dt/bin/dtwm | grep -E 'libXm[.]so'
           ldd /usr/dt/bin/dtsession | grep -E 'libXm[.]so'
-          libxm="$(ldd /usr/dt/bin/dtwm | awk '/libXm[.]so/ {print $3; exit}')"
+          libxm="$(ldd /usr/dt/bin/dtwm | awk '!f && /libXm[.]so/ {print $3; f=1}')"
           test -n "$libxm"
           test -e "$libxm"
           printf 'linked libXm: %s\n' "$libxm"

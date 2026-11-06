@@ -1398,6 +1398,7 @@ typedef struct _WmBackdropData
     String		image;			/* resource */
     Atom		nameAtom;
     Pixmap		imagePixmap;
+    Pixmap		renderedPixmap;		/* ours to free, or None */
     int			colorSet;		/* resource */
     Pixel 		background;		/* resource */
     Pixel 		foreground;		/* resource */

@@ -5,7 +5,7 @@ bin_PROGRAMS = dtsession
 bin_SCRIPTS = dtsession_res
 
 # Laptop keys and lock-before-sleep (see Xsession.d/0070.dtmodern)
-dist_bin_SCRIPTS = dthwkeys dtsleeplock
+dist_bin_SCRIPTS = dthwkeys dtsleeplock dtcompositor
 
 if HAS_PAM_LIBRARY
 DTPAMSVCLIB = $(LIBPAMSVC)

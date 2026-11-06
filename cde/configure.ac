@@ -594,6 +594,19 @@ fi
 AC_SUBST(XILIB)
 AM_CONDITIONAL([HAVE_XI_PROPS], [test "$have_xi_props" = yes])
 
+dnl Backdrop pictures: Motif 2.3's PNG reader gets the colours of RGB,
+dnl palette and greyscale PNGs wrong, so CDE reads PNG itself when
+dnl libpng is available (lib/DtWidget/Picture.c).  Optional.
+have_libpng=no
+AC_CHECK_LIB([png], [png_create_read_struct],
+    [AC_CHECK_HEADER([png.h], [have_libpng=yes])])
+PNGLIB=
+if test "$have_libpng" = yes; then
+    AC_DEFINE([HAVE_LIBPNG], [1], [Define if libpng is available])
+    PNGLIB=-lpng
+fi
+AC_SUBST(PNGLIB)
+
 dnl dtwm: follow monitor hotplug and resolution changes with RandR.
 dnl Optional: without libXrandr dtwm keeps the screen layout it
 dnl started with, as before.

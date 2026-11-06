@@ -241,7 +241,7 @@ jobs:
           echo
           echo '=== dynamic linker view of libXm ==='
           ldconfig -p | grep -E 'libXm[.]so'
-          libxm="$(ldconfig -p | awk '/libXm[.]so/{print $NF; exit}')"
+          libxm="$(ldconfig -p | awk '!f && /libXm[.]so/ {print $NF; f=1}')"
           test -n "$libxm"
           libxm="$(realpath "$libxm")"
           printf 'libXm: %s\n' "$libxm"
@@ -270,7 +270,7 @@ jobs:
           echo "=== available en_US locales ==="
           locale -a | grep -i '^en_US'
 
-          if ! locale -a | grep -Eiq '^en_US[.]utf-?8$'; then
+          if ! locale -a | grep -Ei '^en_US[.]utf-?8$' >/dev/null; then
               echo "ERROR: en_US.UTF-8 locale was not generated" >&2
               exit 1
           fi
@@ -532,7 +532,7 @@ jobs:
           elf_count=0
 
           while IFS= read -r -d '' candidate; do
-              if ! file -b "$candidate" | grep -q '^ELF '; then
+              if ! file -b "$candidate" | grep '^ELF ' >/dev/null; then
                   continue
               fi
 
@@ -686,7 +686,7 @@ jobs:
           for program in /usr/dt/bin/dtwm /usr/dt/bin/dtsession; do
               dependencies="$(ldd "$program")"
               printf '%s\n' "$dependencies"
-              libxm="$(awk '/libXm[.]so/ {print $3; exit}' <<<"$dependencies")"
+              libxm="$(awk '!f && /libXm[.]so/ {print $3; f=1}' <<<"$dependencies")"
               test -n "$libxm"
               test -e "$libxm"
               libxm="$(realpath "$libxm")"

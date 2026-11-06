@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Drive the Clanker/CDE test VM built by build-vm.sh (no root needed).
 
-    vmctl.py boot [--ram MB]       start QEMU in the background (KVM)
+    vmctl.py boot [--ram MB] [--cpus N]  start QEMU in the background (KVM)
+
+    VM_OUT=dir selects another VM built with VM_OUT=dir build-vm.sh
     vmctl.py provision             install CDE + deps inside the VM
     vmctl.py run 'cmd' [-t SECS]   run a root shell command on the serial console
     vmctl.py screenshot FILE.png   capture the VM screen
@@ -19,7 +21,7 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "out")
+OUT = os.environ.get("VM_OUT") or os.path.join(HERE, "out")
 SERIAL = os.path.join(OUT, "serial.sock")
 MONITOR = os.path.join(OUT, "monitor.sock")
 PIDFILE = os.path.join(OUT, "qemu.pid")
@@ -66,7 +68,7 @@ def monitor(cmd):
     return out
 
 
-def boot(ram):
+def boot(ram, cpus=1):
     if os.path.exists(PIDFILE):
         try:
             os.kill(int(open(PIDFILE).read()), 0)
@@ -79,7 +81,7 @@ def boot(ram):
             os.unlink(p)
     cmd = [
         "qemu-system-x86_64", "-enable-kvm", "-cpu", "host",
-        "-machine", "q35", "-smp", "1", "-m", str(ram),
+        "-machine", "q35", "-smp", str(cpus), "-m", str(ram),
         "-drive", "file=%s/disk.qcow2,if=virtio,format=qcow2" % OUT,
         "-drive", "file=%s/payload.tar,if=virtio,format=raw,readonly=on" % OUT,
         "-nic", "user,model=virtio-net-pci",
@@ -89,7 +91,7 @@ def boot(ram):
         "-pidfile", PIDFILE, "-daemonize",
     ]
     subprocess.run(cmd, check=True)
-    print("booted with %d MB RAM" % ram)
+    print("booted with %d MB RAM, %d CPU(s)" % (ram, cpus))
 
 
 def credential(key):
@@ -179,6 +181,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("boot")
     b.add_argument("--ram", type=int, default=384)
+    b.add_argument("--cpus", type=int, default=1)
     sub.add_parser("provision")
     r = sub.add_parser("run")
     r.add_argument("command")
@@ -193,7 +196,7 @@ def main():
     a = ap.parse_args()
 
     if a.cmd == "boot":
-        boot(a.ram)
+        boot(a.ram, a.cpus)
     elif a.cmd == "provision":
         sys.exit(run("mkdir -p /root/payload && tar -xf /dev/vdb -C /root/payload"
                      " && sh /root/payload/provision.sh 2>&1 | tail -5", 1800))
@@ -209,6 +212,12 @@ def main():
             monitor("sendkey " + key)
             time.sleep(0.1)
     elif a.cmd == "stop":
+        # "quit" is a hard power-off: flush the guest's disk cache first,
+        # or files written just before (installs!) come back truncated.
+        try:
+            run("sync", 60)
+        except Exception:
+            pass
         try:
             monitor("quit")
         except Exception:

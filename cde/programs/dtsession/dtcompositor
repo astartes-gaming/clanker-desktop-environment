@@ -1,0 +1,91 @@
+#!/bin/sh
+#####################################################################
+##  dtcompositor - run a compositing manager for the CDE desktop.
+##
+##  Usage: dtcompositor start | stop | status | available
+##
+##  A compositor draws the screen through the GPU (OpenGL), synced to
+##  the display refresh, so moving windows and video don't tear.
+##  Tried in order, first that starts wins:
+##    picom   --backend glx --vsync   (OpenGL, on a hardware GPU)
+##    picom   --backend xrender --vsync (also when GL is software only)
+##    compton (picom's predecessor)
+##    xcompmgr
+##  The user's own picom/compton configuration file still applies.
+##
+##  Turned on by Style Manager > Window > "Use Compositor", which
+##  creates $HOME/.dt/compositor; Xsession.d/0070.dtmodern then runs
+##  "dtcompositor start" at login.  dtwm notices the compositor and
+##  draws move/resize outlines with windows so they stay visible.
+##
+##  Bourne shell only (no $(...)).
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+have() { type "$1" >/dev/null 2>&1; }
+
+COMPOSITORS="picom compton xcompmgr"
+
+# One compositor per display, remembered by pid: never touch another
+# session's compositor.
+dpy=`echo "${DISPLAY:-none}" | tr -c 'A-Za-z0-9.\n' '_'`
+piddir=${XDG_RUNTIME_DIR:-$HOME/.dt}
+pidfile=$piddir/dtcompositor-$dpy.pid
+
+running() {
+    [ -r "$pidfile" ] && kill -0 "`cat $pidfile`" 2>/dev/null
+}
+
+# Run "$@" in the background; keep it if it is still alive after a
+# moment (picom exits at once if, say, OpenGL isn't available).
+try() {
+    have "$1" || return 1
+    "$@" >/dev/null 2>&1 &
+    pid=$!
+    sleep 2
+    if kill -0 $pid 2>/dev/null; then
+        echo $pid > "$pidfile"
+        return 0
+    fi
+    return 1
+}
+
+case $1 in
+available)
+    for c in $COMPOSITORS; do
+        have "$c" && exit 0
+    done
+    exit 1 ;;
+
+status)
+    if running; then echo running; exit 0; fi
+    echo stopped; exit 1 ;;
+
+start)
+    [ -n "$DISPLAY" ] || exit 1
+    running && exit 0
+    # OpenGL only on a real GPU: with software GL (llvmpipe etc., e.g.
+    # in VMs) picom's glx backend misses window updates.
+    if have picom && picom --backend glx --diagnostics 2>/dev/null |
+        grep -i -e "software renderer" -e llvmpipe -e softpipe -e swrast \
+        >/dev/null 2>&1; then
+        :
+    else
+        try picom --backend glx --vsync && exit 0
+    fi
+    try picom --backend xrender --vsync && exit 0
+    try compton && exit 0
+    try xcompmgr && exit 0
+    exit 1 ;;
+
+stop)
+    if running; then
+        kill "`cat $pidfile`" 2>/dev/null
+    fi
+    rm -f "$pidfile"
+    exit 0 ;;
+
+*)
+    echo "usage: dtcompositor start | stop | status | available" >&2
+    exit 2 ;;
+esac

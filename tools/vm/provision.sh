@@ -6,17 +6,27 @@ set -eu
 P=$(cd "$(dirname "$0")" && pwd)
 export DEBIAN_FRONTEND=noninteractive
 
-apt-get update -q
+# Use the whole virtual disk: the cloud image's root partition is 3 GB.
+root=$(findmnt -no SOURCE /)
+disk=/dev/$(lsblk -no PKNAME "$root")
+part=$(echo "$root" | sed 's/.*[^0-9]//')
+
+apt-get -o Acquire::Retries=5 update -q
+apt-get -o Acquire::Retries=5 install -y -q --no-install-recommends \
+    cloud-guest-utils
+growpart "$disk" "$part" >/dev/null 2>&1 && resize2fs "$root" >/dev/null 2>&1 || true
 # Libraries the CDE binaries link against (computed on the build host),
 # plus what CDE needs at runtime and a few test tools.
 # shellcheck disable=SC2046
-apt-get install -y -q --no-install-recommends $(cat "$P/runtime-pkgs.txt") \
+apt-get -o Acquire::Retries=5 install -y -q --no-install-recommends \
+    $(cat "$P/runtime-pkgs.txt") \
     xserver-xorg-core xserver-xorg-input-libinput xauth \
     x11-xserver-utils x11-utils xfonts-base xfonts-utils \
     xfonts-100dpi xfonts-75dpi xfonts-100dpi-transcoded xfonts-75dpi-transcoded \
     ksh tcl rpcbind ncompress m4 cpp ncurses-term \
     dbus dbus-x11 dbus-user-session libpam-systemd \
-    xterm dex xdotool gtk-3-examples xinput python3-evdev
+    xterm dex xdotool gtk-3-examples xinput python3-evdev picom \
+    ksh x11-apps
 
 # The staged CDE tree (built on the host with make install DESTDIR=...).
 tar -xzf "$P/cde-stage.tar.gz" -C /
