@@ -156,10 +156,10 @@ extern void show_about(Widget, XtPointer, XtPointer);
 
 
 static struct itimerval timer;
-extern u_long gettransient();
+extern u_long gettransient(void);
 extern void xtcallback(XtPointer, int *, XtInputId *);
 extern int getfdset(fd_set);
-extern Tick prevnday_exacttime();
+extern Tick prevnday_exacttime(void);
 extern void quit_handler(Widget, XtPointer, XtPointer);
 static void sig_int_handler(int sig);
 extern void find_cb(Widget, XtPointer, XtPointer);

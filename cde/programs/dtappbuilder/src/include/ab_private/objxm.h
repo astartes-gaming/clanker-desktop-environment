@@ -740,7 +740,7 @@ extern int	objxm_dump_widget_geometry(
 		/* Load internal resource tables with 
 		 * required Xt/Xm resources/enums/createfuncs
 		 */
-extern void     objxm_strs_init(
+extern void     objxm_strs_init(void
                 );
 
 		/* return "strname" corresponding to xmname 

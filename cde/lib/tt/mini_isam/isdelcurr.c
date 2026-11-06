@@ -64,7 +64,7 @@ static int _amdelcurr(Bytearray *isfhandle, Bytearray *curpos, Recno *recnum, st
 int 
 isdelcurr(int isfd)
 {
-    int			_am_delcurr();
+    int			_am_delcurr(void);
     Fab	*fab;
     int			ret;
     Recno		recnum;

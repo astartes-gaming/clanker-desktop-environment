@@ -121,7 +121,7 @@ static int DefaultOutputString(ClientData clientData,
 			       Tcl_Interp *interp,
 			       int argc,
 			       const char *argv[]);
-char		*GetOutFileBaseName();
+char		*GetOutFileBaseName(void);
 
 /* ______________________________________________________________________ */
 /*  Program entry point.  Look at args, read instance, dispatch to the

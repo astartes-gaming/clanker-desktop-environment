@@ -53,7 +53,7 @@ extern void UxDoEditPixmap(Widget wid, char *fname);
 /* Initialize global values.                                                  */
 /******************************************************************************/
 Boolean bRegisteredSignal = FALSE;
-int     (*sigchildRoutine)();
+int     (*sigchildRoutine)(void);
 
 /******************************************************************************/
 /* activateCB_open_FindSet - Callback for the "Find Set" button on            */
@@ -135,11 +135,11 @@ void activateCB_open_FindSet (Widget find_set_button, XtPointer cdata,
                                                (unsigned char *)container_title,
                                                numberOfTopButtons,
                                                (unsigned char *)top_button_one_label,
-                                               (void (*)())top_button_one_cb,
+                                               (void (*)(void))top_button_one_cb,
                                                (unsigned char *)top_button_two_label,
-                                               (void (*)())top_button_two_cb,
+                                               (void (*)(void))top_button_two_cb,
                                                (unsigned char *)top_button_three_label,
-                                               (void (*)())top_button_three_cb,
+                                               (void (*)(void))top_button_three_cb,
                                                use_icon_name_field,
                                                (unsigned char *)name_field_title,
                                                numberOfBottomButtons,

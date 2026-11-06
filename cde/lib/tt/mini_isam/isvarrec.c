@@ -40,7 +40,7 @@
 
 /* Local functions */
 long _vl_getpos(Fcb *fcb, Recno recnum);			     /* Get offset in .rec file */
-int  _vl_deleted();			     /* 0/1 returns 1 if record is deleted */
+int  _vl_deleted(void);			     /* 0/1 returns 1 if record is deleted */
 static void remove_from_chain2(Fcb *fcb, Recno recnum);	     /* used by _vlrec_wrrec() */
 long _istail_insert(Fcb *fcb, char *tailp, int taillen);
 static void _istail_delete(Fcb *fcb, long offset);

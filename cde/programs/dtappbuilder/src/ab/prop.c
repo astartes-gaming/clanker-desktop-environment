@@ -384,7 +384,7 @@ static BOOL	menu_in_list(
    		    ABObj        target_menu
 		);
 
-static void strings_init(
+static void strings_init(void
 		);
 
 

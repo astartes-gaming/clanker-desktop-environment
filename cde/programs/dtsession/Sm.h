@@ -347,7 +347,7 @@ typedef struct
 /*
  * External variables
  */
-extern	char	*_dtsessionMG();
+extern	char	*_dtsessionMG(void);
 
 /*
  * Files that the session manager saves sessions to and restores sessions

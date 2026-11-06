@@ -40,7 +40,7 @@
 
 /* Local functions */
 long _fl_getpos(Fcb *fcb, Recno recnum);			     /* Get offset in .rec file */
-int  _fl_deleted();			     /* 0/1 returns 1 if record is deleted */
+int  _fl_deleted(void);			     /* 0/1 returns 1 if record is deleted */
 static void remove_from_chain(Fcb *fcb, Recno recnum);	     /* used by _flrec_wrrec() */
 
 /*

@@ -219,13 +219,13 @@ typedef struct _AB_UNDO_REC{
 /*
  * Editing functions
  */
-extern void	abobj_edit_init(
+extern void	abobj_edit_init(void
 		);
 
-extern int	abobj_cut(
+extern int	abobj_cut(void
 		);
 
-extern int	abobj_copy(
+extern int	abobj_copy(void
 		);
 
 extern int	abobj_paste(
@@ -238,20 +238,20 @@ extern int	abobj_undo(void);
 
 extern int	abobj_cancel_undo(void);
 
-extern BOOL	abobj_undo_active(
+extern BOOL	abobj_undo_active(void
 		);
 
 /*
  * CLIPBOARD manipulating functions
  */
-extern BOOL	abobj_clipboard_is_empty(
+extern BOOL	abobj_clipboard_is_empty(void
 		);
 
 extern BOOL	abobj_in_clipboard(
 		    ABObj	obj
 		);
 
-extern void	abobj_clipboard_clear(
+extern void	abobj_clipboard_clear(void
 		);
 
 extern void	abobj_clipboard_set(

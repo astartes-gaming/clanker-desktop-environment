@@ -446,7 +446,7 @@ Boolean _DtHelpFileListAddFile (
    char         empty = 0;
    int		nameKey = 0;
    typedef int (*_CEStrcollProc)(const char *,const char *);
-   extern _CEStrcollProc _DtHelpCeGetStrcollProc();
+   extern _CEStrcollProc _DtHelpCeGetStrcollProc(void);
    _CEStrcollProc strcollfn = _DtHelpCeGetStrcollProc();
 
    /* init the variable */

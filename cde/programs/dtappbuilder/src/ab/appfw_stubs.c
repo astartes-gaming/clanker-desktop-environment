@@ -104,7 +104,7 @@ static int	appfw_editor_load_gencode(
 static int      appfw_editor_apply(
                     ABObj   project
                 );
-static void	turnoff_changebars(
+static void	turnoff_changebars(void
 		);
 static BOOL	rootwin_test_func(
 		    ABObj	obj
@@ -112,7 +112,7 @@ static BOOL	rootwin_test_func(
 static BOOL	gencode_arg_class_is_supported(
 		    AB_ARG_CLASS argClass
 		);
-static BOOL	appfw_editor_pending(
+static BOOL	appfw_editor_pending(void
 		);
 static void	appfw_editor_prevent_closeCB(
 		    Widget	w,

@@ -116,7 +116,7 @@ typedef struct {
 					       grays */
     } ilXWCRec, *ilXWCPtr;
 
-typedef ilError   (*executeFunctionType)();
+typedef ilError   (*executeFunctionType)(void);
 
         /*  ------------------------ ilFreeColorData ---------------------- */
         /*  Free the color list and translation table in the given XWC if 

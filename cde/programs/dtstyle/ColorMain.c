@@ -229,7 +229,7 @@ static void allocNewColors(void);
 static void extThemeCB(Widget w, XtPointer client_data, XtPointer call_data);
 static Widget extThemeTG = NULL;
 static Boolean ValidName( char *name) ;
-void loadDatabase();
+void loadDatabase(void);
 
 
 

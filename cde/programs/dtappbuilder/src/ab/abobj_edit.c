@@ -76,7 +76,7 @@
 **       Private Function Declarations                                  **
 **                                                                      **
 **************************************************************************/
-static void	init_clipboard(
+static void	init_clipboard(void
 		);
 
 static void	verify_clipboard_space(
@@ -141,7 +141,7 @@ static void	init_undo_rec(
 		    ABUndoRec		*undo_rec_ptr
 		);
 
-static void	init_undo(
+static void	init_undo(void
 		);
 
 static void	verify_undo_rec_space(
@@ -213,7 +213,7 @@ static ABClipboardRec	ABClipboard = NULL;
 static ABUndoRec	ABUndo = NULL;
 static ABUndoRec	ABUndo_backup = NULL;
 
-static void		(*Undo_func)();
+static void		(*Undo_func)(void);
 
 BOOL			in_undo = FALSE;
 

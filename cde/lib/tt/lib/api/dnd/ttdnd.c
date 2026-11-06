@@ -41,7 +41,7 @@ static Tt_callback_action	_ttdnd_get_contents_callback(Tt_message m, Tt_pattern 
 static void 			_ttdnd_get_contents(int sourceXid, const char *source_type, Ttdnd_receive_data_func *receivefunc, int chunknumber);
 static Tt_callback_action	_ttdnd_continue_transfer(Tt_message m, Tt_pattern p);
 void				_ttdnd_receive(void);
-int				_ttdnd_convert_selection();
+int				_ttdnd_convert_selection(void);
 
 
 #define MAXCHUNK 32768 /* Need some way for user to set this? */	

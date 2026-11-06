@@ -101,7 +101,7 @@
 
 #ifdef __TOOLTALK
 #include <Tt/tttk.h>
-extern void ReplyToMessage( );
+extern void ReplyToMessage(void);
 extern Tt_message replyMsg;
 
 int edit_notifier(char* fname, Tt_message msg, int clear);

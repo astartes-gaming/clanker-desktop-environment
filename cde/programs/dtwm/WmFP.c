@@ -85,8 +85,8 @@ extern void WorkspaceAdjustPanelPosition (Position x,
                               Dimension width,
                               Dimension height);
 
-static void PushRecallSetData ();
-static void EmbeddedClientSetData ();
+static void PushRecallSetData(void);
+static void EmbeddedClientSetData(void);
 static void EmbeddedClientSetGeometry (WmFpEmbeddedClientData *);
 
 

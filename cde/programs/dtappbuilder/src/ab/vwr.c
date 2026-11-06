@@ -69,10 +69,10 @@
  * Some internal functions.
 static ViewerNode	*r_locate_node();
  */
-static void		erase_node();
-static int		child_of_selected_node();
-static void		draw_icon();
-static void		draw_arrow();
+static void		erase_node(void);
+static int		child_of_selected_node(void);
+static void		draw_icon(void);
+static void		draw_arrow(void);
 
 /*************************************
 	ADT of the browser structure

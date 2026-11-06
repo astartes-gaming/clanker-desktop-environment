@@ -113,7 +113,7 @@ void
 CreateWellKnownSockets (void)
 {
     struct sockaddr_in	sock_addr;
-    char		*name, *localHostname();
+    char		*name, *localHostname(void);
 
     if (request_port == 0)
 	    return;

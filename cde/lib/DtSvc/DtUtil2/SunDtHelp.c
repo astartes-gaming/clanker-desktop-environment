@@ -73,7 +73,7 @@ typedef struct _SUNWHelpProcList {
 
 static SUNWHelpProcList		*pmySUNWProcList = NULL;
 
-int SUNWDtHelpdlopen()
+int SUNWDtHelpdlopen(void)
 {
     void *libDtHelpHandle = NULL;
 

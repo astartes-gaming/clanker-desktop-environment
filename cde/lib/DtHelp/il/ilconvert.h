@@ -84,7 +84,7 @@
             other than what might be done by Init().
         */
 typedef struct {
-    ilError           (*CheckFormat)();         /* reserved: MUST BE IL_NPF! */
+    ilError           (*CheckFormat)(void);         /* reserved: MUST BE IL_NPF! */
     unsigned int        srcFormatCode;          /* see above */
     ilError           (*AddElement)(ilPtr, unsigned short *, void *);          /* see above */
     const ilImageDes    *pDstDes;               /* ptr to new des or null */

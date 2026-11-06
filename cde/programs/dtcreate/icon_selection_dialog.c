@@ -82,7 +82,7 @@ char    *file_filter_global;
 DtIconGadget **icons_in_container = NULL;
 
 
-int myscandir(char *, struct dirent ***, int(*)(struct dirent *, char *), int ());
+int myscandir(char *, struct dirent ***, int(*)(struct dirent *, char *), int(void));
 int get_top_b1_position (int buttoncount);
 int get_top_b2_position (int buttoncount);
 void load_directories_list (char **dirlist);
@@ -125,7 +125,7 @@ Auxiliary code from the Declarations Editor:
 /*  myscandir                                                              */
 /*                                                                         */
 /***************************************************************************/
-int myscandir(char *pszDirName, struct dirent ***NameList, int Select(struct dirent *, char *), int Compare())
+int myscandir(char *pszDirName, struct dirent ***NameList, int Select(struct dirent *, char *), int Compare(void))
 
 {
   DIR            *dirptr;
@@ -1925,11 +1925,11 @@ Widget  create_icon_selection_dialog(swidget    _UxUxParent,
         unsigned char   *_Uxcontainer_title,
         int     _UxnumberOfTopButtons,
         unsigned char   *_Uxtop_button_one_label,
-        void    (*_Uxtop_button_one_cb)(),
+        void    (*_Uxtop_button_one_cb)(void),
         unsigned char   *_Uxtop_button_two_label,
-        void    (*_Uxtop_button_two_cb)(),
+        void    (*_Uxtop_button_two_cb)(void),
         unsigned char   *_Uxtop_button_three_label,
-        void    (*_Uxtop_button_three_cb)(),
+        void    (*_Uxtop_button_three_cb)(void),
         int     _Uxuse_icon_name_field,
         unsigned char   *_Uxname_field_title,
         int     _UxnumberOfBottomButtons,

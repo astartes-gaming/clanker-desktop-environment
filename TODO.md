@@ -65,6 +65,9 @@ features stay optional or detected at run time.
 
 ## Done
 
+- The whole tree builds as C99 and as C23 (GCC 15's default) with no
+  old-style definitions or prototype-less declarations; CI checks both
+  (`c-standards.yml`).
 - Wayland: `dtwayland` and the "CDE (Xwayland)" session run CDE in a
   rootful Xwayland under cage or labwc (Linux, opt-in).
 - xfwm4 manages the windows when installed (opt out with
