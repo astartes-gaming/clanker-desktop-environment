@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  xfwm4 defaults for CDE sessions (Clanker Desktop Environment):
+  Motif-style frames ("CDE" theme, made by dtxfwmtheme from the
+  palette) with the window menu button on the left and minimize and
+  maximize on the right.  Xsession.d/0070.dtmodern puts this directory
+  first in XDG_CONFIG_DIRS; xfwm4's own settings still win.
+-->
+<channel name="xfwm4" version="1.0">
+  <property name="general" type="empty">
+    <property name="theme" type="string" value="CDE"/>
+    <property name="button_layout" type="string" value="O|HM"/>
+    <property name="title_alignment" type="string" value="center"/>
+    <property name="title_font" type="string" value="Sans 10"/>
+    <property name="workspace_count" type="int" value="4"/>
+  </property>
+</channel>

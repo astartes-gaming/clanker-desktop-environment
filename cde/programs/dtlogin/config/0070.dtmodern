@@ -56,6 +56,18 @@ if [ -z "$DT_WINDOW_MANAGER" ]; then
 fi
 export DT_WINDOW_MANAGER
 
+# xfwm4 in a CDE session: Motif-style frames and button layout by
+# default (the user's own xfwm4 settings still win).
+case $DT_WINDOW_MANAGER in
+  *xfwm4)
+    _dtm_xdg="${DT_BINPATH:-/usr/dt/bin}"; _dtm_xdg="${_dtm_xdg%/bin}/config/xdg"
+    if [ -d "$_dtm_xdg" ]; then
+      XDG_CONFIG_DIRS="$_dtm_xdg:${XDG_CONFIG_DIRS:-/etc/xdg}"
+      export XDG_CONFIG_DIRS
+    fi
+    unset _dtm_xdg ;;
+esac
+
 #
 # 2. GTK/Qt theming written by Style Manager > Color
 #    ("Apply colors to GTK and Qt applications").
@@ -88,6 +100,8 @@ if [ -n "$DBUS_SESSION_BUS_ADDRESS" ] &&
   _dtm_vars="$_dtm_vars XDG_SESSION_TYPE DESKTOP_SESSION"
   _dtm_vars="$_dtm_vars GTK_THEME GTK2_RC_FILES GTK_OVERLAY_SCROLLING"
   _dtm_vars="$_dtm_vars QT_QPA_PLATFORMTHEME"
+  # xfwm4 sessions: the CDE defaults for xfconfd (step 1b)
+  [ -n "$XDG_CONFIG_DIRS" ] && _dtm_vars="$_dtm_vars XDG_CONFIG_DIRS"
   if _dtm_have systemctl && systemctl --user show-environment >/dev/null 2>&1
   then
     dbus-update-activation-environment --systemd $_dtm_vars >/dev/null 2>&1

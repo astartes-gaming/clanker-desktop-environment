@@ -1,0 +1,193 @@
+#!/bin/sh
+#####################################################################
+##  dtxfwmtheme - a Motif-style xfwm4 theme in the CDE palette.
+##
+##  Usage: dtxfwmtheme [--reload] [--colors ACTIVE INACTIVE]
+##
+##  Writes the xfwm4 theme "CDE" to $XDG_DATA_HOME/themes/CDE (by
+##  default ~/.local/share/themes/CDE): beveled Motif frames and title
+##  bars like dtwm's, with the window menu button on the left and the
+##  minimize and maximize buttons on the right, in the colors of the
+##  current palette (color set 1 for the active window, 2 for the
+##  others).  dtaltwm runs it before starting xfwm4; with --reload
+##  xfwm4 picks up a changed palette at once.
+##
+##  CDE sessions select the theme through the xfconf defaults in
+##  CDE_INSTALLATION_TOP/config/xdg (see Xsession.d/0070.dtmodern); a
+##  theme chosen in xfwm4's own settings wins.
+##
+##  Bourne shell and awk only.
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+have() { type "$1" >/dev/null 2>&1; }
+
+reload=; act=; ina=
+while [ $# -gt 0 ]; do
+    case $1 in
+        --reload) reload=1 ;;
+        --colors) act=$2; ina=$3; shift 2 ;;   # #RRGGBB, from Style Manager
+    esac
+    shift
+done
+
+dir=${XDG_DATA_HOME:-$HOME/.local/share}/themes/CDE/xfwm4
+
+# The session's palette: "*0*ColorPalette: Name.dp" in the session
+# manager's preferences.
+pal=
+if [ -n "$DISPLAY" ] && have xprop; then
+    pal=`xprop -root _DT_SM_PREFERENCES 2>/dev/null |
+         grep -o 'ColorPalette:\\t[^\\]*' | sed 's/.*\\t//' | head -1`
+fi
+file=
+for d in $HOME/.dt/palettes /etc/dt/palettes /usr/dt/palettes; do
+    if [ -n "$pal" ] && [ -r "$d/$pal" ]; then file=$d/$pal; break; fi
+done
+[ -z "$file" ] && [ -r /usr/dt/palettes/Default.dp ] &&
+    file=/usr/dt/palettes/Default.dp
+
+# #RRRRGGGGBBBB (palette files) -> #RRGGBB
+short() {
+    echo "$1" | sed -n -e 's/^#\(..\)..\(..\)..\(..\)..$/#\1\2\3/' \
+                       -e 's/^#\(......\)$/#\1/p'
+}
+if [ -z "$act" ] && [ -n "$file" ]; then
+    act=`short "\`sed -n 1p "$file"\`"`
+    ina=`short "\`sed -n 2p "$file"\`"`
+fi
+: ${act:=#EDA870}
+: ${ina:=#999999}
+
+mkdir -p "$dir" || exit 1
+
+# All images are drawn by awk from a few rules; colors:
+#   h top/left shadow (light)   . background
+#   s bottom/right shadow       t glyph and text
+awk -v dir="$dir" -v act="$act" -v ina="$ina" '
+function hex2(h) { return index("0123456789abcdef", tolower(h)) - 1 }
+function rgb(c, i) { return hex2(substr(c, 2*i, 1)) * 16 + hex2(substr(c, 2*i+1, 1)) }
+function mk(r, g, b) {
+    if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255
+    if (r < 0) r = 0; if (g < 0) g = 0; if (b < 0) b = 0
+    return sprintf("#%02X%02X%02X", r, g, b)
+}
+# Motif-like shades: lighter and darker versions of the background
+function light(c) { return mk(rgb(c,1) + (255-rgb(c,1))*0.55, rgb(c,2) + (255-rgb(c,2))*0.55, rgb(c,3) + (255-rgb(c,3))*0.55) }
+function dark(c)  { return mk(rgb(c,1)*0.5, rgb(c,2)*0.5, rgb(c,3)*0.5) }
+function text(c)  { return (rgb(c,1)*0.3 + rgb(c,2)*0.59 + rgb(c,3)*0.11 > 140) ? "#000000" : "#FFFFFF" }
+
+# Pixel grid helpers
+function clear(w, h,   x, y) { W = w; H = h; for (y = 0; y < h; y++) for (x = 0; x < w; x++) P[x, y] = "." }
+function px(x, y, c) { if (x >= 0 && y >= 0 && x < W && y < H) P[x, y] = c }
+function hline(x0, x1, y, c,   x) { for (x = x0; x <= x1; x++) px(x, y, c) }
+function vline(x, y0, y1, c,   y) { for (y = y0; y <= y1; y++) px(x, y, c) }
+# A beveled box: raised (light top/left) or sunken
+function box(x0, y0, x1, y1, raised) {
+    hline(x0, x1, y0, raised ? "h" : "s"); vline(x0, y0, y1, raised ? "h" : "s")
+    hline(x0, x1, y1, raised ? "s" : "h"); vline(x1, y0, y1, raised ? "s" : "h")
+}
+function out(name, bg,   f, x, y, line) {
+    f = dir "/" name ".xpm"
+    printf "/* XPM */\nstatic char *%s[] = {\n\"%d %d 4 1\",\n", "img", W, H > f
+    printf "\". c %s\",\n\"h c %s\",\n\"s c %s\",\n\"t c %s\",\n", bg, light(bg), dark(bg), text(bg) > f
+    for (y = 0; y < H; y++) {
+        line = ""
+        for (x = 0; x < W; x++) line = line P[x, y]
+        printf "\"%s\"%s\n", line, (y < H - 1) ? "," : "" > f
+    }
+    printf "};\n" > f
+    close(f)
+}
+
+BEGIN {
+    B = 5           # frame width
+    T = 22          # title bar height, below the frame top
+    TH = B + T      # height of the title row images
+    N = split("active inactive", st, " ")
+    for (i = 1; i <= N; i++) {
+        s = st[i]; bg = (s == "active") ? act : ina
+
+        # Frame sides: raised outer edge, sunken inner edge
+        clear(B, 1); px(0, 0, "h"); px(B-1, 0, "s"); out("left-" s, bg)
+        clear(B, 1); px(0, 0, "h"); px(B-1, 0, "s"); out("right-" s, bg)
+        clear(1, B); px(0, 0, "h"); px(0, B-1, "s"); out("bottom-" s, bg)
+
+        # Bottom corners, with the Motif resize notches
+        C = T
+        clear(C, B); hline(0, C-1, B-1, "s"); vline(0, 0, B-1, "h"); hline(B-1, C-1, 0, "h")
+        vline(B-1, 0, 0, "s"); vline(C-1, 0, B-1, "s"); vline(C-2, 1, B-2, "h"); out("bottom-left-" s, bg)
+        clear(C, B); hline(0, C-1, B-1, "s"); vline(C-1, 0, B-1, "s"); hline(0, C-B, 0, "h")
+        vline(C-B, 0, 0, "s"); vline(0, 0, B-1, "s"); vline(1, 1, B-2, "h"); out("bottom-right-" s, bg)
+
+        # Title row: frame top (B rows) then the raised title bar
+        clear(1, TH); px(0, 0, "h"); px(0, B-1, "s"); px(0, B, "h"); px(0, TH-1, "s")
+        for (k = 1; k <= 5; k++) out("title-" k "-" s, bg)
+
+        # Top corners: frame top and side, notch below the title
+        clear(B, TH); vline(0, 0, TH-1, "h"); hline(0, B-1, 0, "h"); px(B-1, B-1, "s"); vline(B-1, B, TH-1, "s")
+        out("top-left-" s, bg)
+        clear(B, TH); vline(B-1, 0, TH-1, "s"); hline(0, B-1, 0, "h"); px(0, B-1, "s"); vline(0, B, TH-1, "h")
+        out("top-right-" s, bg)
+
+        # Buttons, T wide: raised (pressed: sunken) with a Motif glyph
+        split("menu hide maximize maximize-toggled close shade stick", btn, " ")
+        for (b = 1; b <= 7; b++) {
+            for (p = 1; p <= 4; p++) {
+                state = (p == 1) ? s : (p == 2) ? "pressed" : (p == 3) ? "prelight" : "inactive"
+                if (s == "inactive" && p != 1) continue
+                if (s == "active" && p == 4) continue
+                clear(T, TH)
+                px(0, 0, "h"); hline(0, T-1, 0, "h"); hline(0, T-1, B-1, "s")
+                box(0, B, T-1, TH-1, state != "pressed")
+                cx = int(T / 2); cy = B + int(T / 2)
+                n = btn[b]
+                if (n == "menu") {                  # a raised bar
+                    box(cx-5, cy-1, cx+4, cy+1, 1)
+                } else if (n == "hide" || n == "shade") {   # small square
+                    box(cx-2, cy-2, cx+1, cy+1, 1)
+                } else if (n == "maximize" || n == "maximize-toggled") {
+                    box(cx-6, cy-6, cx+5, cy+5, n == "maximize")
+                } else if (n == "close") {          # an X
+                    for (d = -4; d <= 4; d++) { px(cx+d, cy+d, "t"); px(cx+d, cy-d, "t") }
+                } else if (n == "stick") {
+                    box(cx-1, cy-1, cx, cy, 1)
+                }
+                out(n "-" state, bg)
+            }
+        }
+    }
+    f = dir "/themerc"
+    print "# Generated by dtxfwmtheme from the CDE palette; changes are lost." > f
+    print "active_text_color=" text(act) > f
+    print "inactive_text_color=" text(ina) > f
+    close(f)
+}'
+
+cat >> "$dir/themerc" <<EOF
+button_layout=O|HM
+button_offset=0
+button_spacing=0
+full_width_title=true
+title_alignment=center
+title_horizontal_offset=0
+title_vertical_offset_active=2
+title_vertical_offset_inactive=2
+title_shadow_active=false
+title_shadow_inactive=false
+maximized_offset=0
+shadow_delta_height=0
+shadow_delta_width=0
+shadow_delta_x=0
+shadow_delta_y=0
+shadow_opacity=0
+EOF
+
+if [ -n "$reload" ] && have xfconf-query &&
+   [ "`xfconf-query -c xfwm4 -p /general/theme 2>/dev/null`" = CDE ]; then
+    # xfwm4 reloads its theme when the setting changes
+    xfconf-query -c xfwm4 -p /general/theme -s Default 2>/dev/null
+    sleep 1
+    xfconf-query -c xfwm4 -p /general/theme -s CDE 2>/dev/null
+fi
+exit 0

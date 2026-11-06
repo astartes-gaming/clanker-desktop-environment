@@ -63,6 +63,12 @@ features stay optional or detected at run time.
 
 ## Done
 
+- Under xfwm4, Motif-style title bars and frames in the CDE palette
+  (dtxfwmtheme), following palette changes.
+- Style Manager > Front Panel: choose which application each main panel
+  button opens (an installed application or a command).
+- Style Manager > Session: the ~/.dtprofile options (D-Bus, autostart,
+  window manager, ...) as switches.
 - Under xfwm4 the Front Panel's handles move it (it reserves its screen
   edge only while it sits on one).  tools/vm/selftest-wayland.sh tests
   the Wayland session headless (cage, no login needed).
