@@ -16,7 +16,10 @@ endif
 
 dtappgather_SOURCES = Options.C dtappgather.C dtappgather.h Options.h
 
-# can't use INSTALL here as the program is already installed
-install-exec-hook:
-	-chown root $(DESTDIR)$(bindir)/dtappgather
-	-chmod 4755 $(DESTDIR)$(bindir)/dtappgather
+# dtappgather is no longer setuid root: users create their own session
+# directory in these shared, sticky directories (like /tmp).
+install-data-hook:
+	$(MKDIR_P) $(DESTDIR)$(CDE_LOGFILES_TOP)/appconfig/appmanager \
+		$(DESTDIR)$(CDE_LOGFILES_TOP)/tmp
+	-chmod 1777 $(DESTDIR)$(CDE_LOGFILES_TOP)/appconfig/appmanager \
+		$(DESTDIR)$(CDE_LOGFILES_TOP)/tmp
