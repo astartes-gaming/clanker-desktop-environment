@@ -32,7 +32,13 @@ if SOLARIS
 dtfile_LDADD += -lintl -lresolv
 endif
 
+if HAVE_DBUS
+dtfile_CPPFLAGS += $(DBUS_CFLAGS)
+dtfile_LDADD += $(DBUS_LIBS)
+endif
+
 dtfile_SOURCES = ChangeDir.c     ChangeDirP.c    Command.c       Common.c \
+		 DbusFM.c        DbusFM.h \
 		 Desktop.c       Directory.c     Encaps.c        File.c \
 		 FileDialog.c    FileManip.c     FileMgr.c       FileOp.c \
 		 Filter.c        FilterP.c       Find.c          FindP.c \

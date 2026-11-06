@@ -176,6 +176,7 @@
 #include "Help.h"
 #include "FileMgr.h"
 #include "Desktop.h"
+#include "DbusFM.h"
 #include "Main.h"
 #include "ChangeDir.h"
 #include "Prefs.h"
@@ -1791,6 +1792,9 @@ _DtPerfChkpntMsgSend("Begin XtInitialize");
    gettimeofday(&update_time_s, NULL);
 #endif
    (void) InitializeToolTalkSession( toplevel, ttFd );
+
+   /* "Show in folder" for other programs (org.freedesktop.FileManager1) */
+   DtfileDbusInit( toplevel );
 #ifdef DT_PERFORMANCE
    gettimeofday(&update_time_f, NULL);
    if (update_time_s.tv_usec > update_time_f.tv_usec) {
@@ -3519,6 +3523,78 @@ OpenDirectories(
 
 /************************************************************************
  *
+ *  RaiseView
+ *      Bring an existing File Manager view to the current workspace,
+ *      de-iconify it and raise it.
+ *
+ ************************************************************************/
+
+void
+RaiseView(
+        DialogData *dialog_data)
+{
+    FileMgrData *file_mgr_data = (FileMgrData *) dialog_data->data;
+    FileMgrRec *file_mgr_rec = (FileMgrRec *) file_mgr_data->file_mgr_rec;
+    Window   rootWindow;
+    Atom     pCurrent;
+    Screen   *currentScreen;
+    int      screen;
+
+
+    screen = XDefaultScreen(display);
+    currentScreen = XScreenOfDisplay(display, screen);
+    rootWindow = RootWindowOfScreen(currentScreen);
+
+    /* Get the current Workspace */
+    if (DtWsmGetCurrentWorkspace(display, rootWindow, &pCurrent)
+                                                          == Success)
+    {
+       Atom * ws_presence = NULL;
+       unsigned long num_workspaces = 0;
+       int k;
+
+       if (DtWsmGetWorkspacesOccupied(display,
+            XtWindow(file_mgr_rec->shell), &ws_presence,
+            &num_workspaces) == Success)
+       {
+          /* Already in this workspace? */
+          for (k = 0; k < num_workspaces; k++)
+          {
+             if (ws_presence[k] == pCurrent)
+                break;
+          }
+
+          if (k >= num_workspaces)
+          {
+             /* Add to the workspace */
+             ws_presence = (Atom *) XtRealloc((char *)ws_presence,
+                  sizeof (Atom) * (num_workspaces + 1));
+
+             ws_presence[num_workspaces] = pCurrent;
+             DtWsmSetWorkspacesOccupied(display,
+                                 XtWindow(file_mgr_rec->shell),
+                                 ws_presence, num_workspaces + 1);
+          }
+          XFree((char *)ws_presence);
+       }
+       else
+       {
+          /* Change the hints to reflect the current workspace */
+          DtWsmSetWorkspacesOccupied(display,
+                                  XtWindow(file_mgr_rec->shell),
+                                  &pCurrent, 1);
+       }
+    }
+
+    /* must map the window to catch iconified windows */
+    /* a XtPopup will not catch it */
+    XtMapWidget(file_mgr_rec->shell);
+    XRaiseWindow(display, XtWindow(file_mgr_rec->shell));
+}
+
+
+/************************************************************************
+ *
  *  GetNewView
  *      Given a directory name, generate a new view for the directory.
  *
@@ -3595,64 +3671,11 @@ GetNewView(
             (strcmp(host_name, view_set[i]->host_name) == 0))
                                   )
          {
-             Window   rootWindow;
-             Atom     pCurrent;
-             Screen   *currentScreen;
-             int      screen;
-
              dialog_data = (DialogData *) view_set[i]->dialog_data;
              file_mgr_data = (FileMgrData *) dialog_data->data;
              file_mgr_rec = (FileMgrRec *) file_mgr_data->file_mgr_rec;
 
-             screen = XDefaultScreen(display);
-             currentScreen = XScreenOfDisplay(display, screen);
-             rootWindow = RootWindowOfScreen(currentScreen);
-
-             /* Get the current Workspace */
-             if (DtWsmGetCurrentWorkspace(display, rootWindow, &pCurrent)
-                                                                   == Success)
-             {
-                Atom * ws_presence = NULL;
-                unsigned long num_workspaces = 0;
-                int k;
-
-                if (DtWsmGetWorkspacesOccupied(display,
-                     XtWindow(file_mgr_rec->shell), &ws_presence,
-                     &num_workspaces) == Success)
-                {
-                   /* Already in this workspace? */
-                   for (k = 0; k < num_workspaces; k++)
-                   {
-                      if (ws_presence[k] == pCurrent)
-                         break;
-                   }
-
-                   if (k >= num_workspaces)
-                   {
-                      /* Add to the workspace */
-                      ws_presence = (Atom *) XtRealloc((char *)ws_presence,
-                           sizeof (Atom) * (num_workspaces + 1));
-
-                      ws_presence[num_workspaces] = pCurrent;
-                      DtWsmSetWorkspacesOccupied(display,
-                                          XtWindow(file_mgr_rec->shell),
-                                          ws_presence, num_workspaces + 1);
-                   }
-                   XFree((char *)ws_presence);
-                }
-                else
-                {
-                   /* Change the hints to reflect the current workspace */
-                   DtWsmSetWorkspacesOccupied(display,
-                                           XtWindow(file_mgr_rec->shell),
-                                           &pCurrent, 1);
-                }
-             }
-
-             /* must map the window to catch iconified windows */
-             /* a XtPopup will not catch it */
-             XtMapWidget(file_mgr_rec->shell);
-             XRaiseWindow(display, XtWindow(file_mgr_rec->shell));
+             RaiseView(dialog_data);
 
              /* announce activity */
 	     {

@@ -5145,13 +5145,16 @@ FileMgrData *file_mgr_data)
             strcmp(file_mgr_data->desktop_file,
                    file_view_data->file_data->file_name) == 0)
         {
+            /* The view may be an existing one with a selection. */
+            DeselectAllFiles (file_mgr_data);
             SelectFile (file_mgr_data, file_view_data);
-            break;
+            ActivateSingleSelect(file_mgr_data->file_mgr_rec,
+                                 file_view_data->file_data->logical_type);
+            PositionFileView(file_view_data, file_mgr_data);
+            return;
         }
     }
-    ActivateSingleSelect(file_mgr_data->file_mgr_rec,
-                         file_mgr_data->selection_list[0]->file_data->logical_type);
-    if(file_view_data) {
-        PositionFileView(file_view_data, file_mgr_data);
-    }
+    /* Not there (deleted, or hidden by the filter): select nothing.
+     * The old code went on to use an empty selection list and the
+     * last file in the folder. */
 }
