@@ -51,8 +51,10 @@ features stay optional or detected at run time.
   - [ ] libtt session messages over D-Bus, with ToolTalk as the
         fallback when no session bus is running.
 
-- [ ] Under xfwm4: hide the dtwm-only Workspace menu entries (Shuffle,
-      Minimize/Restore Front Panel) and let the panel's handles move it.
+- [ ] Under xfwm4: let the Front Panel's handles move it.
+- [ ] UTF-8 locales (C.UTF-8, en_US.UTF-8, as a text-console or
+      Wayland login has): Help shows '"' for bullets and Motif warns
+      "Missing charsets in String to FontSet conversion".
 
 ## Code health
 

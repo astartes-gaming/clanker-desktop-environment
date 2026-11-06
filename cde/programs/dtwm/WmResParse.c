@@ -2546,6 +2546,21 @@ static MenuItem *ParseMenuItems (WmScreenData *pSD)
 
 	menuItem->greyedContext = functionTable[ix].greyedContext;
 	menuItem->mgtMask = functionTable[ix].mgtMask;
+
+	/*
+	 * Under another window manager (-panelonly) leave out what only
+	 * works when dtwm manages the windows.
+	 */
+	if (wmGD.panelOnly &&
+	    (menuItem->wmFunction == F_Circle_Up ||
+	     menuItem->wmFunction == F_Circle_Down ||
+	     menuItem->wmFunction == F_Pack_Icons ||
+	     menuItem->wmFunction == F_Toggle_Front_Panel))
+	{
+	    FreeMenuItem (menuItem);
+	    continue;
+	}
+
         if ((menuItem->wmFunction == F_Toggle_Front_Panel) &&
 	    ((wmGD.useFrontPanel == False) ||
 	     (wmGD.dtSD != pSD)))
