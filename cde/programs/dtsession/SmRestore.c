@@ -260,6 +260,10 @@ static Boolean	wmTimeout;
 
 char   tmpExecWmFile[MAXPATHSM+1];
 static Boolean  localWmLaunched = False;
+/* wmStartupCommand names a window manager other than dtwm */
+static Boolean  otherWm = False;
+static Boolean  otherWmReady;
+static XtIntervalId otherWmPoll;
 
 /* 
  *     ^^^^^  ^^^^^  ^^^^^  ^^^^^  ^^^^^  ^^^^^  
@@ -649,14 +653,37 @@ StartWM( void )
     char localWmErrorString[(2 * MAXPATHSM) + 1];
     Boolean goodWmStartup = True;
     int status;
-  
-    if((smGD.wmStartup == NULL) || (*smGD.wmStartup == 0))
+    char *wmCommand = smGD.wmStartup;
+    char altWmCommand[MAXPATHSM + 64];
+
+    /*
+     * Without a wmStartupCommand resource, DT_WINDOW_MANAGER names the
+     * window manager (Xsession.d/0070.dtmodern sets it to xfwm4 when
+     * installed; DT_WINDOW_MANAGER=dtwm in .dtprofile opts out).
+     * Another window manager runs through dtaltwm, which also starts
+     * the Front Panel ("dtwm -panelonly").
+     */
+    if ((wmCommand == NULL) || (*wmCommand == 0))
+    {
+	const char *wm = getenv("DT_WINDOW_MANAGER");
+
+	if (wm && *wm && strcmp(wm, "dtwm") != 0 &&
+	    strcmp(wm, CDE_INSTALLATION_TOP "/bin/dtwm") != 0 &&
+	    strpbrk(wm, " \t\"'\\") == NULL && strlen(wm) < MAXPATHSM)
+	{
+	    snprintf(altWmCommand, sizeof altWmCommand,
+		     CDE_INSTALLATION_TOP "/bin/dtaltwm %s", wm);
+	    wmCommand = altWmCommand;
+	}
+    }
+
+    if((wmCommand == NULL) || (*wmCommand == 0))
     {
 	ForkWM();
     }
     else
     {
-	CreateExecString(smGD.wmStartup);
+	CreateExecString(wmCommand);
 
 	/*
 	 * check to see if the wmStartup string exists and is
@@ -667,6 +694,13 @@ StartWM( void )
 	{
 	    goodWmStartup = False;
 	    CreateExecString(CDE_INSTALLATION_TOP "/bin/dtwm");	    
+	}
+	else
+	{
+	    const char *base = strrchr(smExecArray[0], '/');
+
+	    base = base ? base + 1 : smExecArray[0];
+	    otherWm = (strcmp(base, "dtwm") != 0);
 	}
 	
 	if(smExecArray[0] != NULL)
@@ -688,13 +722,13 @@ StartWM( void )
     
     if (goodWmStartup == False)
     {
-	sprintf(wmStartupErrorString, GETMESSAGE(16, 7,
+	snprintf(wmStartupErrorString, sizeof wmStartupErrorString, GETMESSAGE(16, 7,
           "The wmStartupCommand resource is set to:\n\n"
           "%s\n\n"
           "This file does not exist or is not executable.\n"
           CDE_INSTALLATION_TOP "/bin/dtwm will be started "
           "instead.\n"),
-          smGD.wmStartup);
+          wmCommand);
 	PrintError(DtError, wmStartupErrorString);
     }
 
@@ -3915,6 +3949,27 @@ KillParent( void )
  *  --------
  * 
  *************************************<->***********************************/
+static void
+PollOtherWM( XtPointer client_data, XtIntervalId *id )
+{
+    /*
+     * Another window manager (xfwm4, openbox, ...) never sends dtwm's
+     * "ready" message, so do not wait the whole waitWmTimeout for it:
+     * an ICCCM 2.0 window manager owns WM_S<screen> once it manages
+     * the screen.
+     */
+    char name[32];
+    Atom wmSel;
+
+    sprintf(name, "WM_S%d", DefaultScreen(smGD.display));
+    wmSel = XInternAtom(smGD.display, name, False);
+    otherWmPoll = 0;
+    if (XGetSelectionOwner(smGD.display, wmSel) != None)
+        otherWmReady = True;
+    else
+        otherWmPoll = XtAppAddTimeOut(smGD.appCon, 250, PollOtherWM, NULL);
+}
+
 static void 
 WaitForWM( void )
 {
@@ -3936,11 +3991,19 @@ WaitForWM( void )
 				smRes.waitWmTimeout,
 				WaitWMTimeout, NULL);
     
-    while((smGD.dtwmRunning == False) && (wmTimeout == False))
+    otherWmReady = False;
+    otherWmPoll = 0;
+    if (otherWm)
+        PollOtherWM(NULL, NULL);
+
+    while((smGD.dtwmRunning == False) && (wmTimeout == False) &&
+          (otherWmReady == False))
     {
 	XtAppProcessEvent(smGD.appCon, XtIMAll);
     }
-    
+
+    if (otherWmPoll)
+        XtRemoveTimeOut(otherWmPoll);
     XtRemoveTimeOut(wmTimerId);
     XtRemoveEventHandler(smGD.topLevelWid,
                       0,

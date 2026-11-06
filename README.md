@@ -151,6 +151,18 @@ To turn a session feature off, set the variable in `~/.dtprofile`:
 Window snapping is set with dtwm resources: `Dtwm*snapDistance`,
 `Dtwm*snapToWindows` and `Dtwm*edgeTiling`.
 
+### Another window manager
+
+To run xfwm4 (or any other window manager) instead of dtwm, add this
+line to `~/.Xdefaults` and log in again:
+
+    Dtsession*wmStartupCommand: /usr/dt/bin/dtaltwm /usr/bin/xfwm4
+
+`dtaltwm` restarts the window manager if it crashes and falls back to
+dtwm if it is not installed or keeps failing. For now the Front Panel,
+the Workspace menu and the backdrops are drawn by dtwm, so they are
+missing under another window manager.
+
 ## Test it
 
 `tools/vm/` builds a small Debian VM without root and runs an end-to-end
