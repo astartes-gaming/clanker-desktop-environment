@@ -74,3 +74,11 @@ VM_OUT=$PWD/tools/vm/out-512 tools/vm/vmctl.py provision
 `qemu-img convert -O qcow2 out-512/disk.qcow2 standalone.qcow2` gives
 an image without the backing file, e.g. for AQEMU or virt-manager.
 
+
+## Wayland session (by hand)
+
+The VM needs `cage`, `xwayland` and `xauth` (add their .deb files to
+`VM_DEBS`). Stop dtlogin (`systemctl stop dtlogin`), log in as the
+test user on the text console with `vmctl.py type`, and run
+`/usr/dt/bin/dtwayland`. Clients of the inner session use `DISPLAY=:1`
+and `XAUTHORITY=/run/user/UID/dtwayland-Xauthority.1`.

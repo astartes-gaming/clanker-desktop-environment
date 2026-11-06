@@ -44,9 +44,6 @@ features stay optional or detected at run time.
 - [ ] Translations for the new strings (dtstyle.msg sets 4 and 20,
       Workspace menu power entries, laptop key bindings) in the
       localized catalogs under `cde/programs/localized/`.
-- [ ] Experimental Wayland session: CDE running in a rootful Xwayland
-      inside a small compositor (cage or labwc), the way Xfce 4.20
-      started. Optional, Linux only, off by default.
 - [ ] Replace ToolTalk with D-Bus where both are available, keeping
       ToolTalk for old systems. Stages 1 and 2 are done (see below); still
       to do:
@@ -54,8 +51,10 @@ features stay optional or detected at run time.
   - [ ] libtt session messages over D-Bus, with ToolTalk as the
         fallback when no session bus is running.
 
-- [ ] Under xfwm4: hide the dtwm-only Workspace menu entries (Shuffle,
-      Minimize/Restore Front Panel) and let the panel's handles move it.
+- [ ] Under xfwm4: let the Front Panel's handles move it.
+- [ ] UTF-8 locales (C.UTF-8, en_US.UTF-8, as a text-console or
+      Wayland login has): Help shows '"' for bullets and Motif warns
+      "Missing charsets in String to FontSet conversion".
 
 ## Code health
 
@@ -69,6 +68,8 @@ features stay optional or detected at run time.
 - The whole tree builds as C99 and as C23 (GCC 15's default) with no
   old-style definitions or prototype-less declarations; CI checks both
   (`c-standards.yml`).
+- Wayland: `dtwayland` and the "CDE (Xwayland)" session run CDE in a
+  rootful Xwayland under cage or labwc (Linux, opt-in).
 - xfwm4 manages the windows when installed (opt out with
   `DT_WINDOW_MANAGER=dtwm`); `dtwm -panelonly` keeps the Front Panel,
   backdrops and Workspace menu, with workspaces and desktops in step.
