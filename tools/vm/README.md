@@ -75,7 +75,14 @@ VM_OUT=$PWD/tools/vm/out-512 tools/vm/vmctl.py provision
 an image without the backing file, e.g. for AQEMU or virt-manager.
 
 
-## Wayland session (by hand)
+## Wayland session
+
+`sh /root/payload/selftest-wayland.sh` (as root in the VM, with cage,
+xwayland and xauth installed) starts `dtwayland` for the test user on
+cage's headless backend and checks the session; it stops dtlogin
+first.
+
+### By hand
 
 The VM needs `cage`, `xwayland` and `xauth` (add their .deb files to
 `VM_DEBS`). Stop dtlogin (`systemctl stop dtlogin`), log in as the

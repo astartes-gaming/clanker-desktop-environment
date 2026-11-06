@@ -429,6 +429,28 @@ else
     check "right-clicking the desktop posts the Workspace menu" \
           test "$after" -gt "$before"
     x xdotool key Escape; sleep 1
+
+    # Drag the panel by its left handle: up, then back to the bottom.
+    fppos() { x xwininfo -id ${fp:-0} | awk '/Absolute upper-left X/ {x=$4} /Absolute upper-left Y/ {y=$4} END {print x, y}'; }
+    fpstrut() { x xprop -id ${fp:-0} _NET_WM_STRUT | awk -F', ' '{print $4}'; }
+    fpdrag() {          # fpdrag DY: drag the left handle DY pixels down
+        dy=$1
+        set -- `fppos`
+        hx=$(($1 + 5)); hy=$(($2 + 40))
+        x xdotool mousemove $hx $hy mousedown 1 sleep 0.3 \
+            mousemove $hx $((hy + dy / 2)) sleep 0.2 \
+            mousemove $hx $((hy + dy)) sleep 0.3 mouseup 1
+        sleep 2
+    }
+    set -- `fppos`; y0=$2
+    fpdrag -300
+    set -- `fppos`; s=`fpstrut`
+    check "the panel's handle moves it (y $y0 -> $2)" test "$2" -lt "$y0"
+    check "a panel off the screen edge reserves no space ($s)" test "$s" = 0
+    fpdrag 600
+    set -- `fppos`; s=`fpstrut`
+    check "dragged back, it sits on the bottom edge (y $2)" test "$2" = "$y0"
+    check "and reserves its height again ($s)" test "$s" -gt 0
 fi
 
 #####################################################################
