@@ -51,7 +51,6 @@ features stay optional or detected at run time.
   - [ ] libtt session messages over D-Bus, with ToolTalk as the
         fallback when no session bus is running.
 
-- [ ] Under xfwm4: let the Front Panel's handles move it.
 - [ ] UTF-8 locales (C.UTF-8, en_US.UTF-8, as a text-console or
       Wayland login has): Help shows '"' for bullets and Motif warns
       "Missing charsets in String to FontSet conversion".
@@ -65,6 +64,9 @@ features stay optional or detected at run time.
 
 ## Done
 
+- Under xfwm4 the Front Panel's handles move it (it reserves its screen
+  edge only while it sits on one).  tools/vm/selftest-wayland.sh tests
+  the Wayland session headless (cage, no login needed).
 - The whole tree builds as C99 and as C23 (GCC 15's default) with no
   old-style definitions or prototype-less declarations; CI checks both
   (`c-standards.yml`).
