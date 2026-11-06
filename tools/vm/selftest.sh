@@ -75,6 +75,29 @@ check "XDG_CURRENT_DESKTOP=CDE"     grep -q '^XDG_CURRENT_DESKTOP=CDE' $envf
 rm -f $envf
 
 #####################################################################
+section "Security and hardening"
+check "dtappgather is not setuid" sh -c "! test -u /usr/dt/bin/dtappgather"
+check "appmanager directory is sticky and shared" \
+      sh -c "stat -c %a /var/dt/appconfig/appmanager | grep -q '^1777$'"
+check "the user's App Manager directory exists" \
+      sh -c "ls -l /var/dt/appconfig/appmanager | grep -q ' $U '"
+if command -v readelf >/dev/null 2>&1; then
+    check "dtwm is built with full RELRO" \
+          sh -c "readelf -d /usr/dt/bin/dtwm | grep -q BIND_NOW"
+    check "dtsession uses stack protection" \
+          sh -c "readelf --dyn-syms /usr/dt/bin/dtsession | grep -q __stack_chk_fail"
+else
+    skp "binary hardening (install binutils to check)"
+fi
+
+#####################################################################
+section "systemd session"
+units() { x systemctl --user is-active "$@"; }
+check "cde-session.target is active"       units cde-session.target
+check "graphical-session.target is active" units graphical-session.target
+check "power actions are installed"        test -x /usr/dt/bin/dtpower
+
+#####################################################################
 section "Network exposure"
 open=`ss -ltnpH | grep -E 'dt|ttsession|rpc.ttdbserver' |
       awk '{print $4}' | grep -vE '^(127\.0\.0\.1|\[::1\]):' | head -3`
