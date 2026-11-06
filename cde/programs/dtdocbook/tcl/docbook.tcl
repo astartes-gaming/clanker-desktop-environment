@@ -1365,7 +1365,7 @@ proc ListItem {id override} {
 	    Emit " TIMING=\"ASYNC\" "
 	    Emit "SSI=\"$firstString$spacing-MARKED\""
 
-	    if {[string match {\[??????\]} $mark]} {
+	    if {[string match {\[??????\]} $validMarkArray($mark)]} {
 		Emit ">\n<P SSI=\"P1\"><SPC NAME=\"$validMarkArray($mark)\""
 		Emit "></P>\n</BLOCK>\n"
 	    } else {
