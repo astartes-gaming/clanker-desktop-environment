@@ -63,6 +63,9 @@ features stay optional or detected at run time.
 
 ## Done
 
+- The whole tree builds as C99 and as C23 (GCC 15's default) with no
+  old-style definitions or prototype-less declarations; CI checks both
+  (`c-standards.yml`).
 - C99 is the language baseline; configure stops with a clear message
   on a compiler without a C99 mode (GCC 3+, Clang, Oracle Studio 12+
   and XL C 10+ all have one).
