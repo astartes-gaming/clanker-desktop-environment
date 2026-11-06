@@ -49,6 +49,8 @@ CDE behaves as it always did.
 - Browsers and video players can keep the screen from blanking and
   locking while they play: the session answers
   `org.freedesktop.ScreenSaver` on D-Bus.
+- "Show in folder" in browsers and other applications opens the File
+  Manager with the file selected (`org.freedesktop.FileManager1`).
 - Logins work on current Linux-PAM. Sessions are registered with logind
   and use the user D-Bus, XDG autostart and systemd's
   `graphical-session.target`.
@@ -153,7 +155,7 @@ Window snapping is set with dtwm resources: `Dtwm*snapDistance`,
 
 `tools/vm/` builds a small Debian VM without root and runs an end-to-end
 self-test of the desktop. It checks logins, touchpad, keys, snapping,
-wallpapers, resolution changes, the screen lock, screen-saver inhibit,
+wallpapers, resolution changes, the screen lock, screen-saver inhibit, "Show in folder",
 suspend and the compositor. See [tools/vm/README.md](tools/vm/README.md).
 
 ```sh

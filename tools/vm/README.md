@@ -39,6 +39,7 @@ PASS, FAIL or SKIP:
 - resolution changes
 - screen lock and unlock, and lock-before-suspend
 - screen-saver inhibit over D-Bus (`ssinhibit` plays a video player)
+- "Show in folder" (`org.freedesktop.FileManager1`) opens dtfile views
 - the compositor
 
 Log in as `tester` at the dtlogin screen, then on the serial console

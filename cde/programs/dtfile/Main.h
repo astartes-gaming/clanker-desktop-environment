@@ -437,6 +437,8 @@ extern DialogData *ViewDirectoryProc(
                         char *root_dir,
                         int restricted,
                         Tt_message msg) ;
+extern void RaiseView(
+                        DialogData *dialog_data) ;
 extern DialogData *GetNewView(
                         char *host_name,
                         char *directory_name,

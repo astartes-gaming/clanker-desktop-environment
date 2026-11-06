@@ -108,8 +108,7 @@ static void ResolveVariableReference(
 			int escape,
 			int brackets) ;
 static char *read_line( 
-			char string[],
-			int n,
+			char **string,
         		FILE *fd) ;
 static void clean_line( 
                         char **string) ;
@@ -548,13 +547,12 @@ get_variable (
  *
  * Synopsis:
  *
- *	ret_value = read_line (string, n, fd);
+ *	ret_value = read_line (&string, fd);
  *
- *	char *ret_vaulue;  	NULL if EOF, string otherwise 
+ *	char *ret_value;  	NULL if EOF, string otherwise 
  *
- *	char string[];  	The array to put the line into.
- *
- *	int n; 			Max number of chars to read.
+ *	char *string;  		A buffer of at least MAX_LINE_LENGTH bytes
+ *				from XtMalloc; grown for longer lines.
  *
  *	FILE * fd;		The file descriptor to read from.
  *
@@ -563,16 +561,33 @@ get_variable (
 static
 char*
 read_line (
-	char string[],			/* MODIFIED */
-	int n,
+	char **string,			/* MODIFIED, may be reallocated */
         FILE *fd )
 {
-   if ((fgets (string, n, fd)) == NULL)
+   /* The buffer is at least MAX_LINE_LENGTH bytes. */
+   size_t size = MAX_LINE_LENGTH;
+   size_t len;
+
+   if (fgets (*string, (int) size, fd) == NULL)
       return (NULL);
-   else {
-      string[strlen (string) - 1] = '\000';
-      return (string);
+   len = strlen (*string);
+
+   /*
+    * A long line (an EXEC_STRING joined from many continued lines by
+    * cpp) used to be cut at MAX_LINE_LENGTH, losing a character, and
+    * its rest was read as a separate, unrecognized field.
+    */
+   while (len > 0 && (*string)[len - 1] != '\n' && !feof (fd))
+   {
+      size *= 2;
+      *string = XtRealloc (*string, size);
+      if (fgets (*string + len, (int) (size - len), fd) == NULL)
+         break;
+      len += strlen (*string + len);
    }
+   if (len > 0 && (*string)[len - 1] == '\n')
+      (*string)[len - 1] = '\0';
+   return (*string);
 }
 
 /*********************
@@ -976,7 +991,7 @@ ReadNextEntry(
       start = NULL;
       indx = 0;
 
-      if (read_line (*tmpLine, MAX_LINE_LENGTH, fd) == NULL) 
+      if (read_line (tmpLine, fd) == NULL) 
       { 
 	 /* EOF */
 	 break;
@@ -1096,7 +1111,7 @@ ReadNextEntry(
       {
 	 (*tmpLine)[0] = '\000';
 
-	 if (read_line (*tmpLine, MAX_LINE_LENGTH, fd) == NULL) /* EOF */ 
+	 if (read_line (tmpLine, fd) == NULL) /* EOF */ 
 	 { 
 	    if (multi_line || (indx >=1)) 
 	    {

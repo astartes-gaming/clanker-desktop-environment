@@ -23,6 +23,7 @@ pass=0; fail=0; skip=0
 x() {
     timeout 30 runuser -u $U -- env DISPLAY=:0 \
         XAUTHORITY=/home/$U/.Xauthority XDG_RUNTIME_DIR=/run/user/$uid \
+        DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus \
         HOME=/home/$U PATH=/usr/dt/bin:/usr/bin:/bin "$@"
 }
 # Long-running clients (no timeout).
@@ -30,7 +31,8 @@ x() {
 # stopped by job control.
 xbg() {
     setsid runuser -u $U -- env DISPLAY=:0 XAUTHORITY=/home/$U/.Xauthority \
-        XDG_RUNTIME_DIR=/run/user/$uid HOME=/home/$U "$@" \
+        XDG_RUNTIME_DIR=/run/user/$uid \
+        DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus HOME=/home/$U "$@" \
         </dev/null >/dev/null 2>&1 &
 }
 ok()   { echo "PASS  $*"; pass=$((pass+1)); }
@@ -40,7 +42,13 @@ check() {
     desc=$1; shift
     if "$@" >/dev/null 2>&1; then ok "$desc"; else bad "$desc"; fi
 }
-section() { echo; echo "== $*"; }
+section() {
+    echo; echo "== $*"
+    # SELFTEST_TRACE=1: how many client windows are visible, to spot a
+    # section that hides other applications' windows.
+    [ -n "$SELFTEST_TRACE" ] &&
+        echo "      (visible windows: `x xdotool search --onlyvisible --name . 2>/dev/null | wc -l`)"
+}
 locked() { x xwininfo -name coverDialog 2>/dev/null | grep -q IsViewable; }
 notlocked() { ! locked; }
 tp_probe() { x /usr/dt/bin/dttouchpad -probe | grep -q 'capabilities=.*tapping'; }
@@ -73,6 +81,19 @@ check "session uses the user D-Bus" \
 check "logind session is active"    sh -c "loginctl show-session $sid -p Active | grep -q yes"
 check "XDG_CURRENT_DESKTOP=CDE"     grep -q '^XDG_CURRENT_DESKTOP=CDE' $envf
 rm -f $envf
+# Loading the action database must not warn (long EXEC_STRINGs were
+# cut at 1024 bytes; cpp left CDE_INSTALLATION_TOP in quoted commands).
+# The database is parsed when a client starts, so look at what the
+# running dtfile logged then.
+elog=/home/$U/.dt/errorlog
+dbwarn=0
+for p in `pgrep -u $U -x dtfile`; do
+    n=`grep -A4 "dtfile: PID $p:" $elog 2>/dev/null | grep -c 'unrecognized field'`
+    dbwarn=`expr $dbwarn + $n`
+done
+check "the action database loads without warnings ($dbwarn)" test "$dbwarn" = 0
+check "installed actions have real paths" \
+      sh -c "! grep -l 'CDE_INSTALLATION_TOP\|CDE_CONFIGURATION_TOP' /usr/dt/appconfig/types/C/*.dt"
 
 #####################################################################
 section "Security and hardening"
@@ -279,6 +300,53 @@ if [ -n "$PW" ] && [ -x $ssi ]; then
 else
     skp "inhibit (no password given, or ssinhibit not built)"
 fi
+
+#####################################################################
+section "Show in folder (D-Bus FileManager1)"
+# Browsers call org.freedesktop.FileManager1 for "Show in folder".
+fm1() {
+    x dbus-send --session --print-reply --dest=org.freedesktop.FileManager1 \
+        /org/freedesktop/FileManager1 org.freedesktop.FileManager1."$1" \
+        array:string:"$2" string: >/dev/null 2>&1
+}
+# dtfile keeps closed views as unmapped windows for reuse: only count
+# visible ones.
+fmwins() { x xdotool search --onlyvisible --name "^File Manager - $1\$" 2>/dev/null; }
+fmwin() { test -n "`fmwins "$1"`"; }
+nofmwin() { ! fmwin "$1"; }
+fmclose() {         # close with the window manager, only once focused
+    for w in `fmwins "$1"`; do
+        x xdotool windowactivate --sync $w >/dev/null 2>&1
+        [ "`x xdotool getactivewindow 2>/dev/null`" = "$w" ] &&
+            x xdotool key alt+F4
+        sleep 2
+    done
+}
+fmpid=`x dbus-send --session --print-reply=literal \
+        --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+        org.freedesktop.DBus.GetConnectionUnixProcessID \
+        string:org.freedesktop.FileManager1 2>/dev/null | awk '{print $2}'`
+check "dtfile owns org.freedesktop.FileManager1 (pid $fmpid)" \
+      test "`ps -o comm= -p ${fmpid:-0}`" = dtfile
+d=/home/$U/selftest-fm
+rm -rf $d; x mkdir -p "$d/show folder"; x touch "$d/item one.txt"
+check "ShowFolders answers" fm1 ShowFolders "file://$d/show%20folder"
+sleep 4
+check "ShowFolders opens a view of the folder" fmwin "show folder"
+fmclose "show folder"
+check "ShowItems answers" fm1 ShowItems "file://localhost$d/item%20one.txt"
+sleep 4
+check "ShowItems opens the item's folder" fmwin selftest-fm
+fm1 ShowItems "file://$d/show%20folder"; sleep 3
+n=`fmwins selftest-fm | wc -l`
+check "ShowItems reuses the open view ($n window)" test "$n" = 1
+fmclose selftest-fm
+fm1 ShowFolders "http://example.com/$d"
+fm1 ShowFolders "file://not-this-host$d"
+sleep 3
+check "non-local URIs are ignored" nofmwin selftest-fm
+check "dtfile is still running" pgrep -u $U -x dtfile
+rm -rf $d
 
 #####################################################################
 section "Compositor"
