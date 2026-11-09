@@ -174,7 +174,8 @@ libDtSvc_la_SOURCES = 	DtCodelibs/buf.C \
 	DtUtil2/UErrNoBMS.c \
 	DtUtil2/Utility.c \
 	DtUtil2/XlationSvc.c \
-	DtUtil2/XmWrap.c
+	DtUtil2/XmWrap.c \
+	DtUtil2/LivePalette.c
 
 libDtSvc_la_LIBADD =
 

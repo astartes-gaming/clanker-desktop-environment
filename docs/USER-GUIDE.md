@@ -166,8 +166,11 @@ AccessX features) and are applied again at every login.
   xsettingsd`). Without it they pick up the new colors when restarted.
 - Window frames under xfwm4 change at once (xfwm4 restarts in the
   background; your windows stay open).
-- CDE's own applications on today's (true color) displays pick up a new
-  palette when they are restarted.
+- CDE's own applications (File Manager, Text Editor, Terminal, Help,
+  Settings, the Front Panel, …) change color at once too. A few icons
+  drawn in the old colors, and the workspace buttons' own colors, keep
+  them until the application is restarted. `DT_NO_LIVE_PALETTE=1` turns
+  this off.
 
 ## Using Xfce applications
 

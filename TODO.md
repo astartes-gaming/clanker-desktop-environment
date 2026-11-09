@@ -61,11 +61,21 @@ features stay optional or detected at run time.
 - [ ] Move touched code to C99 idioms (`stdbool.h`, `stdint.h`,
       declarations where used) as it is worked on; no mass rewrites.
 
-- [ ] Motif applications follow palette changes live on TrueColor
-      displays (CDE's dynamic colors only work on PseudoColor; today
-      they need a restart).
+- [ ] Live palette: the workspace buttons' colors, and icons drawn in
+      the old colors, still need a restart.
+- [ ] dtlogin: logind marks the session "closing" as soon as it starts
+      (seen in the VM: "Session N logged out. Waiting for processes to
+      exit."); find where the PAM session's fd is closed.
 
 ## Done
+
+- Running CDE applications follow palette changes on TrueColor displays
+  (libDtSvc LivePalette.c: old pixel sets from Motif's color object
+  data, new ones computed from the palette file, mapped over every
+  widget's color resources; dtwm, dthelpview and dtterm hooked too).
+- xfwm4 under dtaltwm runs with --sm-client-disable, so a palette-change
+  restart no longer starts two xfwm4s (and lost the window manager and
+  the Front Panel).
 
 - Settings > Session > "Use Xfce applications when installed": Thunar,
   Mousepad, xfce4-terminal in the CDE palette, falling back to CDE's

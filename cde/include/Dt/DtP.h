@@ -137,6 +137,17 @@ extern const char * _DtHelpString;
 extern const char * _DtApplyString;
 extern const char * _DtCloseString;
 
+/*
+ * Follow palette changes made in Settings > Color while running, on
+ * TrueColor displays (LivePalette.c).  DtInitialize() calls it;
+ * applications that don't use DtInitialize() call it with their
+ * top-level widget.
+ */
+extern void _DtLivePaletteInitialize(Widget w);
+/* ...and applications that handle root window events themselves pass
+ * each one here. */
+extern void _DtLivePaletteEvent(XEvent *event);
+
 #ifdef __cplusplus
 }
 #endif
