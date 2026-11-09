@@ -61,7 +61,18 @@ features stay optional or detected at run time.
 - [ ] Move touched code to C99 idioms (`stdbool.h`, `stdint.h`,
       declarations where used) as it is worked on; no mass rewrites.
 
+- [ ] Motif applications follow palette changes live on TrueColor
+      displays (CDE's dynamic colors only work on PseudoColor; today
+      they need a restart).
+
 ## Done
+
+- Settings > Session > "Use Xfce applications when installed": Thunar,
+  Mousepad, xfce4-terminal in the CDE palette, falling back to CDE's
+  applications (dtmodernapp).
+- Live GTK theming through XSETTINGS (dtxsettings + xsettingsd): palette
+  changes reach running GTK applications without a restart.
+- docs/USER-GUIDE.md: a user guide for the whole desktop.
 
 - Touchscreen gestures (dttouch, XInput 2.2 touch grab + XTest): long
   press = right click, two-finger drag = scroll; taps and drags pass

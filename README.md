@@ -27,12 +27,31 @@ CDE behaves as it always did.
   handled. Windows stay on screen and the front panel stays at the
   bottom centre.
 - Picture wallpapers (PNG, JPEG) on every monitor: Center, Fit, Fill
-  (cropped) or Stretch, scaled on the GPU. Choose them in Style
-  Manager > Backdrop; **Add Picture...** takes a picture from anywhere.
+  (cropped) or Stretch, scaled on the GPU. Choose them in
+  Settings > Backdrop; **Add Picture...** takes a picture from anywhere.
 - An optional compositor (picom) for GPU-accelerated, tear-free drawing:
   Settings > Window > *Use Compositor*.
-- GTK and Qt applications can follow the CDE colour palette: Style
-  Manager > Color > *Apply colors to GTK and Qt applications*.
+- GTK and Qt applications can follow the CDE colour palette: Settings > Color > *Apply colors to
+  GTK and Qt applications*. With `xsettingsd` installed, running GTK
+  applications change color at once, without a restart or logout.
+
+**Front Panel**
+- A system tray for applications' tray icons.
+- The light above Exit opens a task manager.
+- Choose what each button opens and add applications to any button's
+  drawer in Settings > Front Panel.
+
+**Touch and accessibility**
+- Touchscreen gestures: a long press is a right click, two fingers
+  scroll.
+- An on-screen keyboard button (onboard, florence or xvkbd).
+- Settings > Accessibility: sticky, slow and bounce keys, mouse keys, a
+  large pointer.
+
+**Applications**
+- Optionally use Xfce's Thunar, Mousepad and xfce4-terminal in the CDE
+  colors (Settings > Session), falling back to CDE's own when they are
+  not installed.
 
 **Laptops**
 - Touchpad settings in Settings > Mouse: tap to click, natural
@@ -120,6 +139,9 @@ to configure.
 
 ## Use
 
+The [User Guide](docs/USER-GUIDE.md) explains the desktop and every
+setting in detail.
+
 | To... | Go to |
 |---|---|
 | Set a picture wallpaper | Settings > Backdrop > *Add Picture...*, then choose Fill or Fit |
@@ -132,6 +154,12 @@ to configure.
 | Theme GTK and Qt applications | Settings > Color |
 | Lock, suspend, restart, shut down | Right-click the desktop |
 | Tile windows | Drag them to a screen edge, or Super+arrow keys |
+| Change what a panel button opens, or add to a drawer | Settings > Front Panel |
+| Use Thunar, Mousepad and xfce4-terminal | Settings > Session > *Use Xfce applications* |
+| Sticky keys, mouse keys, large pointer | Settings > Accessibility |
+| Show the on-screen keyboard | The keyboard button below the lock |
+| See running programs | Click the light above Exit |
+| Right-click on a touchscreen | Long press |
 
 ### Opting out
 
@@ -148,6 +176,8 @@ To turn a session feature off, set the variable in `~/.dtprofile`:
 | `DT_WINDOW_MANAGER=dtwm` | xfwm4 (use dtwm for everything) |
 | `TT_ALLOW_REMOTE=1` | (re-enables) ToolTalk over the network |
 | `DT_ICE_TCP=1` | (re-enables) the session manager over TCP |
+| `DT_NO_TOUCH=1` | touchscreen gestures |
+| `DT_NO_SYSTRAY=1` | the Front Panel's system tray |
 
 Window snapping is set with dtwm resources: `Dtwm*snapDistance`,
 `Dtwm*snapToWindows` and `Dtwm*edgeTiling`.
