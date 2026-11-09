@@ -58,7 +58,7 @@ cp "$HERE/provision.sh" "$OUT/runtime-pkgs.txt" "$PAY/"
 cp "$CDE/contrib/rc/systemd/dtlogin.service" "$PAY/"
 
 # Self-test (run in the VM: sh /root/payload/selftest.sh PASSWORD).
-cp "$HERE/selftest.sh" "$HERE/selftest-wayland.sh" "$HERE/selftest-greeter.sh" "$HERE/trayicon.py" "$HERE/touchpad.py" "$PAY/"
+cp "$HERE/selftest.sh" "$HERE/selftest-wayland.sh" "$HERE/selftest-greeter.sh" "$HERE/trayicon.py" "$HERE/touchscreen.py" "$HERE/buttonlog.py" "$HERE/touchpad.py" "$PAY/"
 python3 "$HERE/mkpng.py" "$PAY/selftest.png"
 cc -O2 -o "$PAY/wsmbackdrop" "$HERE/wsmbackdrop.c" \
     -I"$CDE/include" -I/usr/include/tirpc \

@@ -63,6 +63,10 @@ features stay optional or detected at run time.
 
 ## Done
 
+- Touchscreen gestures (dttouch, XInput 2.2 touch grab + XTest): long
+  press = right click, two-finger drag = scroll; taps and drags pass
+  through.  Started when a touchscreen is present (DT_NO_TOUCH=1: off).
+
 - Front Panel system tray (a `systray` control, freedesktop System Tray
   protocol over XEMBED) after Trash; works under dtwm and xfwm4.
 - The busy light above Exit opens a task manager (dttaskmgr: the first

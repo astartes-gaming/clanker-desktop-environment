@@ -625,6 +625,16 @@ fi
 AC_SUBST(XILIB)
 AM_CONDITIONAL([HAVE_XI_PROPS], [test "$have_xi_props" = yes])
 
+dnl dttouch: touchscreen gestures need XInput 2.2 (touch grabs) and
+dnl XTest.  Optional: without them dttouch is not built.
+have_xi_touch=no
+AC_CHECK_LIB([Xi], [XIGrabTouchBegin],
+    [AC_CHECK_LIB([Xtst], [XTestFakeButtonEvent],
+        [AC_CHECK_HEADERS([X11/extensions/XInput2.h X11/extensions/XTest.h],
+            [have_xi_touch=yes], [have_xi_touch=no; break],
+            [#include <X11/Xlib.h>])], [], $X_LIBS)], [], $X_LIBS)
+AM_CONDITIONAL([HAVE_XI_TOUCH], [test "$have_xi_touch" = yes])
+
 dnl Backdrop pictures: Motif 2.3's PNG reader gets the colours of RGB,
 dnl palette and greyscale PNGs wrong, so CDE reads PNG itself when
 dnl libpng is available (lib/DtWidget/Picture.c).  Optional.
