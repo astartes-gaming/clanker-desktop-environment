@@ -63,6 +63,12 @@ features stay optional or detected at run time.
 
 ## Done
 
+- dtlogin opens the PAM session in the process that waits for the
+  session, so logind no longer marks CDE sessions "logged out" as they
+  start (pam_systemd's descriptor was closed by the exec of Xsession).
+- selftest.sh: picks the user's X11 session (not a text console one) and
+  gives the virtual touchscreen real axis ranges.
+
 - Touchscreen gestures (dttouch, XInput 2.2 touch grab + XTest): long
   press = right click, two-finger drag = scroll; taps and drags pass
   through.  Started when a touchscreen is present (DT_NO_TOUCH=1: off).
