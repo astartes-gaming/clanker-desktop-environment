@@ -21,6 +21,7 @@
 ##      DT_NO_DBUS=1            don't start a D-Bus session bus
 ##      DT_NO_XDG_AUTOSTART=1   don't run ~/.config/autostart etc.
 ##      DT_NO_TOUCHPAD=1        don't apply Style Manager touchpad settings
+##      DT_NO_TOUCH=1           no touchscreen gestures (dttouch)
 ##      DT_NO_LOCK_ON_SLEEP=1   don't lock the screen before suspend
 ##      DT_NO_COMPOSITOR=1      don't start the compositor even if enabled
 ##      DT_NO_SYSTEMD_SESSION=1 don't start graphical-session.target
@@ -149,6 +150,14 @@ fi
 #    plugged in or comes back after resume, and exits with the display.
 #
 _dtm_bin=${DT_BINPATH:-/usr/dt/bin}
+# Touchscreen gestures: long press = right click, two fingers scroll.
+# dttouch -probe: only when a touchscreen is present now (DT_TOUCH=1
+# starts it anyway, for one plugged in later).
+if [ -z "$DT_NO_TOUCH" ] && [ -x "$_dtm_bin/dttouch" ] &&
+   { [ -n "$DT_TOUCH" ] || "$_dtm_bin/dttouch" -probe >/dev/null 2>&1; }; then
+  "$_dtm_bin/dttouch" >/dev/null 2>&1 &
+fi
+
 if [ -z "$DT_NO_TOUCHPAD" ] && [ -x "$_dtm_bin/dttouchpad" ]; then
   "$_dtm_bin/dttouchpad" -watch >/dev/null 2>&1 &
 fi

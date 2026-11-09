@@ -491,6 +491,38 @@ if [ "$WM" = xfwm4 ]; then
 fi
 
 #####################################################################
+section "Touchscreen gestures"
+# A virtual touchscreen (uinput) plays a tap, a long press, a two-finger
+# drag and a one-finger drag over a window that logs its mouse buttons.
+if [ ! -x /usr/dt/bin/dttouch ]; then
+    skp "touchscreen gestures (dttouch not built: no XInput 2.2)"
+elif ! python3 -c 'import evdev' 2>/dev/null; then
+    skp "touchscreen gestures (python3-evdev missing)"
+else
+    cp $P/touchscreen.py $P/buttonlog.py /tmp/; chmod 644 /tmp/touchscreen.py /tmp/buttonlog.py
+    python3 /tmp/touchscreen.py 1 1 wait:15000 >/dev/null 2>&1 &
+    tsdev=$!; sleep 3
+    check "dttouch finds the touchscreen" x /usr/dt/bin/dttouch -probe
+    kill $tsdev 2>/dev/null; wait $tsdev 2>/dev/null
+    pgrep -u $U -x dttouch >/dev/null || xbg /usr/dt/bin/dttouch
+    sleep 1
+    bl=/tmp/selftest-buttons.log; rm -f $bl
+    xbg sh -c "python3 /tmp/buttonlog.py 200 200 500 350 25 > $bl 2>&1"
+    sleep 3
+    sz=`screen_size`
+    python3 /tmp/touchscreen.py ${sz%x*} ${sz#*x} tap:400:350 wait:500 \
+        hold:420:360:1200 wait:500 drag2:450:450:0:-200 wait:500 \
+        drag1:450:300:0:100 >/dev/null 2>&1
+    sleep 2
+    n() { grep -c "^press $1\$" $bl 2>/dev/null; }
+    check "a tap clicks (button 1)" test "`n 1`" -ge 1
+    check "a long press is a right click (button 3)" test "`n 3`" = 1
+    check "two fingers scroll (button 5: `n 5`)" test "`n 5`" -ge 3
+    check "a one-finger drag reaches the window as a drag" test "`n 1`" = 2
+    rm -f /tmp/touchscreen.py /tmp/buttonlog.py $bl
+fi
+
+#####################################################################
 section "Resources"
 free -m | awk 'NR==2 {printf "      memory: %s MB used of %s MB\n", $3, $2}'
 df -h / | awk 'NR==2 {printf "      disk:   %s used of %s\n", $3, $2}'
