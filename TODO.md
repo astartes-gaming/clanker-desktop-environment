@@ -63,6 +63,13 @@ features stay optional or detected at run time.
 
 ## Done
 
+- On-screen keyboard: a Front Panel button (below the lock) shows or
+  hides an established keyboard (onboard, florence, xvkbd or
+  matchbox-keyboard; DT_KEYBOARD overrides).
+- Settings > Accessibility: sticky, slow and bounce keys, mouse keys,
+  keyboard toggles (XKB AccessX), a large pointer, the on-screen
+  keyboard at login; applied at login by dtaccess.
+
 - Style Manager is called Settings (window titles, Front Panel label,
   action name; English).  The program is still dtstyle.
 

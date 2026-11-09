@@ -282,13 +282,15 @@ CONTROL Busy
 }
 
 
-CONTROL Blank
+CONTROL Keyboard
 {
-  TYPE			blank
+  TYPE			icon
   CONTAINER_NAME	Switch
   CONTAINER_TYPE	SWITCH
   POSITION_HINTS	3
-  ICON			FpblnkS
+  ICON			DtKeybd
+  LABEL			%|nls-18034-#On-Screen Keyboard#|
+  PUSH_ACTION		OnScreenKeyboard
   HELP_TOPIC		FPOnItemSwitch
   HELP_VOLUME		FPanel
 }

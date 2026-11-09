@@ -180,6 +180,16 @@ terminal; `DT_TASKMANAGER` in `~/.dtprofile` picks another command.
 Settings > Front Panel changes what a button opens and adds
 applications to (or removes items from) each button's drawer.
 
+The keyboard button below the lock in the Front Panel shows (and
+hides) an on-screen keyboard: the first installed of onboard, florence,
+xvkbd and matchbox-keyboard (`DT_KEYBOARD` picks another).
+Settings > Accessibility turns on sticky keys, slow keys, bounce keys,
+mouse keys (the numeric keypad moves the pointer) and their keyboard
+shortcuts, a large mouse pointer, and the on-screen keyboard at login.
+They take effect at once and again at each login (`dtaccess`). For
+high-contrast colors, choose the BlackWhite or WhiteBlack palette in
+Settings > Color.
+
 `DT_WINDOW_MANAGER` can also name another EWMH window manager. It is
 started by `dtaltwm`, which restarts it if it crashes and falls back
 to dtwm if it is missing or keeps failing. Window snapping and the

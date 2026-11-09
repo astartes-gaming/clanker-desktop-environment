@@ -16,6 +16,7 @@
 #define AUTOSTART "Autostart"
 #define FRONTPANEL "FrontPanel"
 #define SESSION   "Session"
+#define ACCESS    "Accessibility"
 
 #define NETWORK_ICON   "DtNetwk"
 #define BLUETOOTH_ICON "DtBlue"
@@ -23,6 +24,7 @@
 #define AUTOSTART_ICON "DtStart"
 #define FRONTPANEL_ICON "Fpapps.l"
 #define SESSION_ICON    "DtSystem.l"
+#define ACCESS_ICON     "DtAccess"
 
 extern void popup_networkBB(Widget shell);
 extern void popup_bluetoothBB(Widget shell);
@@ -30,5 +32,6 @@ extern void popup_updatesBB(Widget shell);
 extern void popup_autostartBB(Widget shell);
 extern void popup_frontPanelBB(Widget shell);
 extern void popup_sessionBB(Widget shell);
+extern void popup_accessBB(Widget shell);
 
 #endif /* _SysPanels_h */

@@ -53,6 +53,7 @@
 #include "Help.h"
 #include "SysCmd.h"
 #include "SysPanels.h"
+#include "Access.h"
 
 #define MSG(n, s) ((char *)GETMESSAGE(20, n, s))
 
@@ -2779,4 +2780,99 @@ popup_sessionBB(Widget shell)
     else
         XtManageChild(sesPanel->dialog);
     XMapRaised(style.display, XtWindow(XtParent(sesPanel->dialog)));
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Accessibility: keyboard (XKB AccessX), pointer size, keyboard      */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The settings are kept in ~/.dt/accessibility and applied at once;
+ * dtaccess applies them again at each login (Access.c).
+ */
+
+static const struct {
+    int         msg;
+    const char *label;
+} accLabels[ACC_COUNT] = {
+    {  97, "Sticky keys: Shift, Ctrl and Alt stay pressed until the next key" },
+    {  98, "Slow keys: a key counts only when held for a moment" },
+    {  99, "Bounce keys: ignore a key pressed again right away" },
+    { 100, "Mouse keys: move the pointer with the numeric keypad" },
+    { 101, "Turn these on and off from the keyboard (Shift five times)" },
+    { 102, "Large mouse pointer (applications started afterwards)" },
+    { 103, "Show the on-screen keyboard at login" },
+};
+
+static Panel *accPanel = NULL;
+static int    accOn[ACC_COUNT];
+
+static void
+AccRefresh(Panel *p)
+{
+    char label[300];
+    int  i;
+
+    AccessRead(style.home, accOn);
+    PanelClearItems(p);
+    for (i = 0; i < ACC_COUNT; i++)
+    {
+        snprintf(label, sizeof(label), "[%s] %s", accOn[i] ? "x" : " ",
+                 MSG(accLabels[i].msg, (char *) accLabels[i].label));
+        PanelAddItem(p, label, AccessKeys[i], "");
+    }
+    PanelBusy(p, False);
+    PanelSetStatus(p, MSG(104,
+        "Accessibility (high-contrast colors: Color > BlackWhite or WhiteBlack):"));
+}
+
+static void
+AccToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    Panel *p = (Panel *) client_data;
+    int    row = PanelSelected(p);
+
+    if (row < 0 || row >= ACC_COUNT)
+        return;
+    AccessRead(style.home, accOn);
+    accOn[row] = !accOn[row];
+    if (!AccessWrite(style.home, accOn))
+        ErrDialog(MSG(105, "The accessibility settings could not be saved."),
+                  style.shell);
+    AccessApply(style.display, accOn);
+    AccRefresh(p);
+    XmListSelectPos(p->list, row + 1, False);
+}
+
+/* The on-screen keyboard, now (dtkeyboard shows or hides it). */
+static void
+AccKeyboardCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    /* detached: the keyboard outlives this dialog */
+    static char *argv[] = { "sh", "-c",
+        "dtkeyboard </dev/null >/dev/null 2>&1 &", NULL };
+
+    (void) SysCmdRun(argv, NULL, 0, NULL, NULL);
+}
+
+void
+popup_accessBB(Widget shell)
+{
+    if (!accPanel)
+    {
+        accPanel = PanelCreate(shell, "accessDialog",
+                               MSG(96, "Settings - Accessibility"), NULL);
+        accPanel->refresh = AccRefresh;
+        XtVaSetValues(accPanel->list, XmNvisibleItemCount, ACC_COUNT, NULL);
+        PanelButton(accPanel, MSG(87, "Change"), AccToggleCB);
+        PanelButton(accPanel, MSG(106, "On-Screen Keyboard"), AccKeyboardCB);
+        XtAddCallback(accPanel->list, XmNdefaultActionCallback, AccToggleCB,
+                      (XtPointer) accPanel);
+    }
+    if (XtIsManaged(accPanel->dialog))
+        AccRefresh(accPanel);
+    else
+        XtManageChild(accPanel->dialog);
+    XMapRaised(style.display, XtWindow(XtParent(accPanel->dialog)));
 }

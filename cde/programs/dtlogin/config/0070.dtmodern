@@ -149,6 +149,15 @@ fi
 #    plugged in or comes back after resume, and exits with the display.
 #
 _dtm_bin=${DT_BINPATH:-/usr/dt/bin}
+# Settings > Accessibility: sticky/slow/bounce/mouse keys, pointer
+# size; and the on-screen keyboard, if it is to be shown at login.
+if [ -x "$_dtm_bin/dtaccess" ] && [ -f "$HOME/.dt/accessibility" ]; then
+  "$_dtm_bin/dtaccess" >/dev/null 2>&1
+  if "$_dtm_bin/dtaccess" -keyboard && [ -x "$_dtm_bin/dtkeyboard" ]; then
+    ( sleep 8; exec "$_dtm_bin/dtkeyboard" ) >/dev/null 2>&1 &
+  fi
+fi
+
 if [ -z "$DT_NO_TOUCHPAD" ] && [ -x "$_dtm_bin/dttouchpad" ]; then
   "$_dtm_bin/dttouchpad" -watch >/dev/null 2>&1 &
 fi

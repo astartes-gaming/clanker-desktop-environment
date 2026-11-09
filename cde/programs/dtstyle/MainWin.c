@@ -570,6 +570,12 @@ ProcessComponentList(
 	  dtIcon = _DtGetIconFileName(style.screen, AUTOSTART_ICON, NULL, NULL, 0);
           helpTag = HELP_MAIN_WINDOW;
       }
+      else if (strcmp(string, ACCESS) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 67, "Accessibility"));
+	  dtIcon = _DtGetIconFileName(style.screen, ACCESS_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
       else if (strcmp(string, SESSION) == 0)
       {
           cmp_string = CMPSTR(GETMESSAGE(4, 66, "Session"));
@@ -774,6 +780,9 @@ activateCB(
 
   else if (strcmp(cd, SESSION) == 0)
     popup_sessionBB(style.shell);
+
+  else if (strcmp(cd, ACCESS) == 0)
+    popup_accessBB(style.shell);
 
 }
 

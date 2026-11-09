@@ -194,6 +194,7 @@ $ Style Manager buttons for the Network, Bluetooth and Updates panels
 64 Autostart
 65 Front Panel
 66 Session
+67 Accessibility
 
 $set 5
 $ _DtMessage set 5 is for the Font dialog
@@ -817,6 +818,17 @@ $quote "
 93 "Drawer items: use Add to Drawer and Remove."
 94 "Select a Front Panel button first."
 95 "Buttons stay on the panel; Reset undoes a change."
+96 "Settings - Accessibility"
+97 "Sticky keys: Shift, Ctrl and Alt stay pressed until the next key"
+98 "Slow keys: a key counts only when held for a moment"
+99 "Bounce keys: ignore a key pressed again right away"
+100 "Mouse keys: move the pointer with the numeric keypad"
+101 "Turn these on and off from the keyboard (Shift five times)"
+102 "Large mouse pointer (applications started afterwards)"
+103 "Show the on-screen keyboard at login"
+104 "Accessibility (high-contrast colors: Color > BlackWhite or WhiteBlack):"
+105 "The accessibility settings could not be saved."
+106 "On-Screen Keyboard"
 
 $set 99
 $    DO NOT TRANSLATE THESE MESSAGES

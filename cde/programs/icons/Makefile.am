@@ -222,7 +222,7 @@ Dtadskt.t.bm                    Dtsrchnexti.m.pm \
 Dtadskt.t_m.bm                  Dtsrchnext.m.pm \
 Dtadskt.t.pm                    Dtsrchprevi.m.pm \
 Dtaexag.m.pm                    Dtsrchprev.m.pm \
-Dtaexbx.m.bm                    DtStart.bm \
+Dtaexbx.m.bm                    DtStart.bm DtAccess.bm DtAccess_m.bm DtAccess.pm \
 Dtaexbx.m_m.bm                  DtStart_m.bm \
 Dtaexbx.m.pm                    DtStart.pm \
 Dtaexbx.t.bm                    Dtstyle.l.bm \
