@@ -153,9 +153,17 @@ fi
 #    plugged in or comes back after resume, and exits with the display.
 #
 _dtm_bin=${DT_BINPATH:-/usr/dt/bin}
+# A touchscreen: Settings > Accessibility's larger controls default to
+# on (dtaccess reads DT_TOUCHSCREEN), and dttouch starts below.
+if [ -z "$DT_NO_TOUCH" ] && [ -x "$_dtm_bin/dttouch" ] &&
+   "$_dtm_bin/dttouch" -probe >/dev/null 2>&1; then
+  DT_TOUCHSCREEN=1; export DT_TOUCHSCREEN
+fi
+
 # Settings > Accessibility: sticky/slow/bounce/mouse keys, pointer
-# size; and the on-screen keyboard, if it is to be shown at login.
-if [ -x "$_dtm_bin/dtaccess" ] && [ -f "$HOME/.dt/accessibility" ]; then
+# size, larger controls; and the on-screen keyboard at login.
+if [ -x "$_dtm_bin/dtaccess" ] &&
+   { [ -f "$HOME/.dt/accessibility" ] || [ -n "$DT_TOUCHSCREEN" ]; }; then
   "$_dtm_bin/dtaccess" >/dev/null 2>&1
   if "$_dtm_bin/dtaccess" -keyboard && [ -x "$_dtm_bin/dtkeyboard" ]; then
     ( sleep 8; exec "$_dtm_bin/dtkeyboard" ) >/dev/null 2>&1 &
@@ -166,7 +174,7 @@ fi
 # dttouch -probe: only when a touchscreen is present now (DT_TOUCH=1
 # starts it anyway, for one plugged in later).
 if [ -z "$DT_NO_TOUCH" ] && [ -x "$_dtm_bin/dttouch" ] &&
-   { [ -n "$DT_TOUCH" ] || "$_dtm_bin/dttouch" -probe >/dev/null 2>&1; }; then
+   { [ -n "$DT_TOUCH" ] || [ -n "$DT_TOUCHSCREEN" ]; }; then
   "$_dtm_bin/dttouch" >/dev/null 2>&1 &
 fi
 

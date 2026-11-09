@@ -831,6 +831,7 @@ $quote "
 106 "On-Screen Keyboard"
 107 "Use Xfce applications when installed (Thunar, Mousepad, Terminal; at once)"
 108 "The applications could not be changed."
+109 "Larger controls for touch (applications started afterwards)"
 
 $set 99
 $    DO NOT TRANSLATE THESE MESSAGES

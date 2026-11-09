@@ -19,12 +19,13 @@
 
 #include <X11/Xlib.h>
 #include <X11/XKBlib.h>
+#include <X11/Xatom.h>
 
 #include "Access.h"
 
 const char *const AccessKeys[ACC_COUNT] = {
     "sticky", "slow", "bounce", "mousekeys", "toggles", "bigcursor",
-    "keyboard"
+    "keyboard", "touchsize"
 };
 
 static void
@@ -42,6 +43,9 @@ AccessRead(const char *home, int on[ACC_COUNT])
 
     for (i = 0; i < ACC_COUNT; i++)
         on[i] = 0;
+    /* Larger controls default to on when the session found a
+     * touchscreen (0070.dtmodern exports DT_TOUCHSCREEN). */
+    on[ACC_TOUCHSIZE] = getenv("DT_TOUCHSCREEN") != NULL;
     AccessPath(home, path, sizeof(path));
     if ((fp = fopen(path, "r")) == NULL)
         return;
@@ -99,6 +103,83 @@ SetCursorSize(int big)
     }
 }
 
+/*
+ * Larger Motif controls for fingers: these resources are added to, or
+ * removed from, RESOURCE_MANAGER (exactly these lines), and are used
+ * by applications started afterwards.  The scroll bars are the ones
+ * Motif's scrolled windows create (lists, text, file views).
+ */
+static const char *const touch_res[] = {
+    "*VertScrollBar.width",                 "22",
+    "*HorScrollBar.height",                 "22",
+    "*XmList.listSpacing",                  "6",
+    "*XmPushButton.marginHeight",           "5",
+    "*XmPushButtonGadget.marginHeight",     "5",
+    "*XmCascadeButton.marginHeight",        "5",
+    "*XmCascadeButtonGadget.marginHeight",  "5",
+    "*XmToggleButton.marginHeight",         "4",
+    "*XmToggleButtonGadget.marginHeight",   "4",
+    "*XmToggleButton.indicatorSize",        "18",
+    "*XmToggleButtonGadget.indicatorSize",  "18",
+    "*XmTextField.marginHeight",            "6",
+    NULL
+};
+
+static int
+IsTouchResource(const char *line, size_t len)
+{
+    int i;
+
+    for (i = 0; touch_res[i]; i += 2) {
+        size_t n = strlen(touch_res[i]);
+
+        if (len > n && strncmp(line, touch_res[i], n) == 0 && line[n] == ':')
+            return 1;
+    }
+    return 0;
+}
+
+static void
+SetTouchSizes(Display *dpy, int on)
+{
+    Window        root = RootWindow(dpy, 0);
+    Atom          type;
+    int           format, i;
+    unsigned long n, after, len = 0, cap;
+    unsigned char *data = NULL;
+    char         *out, *p, *e;
+
+    if (XGetWindowProperty(dpy, root, XA_RESOURCE_MANAGER, 0, 1L << 22,
+                           False, XA_STRING, &type, &format, &n, &after,
+                           &data) != Success)
+        return;
+    cap = (data ? n : 0) + 2048;
+    if ((out = malloc(cap)) == NULL) {
+        if (data) XFree(data);
+        return;
+    }
+    /* keep every other line */
+    for (p = (char *) data; data && p < (char *) data + n; p = e + 1) {
+        e = memchr(p, '\n', (char *) data + n - p);
+        if (e == NULL)
+            e = (char *) data + n;
+        if (e > p && !IsTouchResource(p, e - p)) {
+            memcpy(out + len, p, e - p);
+            len += e - p;
+            out[len++] = '\n';
+        }
+    }
+    if (on)
+        for (i = 0; touch_res[i]; i += 2)
+            len += snprintf(out + len, cap - len, "%s:\t%s\n",
+                            touch_res[i], touch_res[i + 1]);
+    XChangeProperty(dpy, root, XA_RESOURCE_MANAGER, XA_STRING, 8,
+                    PropModeReplace, (unsigned char *) out, (int) len);
+    free(out);
+    if (data)
+        XFree(data);
+}
+
 void
 AccessApply(Display *dpy, const int on[ACC_COUNT])
 {
@@ -145,5 +226,6 @@ AccessApply(Display *dpy, const int on[ACC_COUNT])
         XkbFreeKeyboard(xkb, 0, True);
     }
     SetCursorSize(on[ACC_BIGCURSOR]);
+    SetTouchSizes(dpy, on[ACC_TOUCHSIZE]);
     XFlush(dpy);
 }

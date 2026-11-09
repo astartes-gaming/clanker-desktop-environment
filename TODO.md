@@ -69,6 +69,10 @@ features stay optional or detected at run time.
 
 ## Done
 
+- Larger Motif controls for touch (scroll bars, menu items, buttons, list
+  rows, check boxes): Settings > Accessibility, on by default when a
+  touchscreen is found at login.
+
 - Running CDE applications follow palette changes on TrueColor displays
   (libDtSvc LivePalette.c: old pixel sets from Motif's color object
   data, new ones computed from the palette file, mapped over every
