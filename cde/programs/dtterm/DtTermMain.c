@@ -90,6 +90,7 @@
 #define DtWsmSetWorkspacesOccupied XvSetWorkspaceHints
 #else   /*  HPVUE */
 #include <Dt/Dt.h>
+#include <Dt/DtP.h>
 #include <Dt/Wsm.h>
 #include <Dt/EnvControlP.h>
 #include <Dt/Session.h>
@@ -1271,6 +1272,9 @@ main(int argc, char **argv)
 
     if (attrs.session != NULL)
        RestoringTerms = TRUE;
+
+    /* Clanker: follow palette changes while running */
+    _DtLivePaletteInitialize(topLevel);
 
     if (isDebugSet('T')) {
 #ifdef	BBA

@@ -829,6 +829,8 @@ $quote "
 104 "Accessibility (high-contrast colors: Color > BlackWhite or WhiteBlack):"
 105 "The accessibility settings could not be saved."
 106 "On-Screen Keyboard"
+107 "Use Xfce applications when installed (Thunar, Mousepad, Terminal; at once)"
+108 "The applications could not be changed."
 
 $set 99
 $    DO NOT TRANSLATE THESE MESSAGES

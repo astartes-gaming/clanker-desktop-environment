@@ -75,6 +75,9 @@ esac
 #
 if [ -r "$HOME/.dt/theming/env" ]; then
   . "$HOME/.dt/theming/env"
+elif [ -f "$HOME/.dt/modern-apps" ] &&
+     [ -x "${DT_BINPATH:-/usr/dt/bin}/dtxsettings" ]; then
+  "${DT_BINPATH:-/usr/dt/bin}/dtxsettings" start 2>/dev/null  # Xfce apps
 fi
 
 #

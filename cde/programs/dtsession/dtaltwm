@@ -61,7 +61,10 @@ case `basename "$wm"` in
         fi
         # Its window menu is GTK: the CDE-wm stylesheet from dtxfwmtheme.
         # DT_XFWM_GTK_THEME (e.g. in ~/.dtprofile) picks another theme.
-        set -- env GTK_THEME="${DT_XFWM_GTK_THEME:-CDE-wm}" "$@" ;;
+        # Not a session-management client: dtsession would restart it
+        # too when dtxfwmtheme restarts it (two xfwm4s, then none).
+        set -- env GTK_THEME="${DT_XFWM_GTK_THEME:-CDE-wm}" "$@" \
+            --sm-client-disable ;;
 esac
 
 panel=

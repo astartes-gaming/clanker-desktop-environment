@@ -188,6 +188,9 @@ DtBigInitialize(
 
    initialized = TRUE;
    _DtSvcProcessUnlock();
+
+   /* Clanker: follow palette changes on TrueColor displays */
+   _DtLivePaletteInitialize(_DtInitTtContextWidget);
    return (initialized);
 }
 
