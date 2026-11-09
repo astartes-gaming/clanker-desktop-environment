@@ -63,12 +63,14 @@ features stay optional or detected at run time.
 
 - [ ] Live palette: the workspace buttons' colors, and icons drawn in
       the old colors, still need a restart.
-- [ ] dtlogin: logind marks the session "closing" as soon as it starts
-      (seen in the VM: "Session N logged out. Waiting for processes to
-      exit."); find where the PAM session's fd is closed.
 
 ## Done
 
+- dtlogin opens the PAM session in the process that waits for the
+  session, so logind no longer marks CDE sessions "logged out" as they
+  start (pam_systemd's descriptor was closed by the exec of Xsession).
+- selftest.sh: picks the user's X11 session (not a text console one) and
+  gives the virtual touchscreen real axis ranges.
 - Running CDE applications follow palette changes on TrueColor displays
   (libDtSvc LivePalette.c: old pixel sets from Motif's color object
   data, new ones computed from the palette file, mapped over every
