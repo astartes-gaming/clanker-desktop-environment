@@ -21,4 +21,10 @@ extern void ExtThemeSetEnabled(Boolean enable, palette *p);
 /* Regenerate theme files from palette p if theming is enabled. */
 extern void ExtThemeApply(palette *p);
 
+/* Write the theme files without selecting them (dtmodernapp). */
+extern void ExtThemeGenerate(palette *p);
+
+/* Have running GTK applications reload the theme (dtxsettings). */
+extern void ExtThemeLive(void);
+
 #endif /* _ExtTheme_h */

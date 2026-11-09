@@ -61,6 +61,9 @@ features stay optional or detected at run time.
 - [ ] Move touched code to C99 idioms (`stdbool.h`, `stdint.h`,
       declarations where used) as it is worked on; no mass rewrites.
 
+- [ ] Live palette: the workspace buttons' colors, and icons drawn in
+      the old colors, still need a restart.
+
 ## Done
 
 - dtlogin opens the PAM session in the process that waits for the
@@ -68,6 +71,20 @@ features stay optional or detected at run time.
   start (pam_systemd's descriptor was closed by the exec of Xsession).
 - selftest.sh: picks the user's X11 session (not a text console one) and
   gives the virtual touchscreen real axis ranges.
+- Running CDE applications follow palette changes on TrueColor displays
+  (libDtSvc LivePalette.c: old pixel sets from Motif's color object
+  data, new ones computed from the palette file, mapped over every
+  widget's color resources; dtwm, dthelpview and dtterm hooked too).
+- xfwm4 under dtaltwm runs with --sm-client-disable, so a palette-change
+  restart no longer starts two xfwm4s (and lost the window manager and
+  the Front Panel).
+
+- Settings > Session > "Use Xfce applications when installed": Thunar,
+  Mousepad, xfce4-terminal in the CDE palette, falling back to CDE's
+  applications (dtmodernapp).
+- Live GTK theming through XSETTINGS (dtxsettings + xsettingsd): palette
+  changes reach running GTK applications without a restart.
+- docs/USER-GUIDE.md: a user guide for the whole desktop.
 
 - Touchscreen gestures (dttouch, XInput 2.2 touch grab + XTest): long
   press = right click, two-finger drag = scroll; taps and drags pass

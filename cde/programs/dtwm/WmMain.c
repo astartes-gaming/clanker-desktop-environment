@@ -51,6 +51,7 @@
 #include "WmIPC.h"
 #include "WmBackdrop.h"
 #include "WmMultiHead.h"
+#include <Dt/DtP.h>
 
 
 /*
@@ -147,6 +148,10 @@ main (int argc, char *argv [], char *environ [])
     for (;;)
     {
         XtAppNextEvent (wmGD.mwmAppContext, &event);
+
+	/* Clanker: the Front Panel follows palette changes (root window
+	 * events don't reach Xt's dispatcher here). */
+	_DtLivePaletteEvent (&event);
 
 
         /*

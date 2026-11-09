@@ -2297,7 +2297,9 @@ void
    {
        const char *wm = getenv("DT_WINDOW_MANAGER");
 
-       if (wm && strstr(wm, "xfwm4"))
+       /* Unset means "automatic", which picks xfwm4 when installed;
+        * dtxfwmtheme restarts xfwm4 only if it runs under dtaltwm. */
+       if (!wm || !*wm || strstr(wm, "xfwm4"))
        {
            static char act[8], ina[8];
            char *argv[] = { CDE_INSTALLATION_TOP "/bin/dtxfwmtheme",

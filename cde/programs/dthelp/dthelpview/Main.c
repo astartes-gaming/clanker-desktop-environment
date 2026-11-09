@@ -69,6 +69,7 @@
 
 
 #include <Dt/DtNlUtils.h>
+#include <Dt/DtP.h>
 #include <Dt/EnvControlP.h>
 
 /* Local Includes */
@@ -255,6 +256,7 @@ void main(
 
   /* Initialize toolkit and open the display */
   topLevel = XtInitialize(appName, "Dthelpview", option_list, 5, &argc, argv);
+  _DtLivePaletteInitialize(topLevel);	/* follow palette changes */
   appDisplay = XtDisplay(topLevel);
 
   if (!appDisplay) 

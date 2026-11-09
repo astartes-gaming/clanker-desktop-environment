@@ -1,0 +1,64 @@
+#!/bin/sh
+#####################################################################
+##  dtxsettings start|reload|stop - live GTK theming for CDE sessions.
+##
+##  GTK 3/4 applications follow the XSETTINGS "Net/ThemeName" while
+##  they run.  When the CDE GTK theme is in use (Settings > Color >
+##  "Apply colors to GTK and Qt applications", or Settings > Session >
+##  "Use Xfce applications"), this runs xsettingsd with that theme, so
+##  no GTK_THEME is needed.  "reload" (after a palette change) switches
+##  between the names CDE and CDE-B (the same files) so that running
+##  applications load the new colors at once.  Nothing happens if
+##  xsettingsd is not installed or another settings daemon (e.g.
+##  xfsettingsd) runs.  Plain POSIX sh.
+#####################################################################
+
+have() { command -v "$1" >/dev/null 2>&1; }
+dt=$HOME/.dt
+conf=$dt/xsettingsd.conf
+pidf=$dt/xsettingsd.pid
+themes=$HOME/.themes
+
+running() {
+    [ -f "$pidf" ] && kill -0 "`cat $pidf`" 2>/dev/null
+}
+wanted() {
+    [ -f "$dt/theming/env" ] || [ -f "$dt/modern-apps" ]
+}
+stop() {
+    running && kill "`cat $pidf`" 2>/dev/null
+    rm -f "$pidf"
+}
+
+case $1 in
+    stop)   stop; exit 0 ;;
+    status) running; exit $? ;;
+    start|reload) ;;
+    *) echo "usage: dtxsettings start|reload|stop|status" >&2; exit 2 ;;
+esac
+
+if ! wanted; then stop; exit 0; fi
+have xsettingsd || exit 1
+[ -f "$themes/CDE/gtk-3.0/gtk.css" ] || exit 1
+pgrep -u "`id -u`" -x xfsettingsd >/dev/null 2>&1 && exit 1
+
+name=CDE
+if [ "$1" = reload ] && running &&
+   grep -q '^Net/ThemeName "CDE"' "$conf" 2>/dev/null; then
+    name=CDE-B
+fi
+[ -e "$themes/CDE-B" ] || ln -s CDE "$themes/CDE-B"
+mkdir -p "$dt"
+cat > "$conf" <<EOC
+# Written by dtxsettings (CDE session): GTK theme in the CDE palette.
+Net/ThemeName "$name"
+Gtk/OverlayScrolling 0
+EOC
+
+if running; then
+    kill -HUP "`cat $pidf`"
+else
+    xsettingsd -c "$conf" >/dev/null 2>&1 &
+    echo $! > "$pidf"
+fi
+exit 0
