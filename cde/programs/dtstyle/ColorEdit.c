@@ -273,7 +273,7 @@ CreateColorEditor(
         XtSetValues (edit.DialogShell, args, n);
 
         n=0;
-	XtSetArg (args[n], XmNtitle, ((char *)GETMESSAGE(17, 16, "Style Manager - Modify Color"))); n++;
+	XtSetArg (args[n], XmNtitle, ((char *)GETMESSAGE(17, 16, "Settings - Modify Color"))); n++;
         XtSetArg (args[n], XmNuseAsyncGeometry, True); n++;
         XtSetArg(args[n], XmNmwmFunctions, DIALOG_MWM_FUNC); n++;
         XtSetValues (XtParent(edit.DialogShell), args, n);

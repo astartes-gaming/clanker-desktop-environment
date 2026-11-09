@@ -455,7 +455,7 @@ build_mouseDialog( Widget shell )
     XtSetValues (style.mouseDialog, args, n);
 
     n=0;
-    XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(9, 18, "Style Manager - Mouse"))); n++;
+    XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(9, 18, "Settings - Mouse"))); n++;
     XtSetArg (args[n], XmNuseAsyncGeometry, True); n++;
     XtSetArg(args[n], XmNmwmFunctions, DIALOG_MWM_FUNC); n++;  
     XtSetValues (XtParent(style.mouseDialog), args, n);

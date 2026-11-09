@@ -78,11 +78,11 @@
 /* Local #defines                        */
 /*+++++++++++++++++++++++++++++++++++++++*/
 
-#define FONT_MSG   ((char *)GETMESSAGE(5, 23, "Style Manager - Font"))
+#define FONT_MSG   ((char *)GETMESSAGE(5, 23, "Settings - Font"))
 #define PREVIEW    ((char *)GETMESSAGE(5, 17, "Preview"))
 #define IMMEDIATE  ((char *)GETMESSAGE(5, 18, "The changes to fonts will show up in some\napplications the next time they are started.\nOther applications, such as file manager and\napplication manager, will not show the font\nchanges until you Exit the desktop and then log\nback in.")) 
 #define LATER      ((char *)GETMESSAGE(5, 19, "The selected font will be used when\n you restart this session."))
-#define INFO_MSG   ((char *)GETMESSAGE(5, 24, "The font that is currently used for your desktop is not\navailable in the Size list. If a new font is selected and\napplied, you will not be able to return to the current font\nusing the Style Manager - Font dialog."))
+#define INFO_MSG   ((char *)GETMESSAGE(5, 24, "The font that is currently used for your desktop is not\navailable in the Size list. If a new font is selected and\napplied, you will not be able to return to the current font\nusing the Settings - Font dialog."))
 #define SYSTEM_MSG ((char *)GETMESSAGE(5, 20, "AaBbCcDdEeFfGg0123456789"))
 #define USER_MSG   ((char *)GETMESSAGE(5, 21, "AaBbCcDdEeFfGg0123456789"))
 #define BLANK_MSG  "                          "

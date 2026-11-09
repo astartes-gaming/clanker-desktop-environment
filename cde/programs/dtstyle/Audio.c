@@ -185,7 +185,7 @@ build_audioDlg(
     XtSetValues (style.audioDialog, args, n);
 
     n=0;
-    XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(6, 7, "Style Manager - Beep"))); n++;
+    XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(6, 7, "Settings - Beep"))); n++;
     XtSetArg (args[n], XmNuseAsyncGeometry, True); n++;
     XtSetArg(args[n], XmNmwmFunctions, DIALOG_MWM_FUNC); n++;
     XtSetValues (XtParent(style.audioDialog), args, n);

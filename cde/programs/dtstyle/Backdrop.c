@@ -107,7 +107,7 @@
 #define B_CANCEL_BUTTON       3
 #define B_HELP_BUTTON         4
 
-#define ERR2   ((char *)GETMESSAGE(11, 2, "The backdrop portion of the Style Manager\n\
+#define ERR2   ((char *)GETMESSAGE(11, 2, "The backdrop part of Settings\n\
 will not operate because there are no backdrop\nfiles available. Check $HOME/.dt/errorlog."))
 
 /*+++++++++++++++++++++++++++++++++++++++*/
@@ -482,7 +482,7 @@ CreateBackdropDialog(
     XmStringFree (strings[3]);
 
     n = 0;
-    XtSetArg (args[n], XmNtitle, ((char *)GETMESSAGE(11, 12, "Style Manager - Backdrop"))); n++;
+    XtSetArg (args[n], XmNtitle, ((char *)GETMESSAGE(11, 12, "Settings - Backdrop"))); n++;
     XtSetArg (args[n], XmNuseAsyncGeometry, True); n++;
     XtSetValues (XtParent(style.backdropDialog), args, n);
 
@@ -1642,7 +1642,7 @@ AddPictureCB(
         str = CMPSTR(style.home);
         XtSetArg(args[n], XmNdirectory, str); n++;
         XtSetArg(args[n], XmNtitle,
-                 (char *)GETMESSAGE(11, 20, "Style Manager - Add Picture")); n++;
+                 (char *)GETMESSAGE(11, 20, "Settings - Add Picture")); n++;
         backdrops.fileDialog =
             XmCreateFileSelectionDialog(style.backdropDialog, "addPicture",
                                         args, n);

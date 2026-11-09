@@ -33,7 +33,7 @@ features stay optional or detected at run time.
 - [ ] A screen-lock unlock failure seen once after resume with the QEMU
       keyboard; not reproduced since.
 - [ ] Builds without libpng/libjpeg, and visuals other than TrueColor.
-- [ ] Qt theming (Style Manager > Color) with qt5ct and qt6ct.
+- [ ] Qt theming (Settings > Color) with qt5ct and qt6ct.
 - [ ] Network, Bluetooth and Updates panels on a real machine (Wi-Fi
       with WPA, pairing a device, an update run with each backend).
 
@@ -63,13 +63,16 @@ features stay optional or detected at run time.
 
 ## Done
 
+- Style Manager is called Settings (window titles, Front Panel label,
+  action name; English).  The program is still dtstyle.
+
 - Front Panel system tray (a `systray` control, freedesktop System Tray
   protocol over XEMBED) after Trash; works under dtwm and xfwm4.
 - The busy light above Exit opens a task manager (dttaskmgr: the first
   of xfce4-taskmanager, lxtask, MATE/GNOME/KDE monitors, else htop/top).
 - Under xfwm4 the window menu (and tooltips) use the CDE-wm GTK
   stylesheet made from the palette by dtxfwmtheme.
-- Style Manager > Front Panel: add applications to any button's drawer
+- Settings > Front Panel: add applications to any button's drawer
   (a drawer is created if it has none), remove or restore drawer items.
   A changed button now keeps its drawer.
 - A panel-only dtwm quits on SIGTERM/SIGHUP without a confirmation box
@@ -77,9 +80,9 @@ features stay optional or detected at run time.
 
 - Under xfwm4, Motif-style title bars and frames in the CDE palette
   (dtxfwmtheme), following palette changes.
-- Style Manager > Front Panel: choose which application each main panel
+- Settings > Front Panel: choose which application each main panel
   button opens (an installed application or a command).
-- Style Manager > Session: the ~/.dtprofile options (D-Bus, autostart,
+- Settings > Session: the ~/.dtprofile options (D-Bus, autostart,
   window manager, ...) as switches.
 - Under xfwm4 the Front Panel's handles move it (it reserves its screen
   edge only while it sits on one).  tools/vm/selftest-wayland.sh tests

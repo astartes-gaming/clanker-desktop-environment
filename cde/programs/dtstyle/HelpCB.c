@@ -222,7 +222,7 @@ HelpModeCB(
 
       case DtHELP_SELECT_INVALID:
 
-          ErrDialog((char *)GETMESSAGE(2, 8, "You must select an item\nwithin the Style Manager."), style.shell);
+          ErrDialog((char *)GETMESSAGE(2, 8, "You must select an item\nwithin Settings."), style.shell);
           break;
 
    }

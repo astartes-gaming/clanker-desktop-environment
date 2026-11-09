@@ -368,7 +368,7 @@ AskPassword(char *prompt, PasswordProc proc, XtPointer data)
         pwDialog = XmCreatePromptDialog(style.shell, "passwordDialog",
                                         NULL, 0);
         XtVaSetValues(XtParent(pwDialog), XmNtitle,
-                      MSG(2, "Style Manager - Password"), NULL);
+                      MSG(2, "Settings - Password"), NULL);
         text = XmSelectionBoxGetChild(pwDialog, XmDIALOG_TEXT);
         XtAddCallback(text, XmNmodifyVerifyCallback, PasswordVerifyCB, NULL);
         XtAddCallback(pwDialog, XmNokCallback, PasswordDoneCB, NULL);
@@ -729,7 +729,7 @@ popup_networkBB(Widget shell)
     {
         _DtTurnOnHourGlass(shell);
         net = PanelCreate(shell, "networkDialog",
-                          MSG(3, "Style Manager - Network"), MSG(4, "Wi-Fi"));
+                          MSG(3, "Settings - Network"), MSG(4, "Wi-Fi"));
         net->refresh = NetRefresh;
         XtAddCallback(net->toggle, XmNvalueChangedCallback, NetToggleCB,
                       (XtPointer) net);
@@ -961,7 +961,7 @@ popup_bluetoothBB(Widget shell)
     {
         _DtTurnOnHourGlass(shell);
         bt = PanelCreate(shell, "bluetoothDialog",
-                         MSG(20, "Style Manager - Bluetooth"),
+                         MSG(20, "Settings - Bluetooth"),
                          MSG(21, "Bluetooth"));
         bt->refresh = BtRefresh;
         XtAddCallback(bt->toggle, XmNvalueChangedCallback, BtToggleCB,
@@ -1161,7 +1161,7 @@ popup_updatesBB(Widget shell)
     {
         _DtTurnOnHourGlass(shell);
         upd = PanelCreate(shell, "updatesDialog",
-                          MSG(40, "Style Manager - Updates"), NULL);
+                          MSG(40, "Settings - Updates"), NULL);
         upd->refresh = UpdRefresh;
         PanelButton(upd, MSG(41, "Check for Updates"), UpdCheckCB);
         PanelButton(upd, MSG(47, "Update Now..."), UpdNowCB);
@@ -1510,7 +1510,7 @@ AutAddCB(Widget w, XtPointer client_data, XtPointer call_data)
         autPrompt = XmCreatePromptDialog(style.shell, "autostartAdd",
                                          NULL, 0);
         XtVaSetValues(XtParent(autPrompt), XmNtitle,
-                      MSG(53, "Style Manager - Add Application"), NULL);
+                      MSG(53, "Settings - Add Application"), NULL);
         s = CMPSTR(MSG(54, "Command to run when you log in:"));
         XtVaSetValues(autPrompt, XmNselectionLabelString, s, NULL);
         XmStringFree(s);
@@ -1529,7 +1529,7 @@ popup_autostartBB(Widget shell)
     if (!aut)
     {
         aut = PanelCreate(shell, "autostartDialog",
-                          MSG(50, "Style Manager - Autostart"), NULL);
+                          MSG(50, "Settings - Autostart"), NULL);
         aut->refresh = AutRefresh;
         PanelButton(aut, MSG(52, "Turn On/Off"), AutToggleCB);
         PanelButton(aut, MSG(55, "Add..."), AutAddCB);
@@ -1904,9 +1904,9 @@ FpWriteChoices(void)
         return False;
     }
 
-    fprintf(fp, "# Front Panel changed in Style Manager > Front Panel.\n"
+    fprintf(fp, "# Front Panel changed in Settings > Front Panel.\n"
                 "# Written by dtstyle; the #@ lines record the choices.\n\n");
-    fprintf(dt, "# Actions for the Front Panel changed in Style Manager.\n"
+    fprintf(dt, "# Actions for the Front Panel changed in Settings.\n"
                 "# Written by dtstyle.\n\n");
 
     /* Changed buttons: same name, so the system one is replaced and
@@ -2337,11 +2337,11 @@ FpChoose(Panel *p, const char *button, Boolean add)
     }
     if (add)
         snprintf(title, sizeof(title), "%s - %s",
-                 MSG(92, "Style Manager - Add to Drawer"),
+                 MSG(92, "Settings - Add to Drawer"),
                  c ? c->label : button);
     else
         snprintf(title, sizeof(title), "%s",
-                 MSG(62, "Style Manager - Choose Application"));
+                 MSG(62, "Settings - Choose Application"));
     XtVaSetValues(XtParent(fpChooser), XmNtitle, title, NULL);
 
     order = (int *) XtMalloc((fpNApps ? fpNApps : 1) * sizeof(int));
@@ -2467,7 +2467,7 @@ popup_frontPanelBB(Widget shell)
     if (!fpPanel)
     {
         fpPanel = PanelCreate(shell, "frontPanelDialog",
-                              MSG(60, "Style Manager - Front Panel"), NULL);
+                              MSG(60, "Settings - Front Panel"), NULL);
         fpPanel->refresh = FpRefresh;
         PanelButton(fpPanel, MSG(64, "Change..."), FpChangeCB);
         PanelButton(fpPanel, MSG(88, "Add to Drawer..."), FpAddCB);
@@ -2766,7 +2766,7 @@ popup_sessionBB(Widget shell)
     if (!sesPanel)
     {
         sesPanel = PanelCreate(shell, "sessionDialog",
-                               MSG(70, "Style Manager - Session"), NULL);
+                               MSG(70, "Settings - Session"), NULL);
         sesPanel->refresh = SesRefresh;
         XtVaSetValues(sesPanel->list,
                       XmNvisibleItemCount, SES_NOPTIONS + 1, NULL);

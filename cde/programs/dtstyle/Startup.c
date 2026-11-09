@@ -242,7 +242,7 @@ BuildStartup(
   XtSetValues (style.startupDialog, args, n);
   
   n=0;
-  XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(7, 14, "Style Manager - Startup"))); n++;
+  XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(7, 14, "Settings - Startup"))); n++;
   XtSetArg(args[n], XmNuseAsyncGeometry, True); n++;
   XtSetArg(args[n], XmNmwmFunctions, DIALOG_MWM_FUNC  ); n++;
   XtSetValues (XtParent(style.startupDialog), args, n);

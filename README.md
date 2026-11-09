@@ -30,18 +30,18 @@ CDE behaves as it always did.
   (cropped) or Stretch, scaled on the GPU. Choose them in Style
   Manager > Backdrop; **Add Picture...** takes a picture from anywhere.
 - An optional compositor (picom) for GPU-accelerated, tear-free drawing:
-  Style Manager > Window > *Use Compositor*.
+  Settings > Window > *Use Compositor*.
 - GTK and Qt applications can follow the CDE colour palette: Style
   Manager > Color > *Apply colors to GTK and Qt applications*.
 
 **Laptops**
-- Touchpad settings in Style Manager > Mouse: tap to click, natural
+- Touchpad settings in Settings > Mouse: tap to click, natural
   scrolling, two-finger scrolling, disable while typing, and speed.
 - Brightness, volume, mute and microphone keys work.
 - The screen locks before the computer suspends (lid closed, sleep key).
 
 **Settings and session**
-- Style Manager panels for **Network** (NetworkManager), **Bluetooth**
+- Settings panels for **Network** (NetworkManager), **Bluetooth**
   (BlueZ), **Updates** (PackageKit, apt, dnf, zypper, pacman, BSD
   package tools) and **Autostart** (start applications at login).
 - **Lock Screen**, **Suspend**, **Restart...** and **Shut Down...** in
@@ -122,14 +122,14 @@ to configure.
 
 | To... | Go to |
 |---|---|
-| Set a picture wallpaper | Style Manager > Backdrop > *Add Picture...*, then choose Fill or Fit |
-| Set up the touchpad | Style Manager > Mouse > *Touchpad* |
-| Connect to Wi-Fi | Style Manager > Network |
-| Pair a Bluetooth device | Style Manager > Bluetooth > *Scan*, then *Pair* |
-| Update the system | Style Manager > Updates > *Update Now...* |
-| Start an application at login | Style Manager > Autostart > *Add...* |
-| Turn on the compositor | Style Manager > Window > *Use Compositor* |
-| Theme GTK and Qt applications | Style Manager > Color |
+| Set a picture wallpaper | Settings > Backdrop > *Add Picture...*, then choose Fill or Fit |
+| Set up the touchpad | Settings > Mouse > *Touchpad* |
+| Connect to Wi-Fi | Settings > Network |
+| Pair a Bluetooth device | Settings > Bluetooth > *Scan*, then *Pair* |
+| Update the system | Settings > Updates > *Update Now...* |
+| Start an application at login | Settings > Autostart > *Add...* |
+| Turn on the compositor | Settings > Window > *Use Compositor* |
+| Theme GTK and Qt applications | Settings > Color |
 | Lock, suspend, restart, shut down | Right-click the desktop |
 | Tile windows | Drag them to a screen edge, or Super+arrow keys |
 
@@ -164,7 +164,7 @@ everything as before:
 
 Under xfwm4 the windows get Motif-style frames like dtwm's (the "CDE"
 xfwm4 theme, made from the current palette and remade when you change
-it in Style Manager > Color), with the window menu button on the left
+it in Settings > Color), with the window menu button on the left
 and minimize and maximize on the right. A theme or button layout you
 choose in xfwm4's own settings is kept; these settings are shared with
 Xfce sessions. xfwm4's window menu is drawn in the same colors with
@@ -177,7 +177,7 @@ already running, it keeps the icons). The busy light above Exit opens a
 task manager: the first one installed of xfce4-taskmanager, lxtask and
 the MATE, GNOME and KDE system monitors, else `htop` or `top` in a
 terminal; `DT_TASKMANAGER` in `~/.dtprofile` picks another command.
-Style Manager > Front Panel changes what a button opens and adds
+Settings > Front Panel changes what a button opens and adds
 applications to (or removes items from) each button's drawer.
 
 `DT_WINDOW_MANAGER` can also name another EWMH window manager. It is

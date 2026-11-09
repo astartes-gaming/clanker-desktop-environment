@@ -73,7 +73,7 @@ GetHelpDialog(void)
 
 	n = 0;
         XtSetArg(args[n], XmNtitle, 
-            ((char *)GETMESSAGE(2, 7, "Style Manager - Help"))); n++;
+            ((char *)GETMESSAGE(2, 7, "Settings - Help"))); n++;
 	pHelp->dialog = DtCreateHelpDialog(style.shell, "helpDlg", 
 					    args, n);
 
@@ -106,7 +106,7 @@ GetHelpDialog(void)
 
         n=0;
         XtSetArg(args[n], XmNtitle, 
-            ((char *)GETMESSAGE(2, 7, "Style Manager - Help"))); n++;
+            ((char *)GETMESSAGE(2, 7, "Settings - Help"))); n++;
 	pHelp->dialog = DtCreateHelpDialog(style.shell, "helpDlg", 
 					    args, n);
         DtWsmRemoveWorkspaceFunctions(style.display, 
@@ -156,7 +156,7 @@ Help(
         XtSetArg(args[n], DtNhelpVolume, helpVolume);	n++;
         XtSetArg(args[n], DtNlocationId, locationId);	n++;
         XtSetArg (args[n], XmNtitle, 
-            ((char *)GETMESSAGE(2, 7, "Style Manager - Help"))); n++;
+            ((char *)GETMESSAGE(2, 7, "Settings - Help"))); n++;
 	helpDialog = DtCreateHelpDialog(style.shell, "helpDlg", args, n);
 
         DtWsmRemoveWorkspaceFunctions(style.display, 

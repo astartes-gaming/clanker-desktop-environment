@@ -431,7 +431,7 @@ BuildI18nDlg(
 
     n=0;
     XtSetArg(args[n], XmNtitle, 
-	 ((char *)GETMESSAGE(19, 1, "Style Manager - Internationalization")));
+	 ((char *)GETMESSAGE(19, 1, "Settings - Internationalization")));
     n++;
     XtSetArg (args[n], XmNuseAsyncGeometry, True); n++;
     XtSetArg(args[n], XmNmwmFunctions, DIALOG_MWM_FUNC); n++;

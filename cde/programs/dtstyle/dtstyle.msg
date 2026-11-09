@@ -74,18 +74,18 @@ $ _DtMessage 4 WILL ONLY APPEAR IN THE DT ERRORLOG FILE
 manager... Exiting.
 
 $  MESSAGES 5-6 IN SET 2 WILL ONLY APPEAR IN THE DT ERRORLOG FILE
-5 Style Manager is already running,\n\
+5 Settings is already running,\n\
 second attempt aborted.
 6 An X Toolkit error occurred...\n\
 Exiting.
 
 $ _DtMessage 7 is the title of all Help dialog boxes
-7 Style Manager - Help
+7 Settings - Help
 
 $ _DtMessage 8 is an error message that appears when you are using Itemh Help
 $ and select on something outside of the Style Manager
 8 You must select an item\n\
-within the Style Manager.
+within Settings.
 
 $ _DtMessage 9 WILL ONLY APPEAR IN THE DT ERRORLOG FILE
 9 Could not obtain screen saver information\n\
@@ -98,7 +98,7 @@ $ _DtMessage set 4 is for the Style Manager main window
 $ Messages 6,8-26,34,39 from set 4 were deleted from the message catalog
 
 $ _DtMessage 1 is the title of the main dtstyle window
-1 Style Manager
+1 Settings
 
 $ mnemonic and label for the File menubar item.
 2 F
@@ -185,7 +185,7 @@ $ Message 58 is a replacement for messages 50
 
 $ Messages 59-60 are replacements for messages 51-52
 59 A
-60 About Style Manager
+60 About Settings
 
 $ Style Manager buttons for the Network, Bluetooth and Updates panels
 61 Network
@@ -225,13 +225,13 @@ $ _DtMessage 22 is the label of the titlebox containing the list of font sizes
 22 Size
 
 $ _DtMessage 23 is the title of the Fonts dialog
-23 Style Manager - Font
+23 Settings - Font
 
 $ _DtMessage 24 is an informative message used by the Fonts dialog
 24 The font that is currently used for your desktop is not\n\
 available in the Size list. If a new font is selected and\n\
 applied, you will not be able to return to the current font\n\
-using the Style Manager - Font dialog.
+using the Settings - Font dialog.
 
 $set 6
 $ _DtMessage set 6 is for the Beep dialog
@@ -244,7 +244,7 @@ $ Messages 2 through 5 are the default buttons and labels of the scales.
 5 Duration
 
 $ _DtMessage 7 is the title of the Beep dialog box
-7 Style Manager - Beep  
+7 Settings - Beep  
 
 
 $set 7
@@ -281,7 +281,7 @@ startup script.  Startup settings are not valid,\n\
 since the session cannot be restored.
 
 $ _DtMessage 14 is the title of the Session Startup dialog box.
-14 Style Manager - Startup
+14 Settings - Startup
 
 $ _DtMessage 15 is an error message
 15 The Session Manager is not running.\n\
@@ -348,7 +348,7 @@ $ _DtMessage 17 is the text below the mouse icon. Notice the two lines.
 17 Test\nDouble-Click
 
 $ _DtMessage 18 is the Mouse Dialog title
-18 Style Manager - Mouse
+18 Settings - Mouse
 
 $ _DtMessage 19 appears in a Notice dialog after the user selects the 
 $ adjust toggle to change the function of the middle mouse button.
@@ -389,13 +389,13 @@ $  MESSAGE 1 IN SET 11 WILL ONLY APPEAR IN THE DT ERRORLOG FILE
 $ _DtMessage 1 - could not open a backdrop directory
 1 Could not open directory %s. 
 $ _DtMessage 2 - error opening the backdrop files
-2 The backdrop portion of the Style Manager\n\
+2 The backdrop part of Settings\n\
 will not operate because there are no backdrop\n\
 files available. Check $HOME/.dt/errorlog.
 
 
 $ _DtMessage 12 is the title of the Backdrop dialog box
-12 Style Manager - Backdrop
+12 Settings - Backdrop
 
 $ Group box for chosing style of backdrop
 13 Backdrop Style
@@ -409,7 +409,7 @@ $ Styles of backdrop
 
 $ Button that copies a picture file into $HOME/.dt/backdrops, and its dialog
 19 Add Picture...
-20 Style Manager - Add Picture
+20 Settings - Add Picture
 21 Choose a PNG or JPEG picture whose name has no spaces.
 22 The picture could not be copied to $HOME/.dt/backdrops.
 
@@ -418,7 +418,7 @@ $ _DtMessage set 12 is for the Screen dialog
 $ Message 2 from set 12 has been deleted from the message catalog
 
 $ _DtMessage 1 is the title of the Screen dialog box. 
-1 Style Manager - Screen
+1 Settings - Screen
 
 $ Messages 3-14 are the labels and buttons for the Screen dialog
 3 Default
@@ -455,7 +455,7 @@ $ Keyboard dialog box.
 4 Click Volume
 
 $ _DtMessage 6 is the title of the Keyboard dialog box
-6 Style Manager - Keyboard
+6 Settings - Keyboard
 
 
 $set 14
@@ -496,13 +496,13 @@ $ _DtMessage 23 appears in an information dialog
 
 $ _DtMessage 25 is an error message that appears when you press the color
 $ button and the color server is not running for some reason.
-25 The color portion of the Style Manager\n\
+25 The color part of Settings\n\
 will not operate because the color server\n\
 is not running.  Check $HOME/.dt/errorlog.
 
 $ _DtMessage 26 can be caused by setting the resource *useColorObj to False
 $ and then running dtstyle and trying to post the Color Dialog.
-26 The color portion of the Style Manager\n\
+26 The color part of Settings\n\
 will not operate because the resource\n\
 'useColorObj' is set to False.
 
@@ -520,7 +520,7 @@ This new palette will overwrite the old one.\n\
 Is this what you want to do?
 
 $ _DtMessage 30 is the title of the Color dialog box.
-30 Style Manager - Color
+30 Settings - Color
 
 $ _DtMessage 31-33 are the ColorUse options
 $ 31 High Color
@@ -539,7 +539,7 @@ $ 37 DT Color Use...
 
 $ _DtMessage 38 is an error message that appears when you press the color
 $ button and there are no palette files to be found
-38 The color portion of the Style Manager\n\
+38 The color part of Settings\n\
 will not operate because there are no palette\n\
 files available.  Check $HOME/.dt/errorlog.
 
@@ -604,13 +604,13 @@ $  MESSAGE 14-15 IN SET 17 WILL ONLY APPEAR IN THE DT ERRORLOG FILE
 15 Warning, couldn't grab Keyboard.\n
 
 $ _DtMessage 16 is the title of the Modify Color dialog box.
-16 Style Manager - Modify Color
+16 Settings - Modify Color
 
 
 $set 18
 $ _DtMessage set 18 is for the Window dialog
 $ _DtMessage 1 is the title of the Window dialog box
-1 Style Manager - Window
+1 Settings - Window
 
 $ Messages 2 through 5 are labels on the Window dialog.
 2 Default
@@ -645,7 +645,7 @@ $ Messsages 1 to 11 are labels displayed in the dialog.
 $ 
 
 $ Message 1 is the title of the Dialog.
-1 Style Manager - Internationalization
+1 Settings - Internationalization
 
 $ Message 2 appears on the button used to reset the last saved values.
 2 Default
@@ -734,8 +734,8 @@ $set 20
 $ Network, Bluetooth and Updates panels (SysPanels.c)
 $quote "
 1 "Working..."
-2 "Style Manager - Password"
-3 "Style Manager - Network"
+2 "Settings - Password"
+3 "Settings - Network"
 4 "Wi-Fi"
 5 "Connect"
 6 "Disconnect"
@@ -749,7 +749,7 @@ $quote "
 15 "The network command failed:"
 16 "This network needs settings this panel does not\noffer. Use Edit Connections."
 17 "Password for"
-20 "Style Manager - Bluetooth"
+20 "Settings - Bluetooth"
 21 "Bluetooth"
 22 "Scan"
 23 "Pair"
@@ -763,7 +763,7 @@ $quote "
 34 "Bluetooth is off."
 35 "Bluetooth settings need BlueZ (bluetoothctl)."
 36 "The Bluetooth command failed:"
-40 "Style Manager - Updates"
+40 "Settings - Updates"
 41 "Check for Updates"
 42 "updates available"
 43 "No updates found."
@@ -771,19 +771,19 @@ $quote "
 45 "Press Update Now to update this system in a terminal."
 46 "System Update"
 47 "Update Now..."
-50 "Style Manager - Autostart"
+50 "Settings - Autostart"
 51 "Applications started when you log in ([x] = on):"
 52 "Turn On/Off"
-53 "Style Manager - Add Application"
+53 "Settings - Add Application"
 54 "Command to run when you log in:"
 55 "Add..."
 56 "   (other desktops only)"
 57 "The autostart entry could not be changed."
 58 "This entry comes with the system: turn it\noff instead of removing it."
 59 "Remove"
-60 "Style Manager - Front Panel"
+60 "Settings - Front Panel"
 61 "Front Panel buttons and what they open:"
-62 "Style Manager - Choose Application"
+62 "Settings - Choose Application"
 63 "Application, or a command to run:"
 64 "Change..."
 65 "The Front Panel could not be changed."
@@ -791,7 +791,7 @@ $quote "
 67 "The Front Panel definition was not found."
 68 "Reset"
 69 "Installed applications:"
-70 "Style Manager - Session"
+70 "Settings - Session"
 71 "Start a D-Bus session bus"
 72 "Run autostart applications"
 73 "Apply the touchpad settings"
@@ -813,7 +813,7 @@ $quote "
 89 "(added)"
 90 "(removed)"
 91 "Front Panel buttons, each followed by the items in its drawer:"
-92 "Style Manager - Add to Drawer"
+92 "Settings - Add to Drawer"
 93 "Drawer items: use Add to Drawer and Remove."
 94 "Select a Front Panel button first."
 95 "Buttons stay on the panel; Reset undoes a change."
