@@ -2,6 +2,13 @@ MAINTAINERCLEANFILES = Makefile.in
 
 bin_PROGRAMS = dtsession
 
+# Touchscreen gestures (XInput 2.2 + XTest), when available
+if HAVE_XI_TOUCH
+bin_PROGRAMS += dttouch
+dttouch_SOURCES = dttouch.c
+dttouch_LDADD = -lXi -lXtst $(XTOOLLIB)
+endif
+
 bin_SCRIPTS = dtsession_res
 
 # Laptop keys and lock-before-sleep (see Xsession.d/0070.dtmodern)

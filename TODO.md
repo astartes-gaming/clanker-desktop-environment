@@ -63,6 +63,9 @@ features stay optional or detected at run time.
 
 ## Done
 
+- Touchscreen gestures (dttouch, XInput 2.2 touch grab + XTest): long
+  press = right click, two-finger drag = scroll; taps and drags pass
+  through.  Started when a touchscreen is present (DT_NO_TOUCH=1: off).
 - On-screen keyboard: a Front Panel button (below the lock) shows or
   hides an established keyboard (onboard, florence, xvkbd or
   matchbox-keyboard; DT_KEYBOARD overrides).

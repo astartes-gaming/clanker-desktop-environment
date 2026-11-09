@@ -180,6 +180,13 @@ terminal; `DT_TASKMANAGER` in `~/.dtprofile` picks another command.
 Settings > Front Panel changes what a button opens and adds
 applications to (or removes items from) each button's drawer.
 
+On a touchscreen, `dttouch` adds what Motif applications lack: a long
+press is a right click (CDE's context menus) and a two-finger drag
+scrolls. Taps and one-finger drags reach applications as before. It
+starts when a touchscreen is present at login (`DT_TOUCH=1` starts it
+anyway, `DT_NO_TOUCH=1` turns it off; `DT_TOUCH_HOLD_MS` and
+`DT_TOUCH_SCROLL_PX` tune it), and needs XInput 2.2 (X.Org 1.13+).
+
 The keyboard button below the lock in the Front Panel shows (and
 hides) an on-screen keyboard: the first installed of onboard, florence,
 xvkbd and matchbox-keyboard (`DT_KEYBOARD` picks another).
