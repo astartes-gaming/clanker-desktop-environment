@@ -208,12 +208,12 @@ $
 $ ----------------------------------------------------------------------------
 $ Messages 2008 - 2009 refer to the Style Manager (Dtstyle) action
 $ 
-2008 Style Manager
+2008 Settings
 $ 
 $ 2009 - do not translate '(Dtstyle)'
 $ 
-2009 The Style Manager (Dtstyle) action starts \\\n\
-                        the desktop Style Manager.
+2009 The Settings (Dtstyle) action starts \\\n\
+                        the desktop Settings.
 $ 
 $ ----------------------------------------------------------------------------
 $ Messages 2010 - 2011 refer to the DtHelpManager action
@@ -3071,7 +3071,7 @@ $
 $ 
 18006 Default
 $ 
-18007 Desktop Style
+18007 Settings
 $ 
 18008 Applications
 $ 
@@ -3084,6 +3084,8 @@ $
 18012 Busy
 $ 
 18033 Task Manager
+$ 
+18034 On-Screen Keyboard
 $ 
 18013 Exit
 $ 

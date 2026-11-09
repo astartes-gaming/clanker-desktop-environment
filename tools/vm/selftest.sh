@@ -501,8 +501,12 @@ elif ! python3 -c 'import evdev' 2>/dev/null; then
 else
     cp $P/touchscreen.py $P/buttonlog.py /tmp/; chmod 644 /tmp/touchscreen.py /tmp/buttonlog.py
     python3 /tmp/touchscreen.py 1 1 wait:15000 >/dev/null 2>&1 &
-    tsdev=$!; sleep 3
-    check "dttouch finds the touchscreen" x /usr/dt/bin/dttouch -probe
+    tsdev=$!
+    # the X server adds the new device a moment later
+    probe() { i=0; while [ $i -lt 8 ]; do
+        x /usr/dt/bin/dttouch -probe && return 0; sleep 1; i=$((i+1)); done
+        return 1; }
+    check "dttouch finds the touchscreen" probe
     kill $tsdev 2>/dev/null; wait $tsdev 2>/dev/null
     pgrep -u $U -x dttouch >/dev/null || xbg /usr/dt/bin/dttouch
     sleep 1

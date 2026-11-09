@@ -201,7 +201,7 @@ build_keyboardDlg(
     XtSetValues (style.kbdDialog, args, n);
 
     n=0;
-    XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(13, 6, "Style Manager - Keyboard"))); n++;
+    XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(13, 6, "Settings - Keyboard"))); n++;
     XtSetArg (args[n], XmNuseAsyncGeometry, True); n++;
     XtSetArg(args[n], XmNmwmFunctions,  DIALOG_MWM_FUNC ); n++;
     XtSetValues (XtParent(style.kbdDialog), args, n);

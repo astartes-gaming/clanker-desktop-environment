@@ -18,3 +18,14 @@ ACTION TaskManager
      DESCRIPTION   Shows the running programs and how much of the \
                    computer they use, and lets you end them.
 }
+
+ACTION OnScreenKeyboard
+{
+     LABEL         On-Screen Keyboard
+     TYPE          COMMAND
+     EXEC_STRING   dtkeyboard
+     ICON          DtKeybd
+     WINDOW_TYPE   NO_STDIO
+     DESCRIPTION   Shows a keyboard on the screen, for touchscreens; \
+                   press again to hide it.
+}

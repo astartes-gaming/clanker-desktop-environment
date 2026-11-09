@@ -1,0 +1,39 @@
+#!/bin/sh
+#####################################################################
+##  dtkeyboard - show or hide an on-screen keyboard (Front Panel).
+##
+##  Uses an established on-screen keyboard: $DT_KEYBOARD if set, else
+##  the first of onboard, florence, xvkbd and matchbox-keyboard that is
+##  installed.  A second press hides it again.  Plain POSIX sh.
+#####################################################################
+
+have() { command -v "$1" >/dev/null 2>&1; }
+uid=`id -u`
+
+for k in onboard florence xvkbd matchbox-keyboard; do
+    if pgrep -u $uid -x $k >/dev/null 2>&1; then
+        pkill -u $uid -x $k       # showing: hide it
+        exit 0
+    fi
+done
+
+if [ -n "$DT_KEYBOARD" ]; then
+    exec sh -c "$DT_KEYBOARD"
+fi
+for k in onboard florence xvkbd matchbox-keyboard; do
+    if have $k; then
+        case $k in
+            # xvkbd: compact, and never takes the keyboard focus
+            xvkbd) exec xvkbd -compact -no-keypad ;;
+            *)     exec $k ;;
+        esac
+    fi
+done
+
+msg="No on-screen keyboard is installed.  Install onboard, florence or xvkbd
+with your package manager (e.g. \"apt install onboard\")."
+if have dterror.ds; then
+    exec dterror.ds "$msg" "On-screen keyboard" OK
+fi
+echo "dtkeyboard: $msg" >&2
+exit 1

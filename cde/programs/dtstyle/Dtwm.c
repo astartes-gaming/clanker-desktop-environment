@@ -471,7 +471,7 @@ build_dtwmDlg(
     XtSetValues (style.dtwmDialog, args, n);
 
     n=0;
-    XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(18, 1, "Style Manager - Window"))); n++;
+    XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(18, 1, "Settings - Window"))); n++;
     XtSetArg (args[n], XmNuseAsyncGeometry, True); n++;
     XtSetArg(args[n], XmNmwmFunctions, DIALOG_MWM_FUNC); n++;
     XtSetValues (XtParent(style.dtwmDialog), args, n);

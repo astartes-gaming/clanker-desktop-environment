@@ -119,7 +119,7 @@ TpSave(const TpSettings *s)
 	unlink(tmp);
 	return 0;
     }
-    fputs("# Touchpad settings written by Style Manager > Mouse.\n", fp);
+    fputs("# Touchpad settings written by Settings > Mouse.\n", fp);
     fputs("# Applied at login by dttouchpad.\n", fp);
     if (s->tapping != TP_UNSET)
 	fprintf(fp, "tapping=%d\n", s->tapping);

@@ -518,7 +518,7 @@ malloc_trace(0);
     if (_DtGetLock (style.display, STYLE_LOCK) == 0)
     {
         _DtSimpleError (progName, DtError, NULL, "%s",
-	     ((char *)GETMESSAGE(2, 5, "Style Manager is already running, second attempt aborted.")));
+	     ((char *)GETMESSAGE(2, 5, "Settings is already running, second attempt aborted.")));
         exit(1);
     }
 

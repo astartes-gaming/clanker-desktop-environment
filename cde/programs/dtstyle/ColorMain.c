@@ -379,7 +379,7 @@ Customize(
     /* Not if Color Server is not running */
     if (style.colorSrv == FALSE)
     {
-       ErrDialog(((char *)GETMESSAGE(14, 25, "The color portion of the Style Manager\nwill not operate because the color server\nis not running.  Check $HOME/.dt/errorlog.")), style.shell);
+       ErrDialog(((char *)GETMESSAGE(14, 25, "The color part of Settings\nwill not operate because the color server\nis not running.  Check $HOME/.dt/errorlog.")), style.shell);
        return;
     }
 
@@ -391,7 +391,7 @@ Customize(
        
     if (XmeUseColorObj() == FALSE)
     {
-       ErrDialog(((char *)GETMESSAGE(14, 26, "The color portion of the Style Manager\nwill not operate because the resource\n'useColorObj' is set to False.")), style.shell);
+       ErrDialog(((char *)GETMESSAGE(14, 26, "The color part of Settings\nwill not operate because the resource\n'useColorObj' is set to False.")), style.shell);
        return;
     }
 
@@ -448,7 +448,7 @@ CreateMainWindow(
     if (NumOfPalettes == 0)
     {
         /* error dialog - no palettes */
-        ErrDialog(((char *)GETMESSAGE(14, 38, "The color portion of the Style Manager\n\
+        ErrDialog(((char *)GETMESSAGE(14, 38, "The color part of Settings\n\
 will not operate because there are no palette\n\
 files available.  Check $HOME/.dt/errorlog.")), style.shell);
         return(-1);        
@@ -2688,7 +2688,7 @@ AddToDialogBox( void )
       return;
 
     n = 0;
-    XtSetArg (args[n], XmNtitle, ((char *)GETMESSAGE(14, 30, "Style Manager - Color"))); n++;
+    XtSetArg (args[n], XmNtitle, ((char *)GETMESSAGE(14, 30, "Settings - Color"))); n++;
     XtSetArg (args[n], XmNuseAsyncGeometry, True); n++;
     XtSetArg (args[n], XmNmwmFunctions, DIALOG_MWM_FUNC); n++;
     XtSetValues (XtParent(style.colorDialog), args, n);

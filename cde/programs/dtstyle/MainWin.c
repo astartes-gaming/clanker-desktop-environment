@@ -210,8 +210,8 @@ build_mainWindow(
         (XtCallbackProc)HelpRequestCB, (XtPointer)HELP_MAIN_WINDOW);
 
     n = 0;
-    tmpStr = (char *)XtMalloc(strlen(GETMESSAGE(4, 1, "Style Manager"))+1);
-    sprintf(tmpStr, "%s", GETMESSAGE(4, 1, "Style Manager"));
+    tmpStr = (char *)XtMalloc(strlen(GETMESSAGE(4, 1, "Settings"))+1);
+    sprintf(tmpStr, "%s", GETMESSAGE(4, 1, "Settings"));
     XtSetArg(args[n], XmNtitle, tmpStr); n++;
     XtSetArg(args[n], XmNiconName, 
         (char *)GETMESSAGE(4, 37, "Style")); n++;
@@ -353,7 +353,7 @@ build_mainWindow(
     n = 0;
     mnemonic = ((char *)GETMESSAGE(4, 59, "A"));
     XtSetArg(args[n], XmNmnemonic, mnemonic[0]); n++;
-    labelString = CMPSTR((char *)GETMESSAGE(4, 60, "About Style Manager"));
+    labelString = CMPSTR((char *)GETMESSAGE(4, 60, "About Settings"));
     XtSetArg(args[n], XmNlabelString, labelString); n++;
     WidgList[count++]= XmCreatePushButton(helpPulldown, "stylemanager", args, n );
     XtAddCallback(WidgList[count-1], XmNactivateCallback,
@@ -570,6 +570,12 @@ ProcessComponentList(
 	  dtIcon = _DtGetIconFileName(style.screen, AUTOSTART_ICON, NULL, NULL, 0);
           helpTag = HELP_MAIN_WINDOW;
       }
+      else if (strcmp(string, ACCESS) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 67, "Accessibility"));
+	  dtIcon = _DtGetIconFileName(style.screen, ACCESS_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
       else if (strcmp(string, SESSION) == 0)
       {
           cmp_string = CMPSTR(GETMESSAGE(4, 66, "Session"));
@@ -774,6 +780,9 @@ activateCB(
 
   else if (strcmp(cd, SESSION) == 0)
     popup_sessionBB(style.shell);
+
+  else if (strcmp(cd, ACCESS) == 0)
+    popup_accessBB(style.shell);
 
 }
 

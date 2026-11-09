@@ -570,7 +570,7 @@ build_screenDialog(
 
     /* Set the title */
     n=0;
-    XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(12, 1, "Style Manager - Screen"))); n++;
+    XtSetArg(args[n], XmNtitle, ((char *)GETMESSAGE(12, 1, "Settings - Screen"))); n++;
     XtSetArg(args[n], XmNuseAsyncGeometry, True); n++;
     XtSetArg(args[n], XmNmwmFunctions, DIALOG_MWM_FUNC); n++;  
     XtSetValues (XtParent(style.screenDialog), args, n);
