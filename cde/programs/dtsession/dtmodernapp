@@ -1,0 +1,46 @@
+#!/bin/sh
+#####################################################################
+##  dtmodernapp ROLE [ARGS...] - run the Xfce application for ROLE,
+##  or CDE's own.
+##
+##  Settings > Session > "Use Xfce applications" creates
+##  ~/.dt/modern-apps and points the Text Editor, Terminal and Home
+##  Folder actions here.  The Xfce application is used when that is on
+##  and it is installed; otherwise the original CDE action runs, so
+##  removing an Xfce application, or turning the option off, falls
+##  back by itself.  The Xfce applications get the CDE colors (the
+##  "CDE" GTK theme that Settings > Color writes).  Plain POSIX sh.
+##
+##  ROLE   Xfce application   CDE fallback (action)
+##  editor mousepad           Dtpad
+##  term   xfce4-terminal     Dtterm
+##  files  thunar             DtfileHome (no ARGS) / Dtfile
+#####################################################################
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+role=$1; [ $# -gt 0 ] && shift
+case $role in
+    editor) app=mousepad;       cde=Dtpad ;;
+    term)   app=xfce4-terminal; cde=Dtterm ;;
+    files)  app=thunar;         cde=Dtfile
+            [ $# -eq 0 ] && cde=DtfileHome ;;
+    *)      echo "usage: dtmodernapp editor|term|files [args]" >&2
+            exit 2 ;;
+esac
+
+if [ -f "$HOME/.dt/modern-apps" ] && have $app; then
+    # The CDE colors: live through XSETTINGS (dtxsettings), else a
+    # fixed GTK_THEME.
+    if ! dtxsettings start 2>/dev/null; then
+        for t in "$HOME/.themes/CDE" "${XDG_DATA_HOME:-$HOME/.local/share}/themes/CDE"; do
+            if [ -f "$t/gtk-3.0/gtk.css" ]; then
+                GTK_THEME=CDE; export GTK_THEME
+                break
+            fi
+        done
+    fi
+    [ "$role" = files ] && [ $# -eq 0 ] && set -- "$HOME"
+    exec $app "$@"
+fi
+exec dtaction $cde "$@"

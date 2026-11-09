@@ -54,6 +54,8 @@
 #include "SysCmd.h"
 #include "SysPanels.h"
 #include "Access.h"
+#include "ExtTheme.h"
+#include "ColorMain.h"
 
 #define MSG(n, s) ((char *)GETMESSAGE(20, n, s))
 
@@ -2522,6 +2524,7 @@ static const SesOption sesOptions[] = {
 };
 #define SES_NOPTIONS ((int) (sizeof(sesOptions) / sizeof(sesOptions[0])))
 #define SES_WM SES_NOPTIONS	/* the window manager row */
+#define SES_MODERN (SES_NOPTIONS + 1)	/* the Xfce applications row */
 
 static Panel *sesPanel = NULL;
 static char  *sesValue[SES_NOPTIONS + 1];	/* current value, or NULL */
@@ -2702,6 +2705,78 @@ SesWmLabel(void)
     return v;
 }
 
+/*
+ * "Use Xfce applications": ~/.dt/modern-apps turns it on, and
+ * ~/.dt/types/clanker-modern.dt points the Text Editor, Terminal and
+ * Home Folder actions at dtmodernapp, which runs the Xfce application
+ * when it is installed and the original CDE action otherwise.
+ */
+static void
+ModernPath(char *buf, size_t len, const char *rel)
+{
+    snprintf(buf, len, "%s/.dt/%s", style.home, rel);
+}
+
+static Boolean
+ModernOn(void)
+{
+    char path[1100];
+
+    ModernPath(path, sizeof(path), "modern-apps");
+    return access(path, F_OK) == 0;
+}
+
+static Boolean
+ModernSet(Boolean on)
+{
+    char  flag[1100], types[1100], dir[1100];
+    FILE *fp;
+    static char *reload[] = { "dtaction", "ReloadActions", NULL };
+
+    ModernPath(flag, sizeof(flag), "modern-apps");
+    ModernPath(types, sizeof(types), "types/clanker-modern.dt");
+    if (!on)
+    {
+        unlink(flag);
+        unlink(types);
+    }
+    else
+    {
+        ModernPath(dir, sizeof(dir), "types");
+        (void) mkdir(dir, 0755);
+        if ((fp = fopen(types, "w")) == NULL)
+            return False;
+        fprintf(fp,
+            "# Written by Settings > Session (\"Use Xfce applications\").\n"
+            "# dtmodernapp runs the Xfce application if it is installed,\n"
+            "# else the original CDE action.\n\n"
+            "ACTION TextEditor\n{\n  LABEL\t\tText Editor\n"
+            "  ICON\t\tDtpenpd\n  TYPE\t\tCOMMAND\n"
+            "  WINDOW_TYPE\tNO_STDIO\n"
+            "  EXEC_STRING\tdtmodernapp editor %%Args%%\n}\n\n"
+            "ACTION Terminal\n{\n  LABEL\t\tTerminal\n"
+            "  ICON\t\tDtterm\n  TYPE\t\tCOMMAND\n"
+            "  WINDOW_TYPE\tNO_STDIO\n"
+            "  EXEC_STRING\tdtmodernapp term\n}\n\n"
+            "ACTION DtfileHome\n{\n  LABEL\t\tFile Manager - Home\n"
+            "  ICON\t\tFphome\n  ARG_COUNT\t0\n  TYPE\t\tCOMMAND\n"
+            "  WINDOW_TYPE\tNO_STDIO\n"
+            "  EXEC_STRING\tdtmodernapp files\n}\n");
+        if (fclose(fp) != 0)
+            return False;
+        if ((fp = fopen(flag, "w")) == NULL)
+            return False;
+        fclose(fp);
+        /* the CDE colors for them */
+        if (pCurrentPalette)
+            ExtThemeGenerate(pCurrentPalette);
+    }
+    ExtThemeLive();		/* start or stop live GTK theming */
+    /* Panel, File Manager and others pick up the new actions. */
+    (void) SysCmdRun(reload, NULL, 30, NULL, NULL);
+    return True;
+}
+
 static void
 SesRefresh(Panel *p)
 {
@@ -2719,6 +2794,10 @@ SesRefresh(Panel *p)
     snprintf(label, sizeof(label), "%s: %s",
              MSG(81, "Window manager"), SesWmLabel());
     PanelAddItem(p, label, "DT_WINDOW_MANAGER", "");
+    snprintf(label, sizeof(label), "[%s] %s", ModernOn() ? "x" : " ",
+             MSG(107, "Use Xfce applications when installed (Thunar, "
+                      "Mousepad, Terminal; at once)"));
+    PanelAddItem(p, label, "modern-apps", "");
     PanelBusy(p, False);
     PanelSetStatus(p, MSG(85,
         "Session options in ~/.dtprofile (used at the next login):"));
@@ -2740,6 +2819,15 @@ SesToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
 
     if (row < 0)
         return;
+    if (row == SES_MODERN)
+    {
+        if (!ModernSet(!ModernOn()))
+            ErrDialog(MSG(108, "The applications could not be changed."),
+                      style.shell);
+        SesRefresh(p);
+        XmListSelectPos(p->list, row + 1, False);
+        return;
+    }
     SesRead();
     if (row == SES_WM)
     {
@@ -2770,7 +2858,7 @@ popup_sessionBB(Widget shell)
                                MSG(70, "Settings - Session"), NULL);
         sesPanel->refresh = SesRefresh;
         XtVaSetValues(sesPanel->list,
-                      XmNvisibleItemCount, SES_NOPTIONS + 1, NULL);
+                      XmNvisibleItemCount, SES_NOPTIONS + 2, NULL);
         PanelButton(sesPanel, MSG(87, "Change"), SesToggleCB);
         XtAddCallback(sesPanel->list, XmNdefaultActionCallback, SesToggleCB,
                       (XtPointer) sesPanel);
