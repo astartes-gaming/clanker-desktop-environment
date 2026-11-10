@@ -1220,7 +1220,38 @@ StartClient( struct verify_info *verify, struct display *d, int *pidp )
     }
 
     user = getEnv (verify->userEnviron, "USER");
-    
+
+#if !defined(sun) && defined(HAS_PAM_LIBRARY)
+    /*
+     * Open the PAM session here, in the process that stays until the
+     * session ends (and closes it then), not in the child that execs
+     * Xsession: pam_systemd/pam_elogind keep a descriptor open in the
+     * calling process, and logind ends the session ("logged out") as
+     * soon as it is closed, which the exec did.  The child inherits the
+     * environment set up here.
+     */
+    _DtSvcPamOpenSession(progName, user, d->name);
+    {
+	/*
+	 * Pass on what PAM modules exported for the session, such as
+	 * XDG_RUNTIME_DIR/XDG_SESSION_ID from pam_systemd/pam_elogind or
+	 * pam_env settings.  Without this the session could not find
+	 * the per-user D-Bus or other logind services.
+	 */
+	char **penv = _DtSvcPamGetEnvList();
+	char **pe, *eq;
+
+	for (pe = penv; pe && *pe; pe++) {
+	    if ((eq = strchr(*pe, '=')) != NULL) {
+		*eq = '\0';
+		verify->userEnviron = setEnv(verify->userEnviron, *pe, eq + 1);
+	    }
+	    free(*pe);
+	}
+	free(penv);
+    }
+#endif
+
     switch (pid = fork ()) {
     case 0:
 #ifdef SIA
@@ -1285,28 +1316,6 @@ StartClient( struct verify_info *verify, struct display *d, int *pidp )
 	}
 #endif
 
-#if !defined(sun) && defined(HAS_PAM_LIBRARY)
-	_DtSvcPamOpenSession(progName, user, d->name);
-	{
-	    /*
-	     * Pass on what PAM modules exported for the session, such as
-	     * XDG_RUNTIME_DIR/XDG_SESSION_ID from pam_systemd/pam_elogind or
-	     * pam_env settings.  Without this the session could not find
-	     * the per-user D-Bus or other logind services.
-	     */
-	    char **penv = _DtSvcPamGetEnvList();
-	    char **pe, *eq;
-
-	    for (pe = penv; pe && *pe; pe++) {
-		if ((eq = strchr(*pe, '=')) != NULL) {
-		    *eq = '\0';
-		    verify->userEnviron = setEnv(verify->userEnviron, *pe, eq + 1);
-		}
-		free(*pe);
-	    }
-	    free(penv);
-	}
-#endif
 
 #ifdef AIXV3
          /*

@@ -60,8 +60,14 @@ geom() {        # geom TITLE -> "x y w h" of the client window
 }
 screen_size() { x xdpyinfo | awk '/dimensions:/ {print $2; exit}'; }
 
-sid=`loginctl list-sessions --no-legend |
-     awk -v u=$U '$3==u && $4=="seat0" {print $1}' | tail -1`
+# The user's X11 session on seat0 (not a text console session).
+sid=
+for s in `loginctl list-sessions --no-legend |
+          awk -v u=$U '$3==u && $4=="seat0" {print $1}'`; do
+    [ "`loginctl show-session $s -p Type --value 2>/dev/null`" = x11 ] &&
+        [ "`loginctl show-session $s -p State --value 2>/dev/null`" != closing ] &&
+        sid=$s
+done
 if [ -z "$sid" ]; then
     echo "No graphical session of $U: log in at the dtlogin screen first."
     exit 99
@@ -500,7 +506,9 @@ elif ! python3 -c 'import evdev' 2>/dev/null; then
     skp "touchscreen gestures (python3-evdev missing)"
 else
     cp $P/touchscreen.py $P/buttonlog.py /tmp/; chmod 644 /tmp/touchscreen.py /tmp/buttonlog.py
-    python3 /tmp/touchscreen.py 1 1 wait:15000 >/dev/null 2>&1 &
+    sz=`screen_size`
+    # (real axis ranges: libinput may reject a device whose range is 0..0)
+    python3 /tmp/touchscreen.py ${sz%x*} ${sz#*x} wait:15000 >/dev/null 2>&1 &
     tsdev=$!
     # the X server adds the new device a moment later
     probe() { i=0; while [ $i -lt 8 ]; do
@@ -513,7 +521,6 @@ else
     bl=/tmp/selftest-buttons.log; rm -f $bl
     xbg sh -c "python3 /tmp/buttonlog.py 200 200 500 350 25 > $bl 2>&1"
     sleep 3
-    sz=`screen_size`
     python3 /tmp/touchscreen.py ${sz%x*} ${sz#*x} tap:400:350 wait:500 \
         hold:420:360:1200 wait:500 drag2:450:450:0:-200 wait:500 \
         drag1:450:300:0:100 >/dev/null 2>&1
