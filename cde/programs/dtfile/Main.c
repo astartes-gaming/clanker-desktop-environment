@@ -2026,6 +2026,11 @@ RestoreSettingsFile( void )
                          &actualFormat,&nitems,&leftover,
                          &data);
 
+  if (data == NULL)		/* no _DT_SAVE_MODE: not from a session */
+  {
+    XtFree(dtPath);
+    return;
+  }
   if(strcmp((char *)data, "home") == 0)
     dirName = XtNewString("home");
   else if(strcmp((char *)data, "current") == 0)

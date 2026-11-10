@@ -138,12 +138,15 @@ GetTopLevelWindowInfo(
 	XaWmState = XInternAtom(smGD.display, _XA_WM_STATE, True);
     }
 
-    XGetWindowProperty(smGD.display,window,XaWmState,
+    wmState = NULL;
+    if (XGetWindowProperty(smGD.display,window,XaWmState,
 		       0L,(long)BUFSIZ,False,
 		       XaWmState,&actualType,&actualFormat,
 		       &nitems,
-		       &leftover,(unsigned char **) &wmState);
-    if (actualType==XaWmState)
+		       &leftover,(unsigned char **) &wmState) != Success)
+	actualType = None;
+    /* any client can set WM_STATE: use it only if it holds the state */
+    if (actualType==XaWmState && actualFormat == 32 && nitems >= 1 && wmState)
     {
 	retInfo.wid = window;
 	retInfo.termState = wmState->state;
