@@ -506,8 +506,23 @@ int IconvFile(
        goto cleanup;
    }
 
-   sprintf(buf,options->iconvCmdAndArgs,
-                 loc[FROM_CODESET],loc[TO_CODESET],*srcFile, destFile);
+   /* Clanker: the codesets come from the help volume (a file anyone
+    * could hand you) and go through the shell: plain locale/codeset
+    * characters only, and a bounded command line. */
+   if (strspn(loc[FROM_CODESET], "abcdefghijklmnopqrstuvwxyz"
+              "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._@-") !=
+           strlen(loc[FROM_CODESET]) ||
+       strspn(loc[TO_CODESET], "abcdefghijklmnopqrstuvwxyz"
+              "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._@-") !=
+           strlen(loc[TO_CODESET]) ||
+       snprintf(buf, sizeof(buf), options->iconvCmdAndArgs,
+                loc[FROM_CODESET],loc[TO_CODESET],*srcFile, destFile)
+           >= (int) sizeof(buf))
+   {
+       unlink(destFile);
+       ret = 0;                    /* no conversion */
+       goto cleanup;
+   }
 
    /* do the conversion */
    if(options->debugHelpPrint) printf("%s\n",buf);
