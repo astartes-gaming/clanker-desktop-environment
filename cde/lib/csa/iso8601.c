@@ -174,6 +174,7 @@ _csa_tick_to_iso8601(time_t tick, char *buf_out)
 
 	/* tick must be +ve to be valid */
 	if (tick < 0) {
+	   buf_out[0] = '\0';
 	   return(-1);
 	}
 
@@ -200,14 +201,24 @@ _csa_tick_to_iso8601(time_t tick, char *buf_out)
         time_str = _XGmtime(&tk, gmtime_buf);
 #endif /* !linux && !CSGRC_BASED */
 
+	/* Callers pass fixed buffers sized for exactly 16 characters:
+	 * refuse times that can't be shown in four-digit years. */
+	if (time_str == NULL || time_str->tm_year + 1900 > 9999) {
+		buf_out[0] = '\0';
+		return (-1);
+	}
+
 	/* format string forces fixed width (zero-padded) fields */
-	asprintf(&s, "%04d%02d%02dT%02d%02d%02dZ",
+	if (asprintf(&s, "%04d%02d%02dT%02d%02d%02dZ",
 		time_str->tm_year + 1900,
 		time_str->tm_mon + 1,
 		time_str->tm_mday,
 		time_str->tm_hour,
 		time_str->tm_min,
-		time_str->tm_sec);
+		time_str->tm_sec) < 0) {
+		buf_out[0] = '\0';
+		return (-1);
+	}
 
     strcpy(buf_out, s);
     free(s);
