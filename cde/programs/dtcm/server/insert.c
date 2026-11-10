@@ -109,7 +109,7 @@ _DtCmsInsertEntry(_DtCmsCalendar *cal, cms_entry *entry)
 		_csa_iso8601_to_tick(date, &entry->key.time);
 
 		/* set reference id */
-		sprintf(buf, "%ld:%s@%s", entry->key.id, cal->calendar,
+		snprintf(buf, sizeof(buf), "%ld:%s@%s", entry->key.id, cal->calendar,
 			_DtCmGetHostAtDomain());
 		opq.size = strlen(buf);
 		opq.data = (unsigned char *)buf;
