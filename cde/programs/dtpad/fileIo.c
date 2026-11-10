@@ -256,33 +256,26 @@ LoadFile(
 char *
 GetTempFile(void)
 {
-    char *tempname = (char *)XtMalloc(32); /* Temporary file name. */
-    FILE *tfp;
+    /* mkstemp creates the file exclusively, mode 0600; no predictable
+     * fallback names (they could be pre-created as symlinks). */
+    const char *dir = getenv("TMPDIR");
+    char *tempname;
+    int fd;
 
-    strcpy(tempname, "/tmp/dtpad_XXXXXX");
-    { int _tf = mkstemp(tempname); if (_tf >= 0) close(_tf); }
-    if ((tfp = fopen(tempname, "w")) == NULL)
-    {
-        pid_t pid;
-        /*
-         * If tmpnam fails, then try to create our own temp name.
-         * Try a couple of different names if necessary.
-         */
+    if (dir == NULL || *dir == '\0')
+        dir = "/tmp";
+    tempname = XtMalloc(strlen(dir) + sizeof("/dtpad_XXXXXX"));
+    sprintf(tempname, "%s/dtpad_XXXXXX", dir);
+    if ((fd = mkstemp(tempname)) < 0 && strcmp(dir, "/tmp") != 0) {
         XtFree(tempname);
-        tempname = XtMalloc(256);
-        pid = getpid();
-        sprintf(tempname, "/usr/tmp/editor%ld", (long)pid);
-        if ((tfp = fopen(tempname, "w")) == NULL)
-        {
-            sprintf(tempname, "/tmp/editor%ld", (long)pid);
-            if ((tfp = fopen(tempname, "w")) == NULL)
-            {
-                XtFree(tempname);
-                return (char *)NULL;
-            }
-        }
+        tempname = XtNewString("/tmp/dtpad_XXXXXX");
+        fd = mkstemp(tempname);
     }
-    fclose(tfp);
+    if (fd < 0) {
+        XtFree(tempname);
+        return (char *)NULL;
+    }
+    close(fd);
     return tempname;
 }
 

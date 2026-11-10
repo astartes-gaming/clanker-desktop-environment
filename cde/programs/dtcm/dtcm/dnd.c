@@ -241,9 +241,11 @@ handle_drop_cb(
 			 * Save data to a file so we can pass it to drag_load_proc().
 			 */
 			strcpy(dnd_filename, "/tmp/cmXXXXXX");
-			mktemp(dnd_filename);
+			{ int _fd = mkstemp(dnd_filename);
+			  fp = (_fd < 0) ? NULL : fdopen(_fd, "w");
+			  if (_fd >= 0 && fp == NULL) close(_fd); }
 	
-			if ((fp = fopen(dnd_filename, "w")) == 0) {
+			if (fp == NULL) {
 				transfer_info->status = DtDND_FAILURE;
 				return;
 			}
