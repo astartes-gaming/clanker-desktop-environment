@@ -261,7 +261,11 @@ WillingMsg( void )
     strcat(tmpbuf," > ");
 
     strcpy(tmpfilename, "/tmp/dtlogin_XXXXXX");
-    { int _tf = mkstemp(tmpfilename); if (_tf >= 0) close(_tf); }
+    { int _tf = mkstemp(tmpfilename);
+      if (_tf >= 0) close(_tf);
+      else tmpfilename[0] = '\0';	/* Clanker: don't fall back to the
+					 * fixed template name in /tmp */
+    }
     if ( tmpfilename[0] != '\0' ) {
 
 	strcat(tmpbuf,tmpfilename);
