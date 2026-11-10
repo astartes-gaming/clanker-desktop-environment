@@ -141,20 +141,19 @@ NumsToBuf(
 			WeekNumberToString(RE_MASK_STOP(array[i]), tmp_buf2);
 			
 			/* Add end mark if needed */
-		if (RE_STOP_IS_SET(array[i])) {
-			sprintf(tmp_buf, "%s$", tmp_buf2);
-			strcat (buffer, tmp_buf);
-			size += strlen(tmp_buf);
-		} else {
-			strcat (buffer, tmp_buf2);
-			size += strlen(tmp_buf2);
-		}
+		if (RE_STOP_IS_SET(array[i]))
+			snprintf(tmp_buf, sizeof(tmp_buf), "%s$", tmp_buf2);
+		else
+			snprintf(tmp_buf, sizeof(tmp_buf), "%s", tmp_buf2);
 
-			/* Make sure the size of our buffer does not overflow */
-		if (size > buf_size) {
+			/* Check the room left before appending: the item
+			 * counts come from the client's rule string. */
+		if (size + strlen(tmp_buf) >= buf_size) {
 			printf ("Error: Internal buffer size exceeded\n");
 			return;
 		}
+		strcat (buffer, tmp_buf);
+		size += strlen(tmp_buf);
 	}
 }
 
@@ -163,6 +162,7 @@ WeekDayToString(
 	WeekDay		 day,
 	char		*buffer)
 {
+	buffer[0] = '\0';	/* an unknown value adds nothing */
 	switch (RE_MASK_STOP(day)) {
 	case WD_SUN:
 		sprintf (buffer, " SU");
@@ -196,6 +196,7 @@ WeekNumberToString(
 	WeekNumber	 week,
 	char		*buffer)
 {
+	buffer[0] = '\0';	/* an unknown value adds nothing */
 	switch (RE_MASK_STOP(week)) {
 	case WK_F1:
 		sprintf (buffer, " 1+");
@@ -255,8 +256,8 @@ ConvertDaily(
 		/* Tack on the duration information */
 	sprintf(tmp_buf, " #%d", re->re_duration);
 
-	size += strlen(tmp_buf);
-	if (size > buf_size) {
+	size = strlen(subcommand) + strlen(tmp_buf);
+	if (size >= buf_size) {
 		printf ("Error: Internal buffer size exceeded\n");
 		return;
 	}
@@ -287,7 +288,7 @@ ConvertWeekly(
 		size += strlen(tmp_buf);
 
 			/* Make sure the size of our buffer does not overflow */
-		if (size > subcommand_size) {
+		if (size >= subcommand_size) {
 			printf ("Error: Internal buffer size exceeded\n");
 			return;
 		}
@@ -304,8 +305,8 @@ ConvertWeekly(
 		/* Tack on the duration information */
 	sprintf(tmp_buf, " #%d", re->re_duration);
 
-	size += strlen(tmp_buf);
-	if (size > subcommand_size) {
+	size = strlen(subcommand) + strlen(tmp_buf);
+	if (size >= subcommand_size) {
 		printf ("Error: Internal buffer size exceeded\n");
 		return;
 	}
@@ -346,7 +347,7 @@ ConvertMonthly(
 		size = strlen(subcommand);
 
 			/* Make sure the size of our buffer does not overflow */
-		if (size > subcommand_size) {
+		if (size >= subcommand_size) {
 			printf ("Error: Internal buffer size exceeded\n");
 			return;
 		}
@@ -360,7 +361,7 @@ ConvertMonthly(
 		size = strlen(subcommand);
 
 			/* Make sure the size of our buffer does not overflow */
-		if (size > subcommand_size) {
+		if (size >= subcommand_size) {
 			printf ("Error: Internal buffer size exceeded\n");
 			return;
 		}
@@ -383,8 +384,8 @@ ConvertMonthly(
 		/* Tack on the duration information */
 	sprintf(tmp_buf, " #%d", re->re_duration);
 
-	size += strlen(tmp_buf);
-	if (size > subcommand_size) {
+	size = strlen(subcommand) + strlen(tmp_buf);
+	if (size >= subcommand_size) {
 		printf ("Error: Internal buffer size exceeded\n");
 		return;
 	}
@@ -419,8 +420,8 @@ ConvertYearly(
 		/* Tack on the duration information */
 	sprintf(tmp_buf, " #%d", re->re_duration);
 
-	size += strlen(tmp_buf);
-	if (size > subcommand_size) {
+	size = strlen(subcommand) + strlen(tmp_buf);
+	if (size >= subcommand_size) {
 		printf ("Error: Internal buffer size exceeded\n");
 		return;
 	}
