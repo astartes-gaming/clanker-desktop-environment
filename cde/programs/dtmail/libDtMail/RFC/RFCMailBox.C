@@ -2953,7 +2953,15 @@ RFCMailBox::createTemporaryMailboxFile(DtMailEnv & error, char *tmp_name)
     return(-1);
   }
 
-  PRIV_ENABLED(fd,SafeOpen(tmp_name, O_RDWR | O_CREAT | O_TRUNC, info.st_mode));
+  // Clanker: the name is predictable and the directory may be shared
+  // (/var/mail): create the file exclusively, never through a symlink,
+  // as group mail could otherwise truncate whatever a planted link
+  // points to.
+#ifndef O_NOFOLLOW
+#define O_NOFOLLOW 0
+#endif
+  PRIV_ENABLED(fd,SafeOpen(tmp_name, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW,
+                           info.st_mode));
   if (fd < 0) {
     int errno2 = errno;
     switch (errno2) {
@@ -3099,8 +3107,16 @@ RFCMailBox::writeMailBox(DtMailEnv &error, DtMailBoolean hide_access)
   // Create the new temporary file to hold the mailbox contents
   //
   static char tmp_name[MAXPATHLEN+1];
-  sprintf(tmp_name, "%s.tmp.%08lx", _real_path, (long)time(NULL));
-  assert(strlen(tmp_name)<sizeof(tmp_name));
+  // Clanker: bounded, and unique per process (the file is created with
+  // O_EXCL); was sprintf with only an assert after the fact.
+  if (snprintf(tmp_name, sizeof(tmp_name), "%s.tmp.%08lx.%ld", _real_path,
+               (long)time(NULL), (long)getpid()) >= (int)sizeof(tmp_name)) {
+    error.vSetError(DTME_CannotCreateTemporaryMailboxFile, DTM_FALSE, NULL,
+                    _real_path, "name too long");
+    DtMailEnv	tmp_error;
+    unlockFile(tmp_error, _fd);
+    return;
+  }
 
   int fd = createTemporaryMailboxFile(error, tmp_name);
   if (error.isSet()) {
