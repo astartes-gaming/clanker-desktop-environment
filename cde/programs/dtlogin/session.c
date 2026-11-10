@@ -707,6 +707,21 @@ LoadXloginResources( struct display *d )
 
         XrmPutFileDatabase(XresourceDB, tmpname);
 
+	/* Clanker: this runs through the shell as root, and for XDMCP
+	 * displays the name comes from a reverse DNS lookup: only plain
+	 * display-name characters may go in. */
+	if (strspn (d->name, "abcdefghijklmnopqrstuvwxyz"
+		    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.:_-[]") !=
+	    strlen (d->name) ||
+	    strspn (authority, "abcdefghijklmnopqrstuvwxyz"
+		    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./_-=:") !=
+	    strlen (authority)) {
+	    LogError ((unsigned char *) "dtlogin: refusing unsafe display "
+		      "name '%s' for xrdb\n", d->name);
+	    unlink (tmpname);
+	    if (resources) free (resources);
+	    return -1;
+	}
 	snprintf (cmd, sizeof(cmd), "%s%s %s -display %s -load %s",
 			auth_key, authority, d->xrdb, d->name, tmpname);
 	Debug ("Loading resource file: %s\n", cmd);
