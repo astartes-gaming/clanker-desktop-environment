@@ -181,10 +181,10 @@ POP2Server::ptrans_parse_response (char *argbuf)
     _pound_arg = _equal_arg = -1;
     if (SockGets(buf, sizeof(buf), _sockfp))
     {
-	if (buf[strlen(buf)-1] == '\n')
+	if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\n')
 	  buf[strlen(buf)-1] = '\0';
-	if (buf[strlen(buf)-1] == '\r')
-	  buf[strlen(buf)-1] = '\r';
+	if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\r')
+	  buf[strlen(buf)-1] = '\0';
 
 	if (_protologging)
 	  _logger.logError(DTM_FALSE, "%s< %s", proto_name(), buf);

@@ -238,17 +238,17 @@ POP3Server::ptrans_fldstate_read(int *countp, int *newp)
 		*newp = 0;
  		while (SockGets(buf, sizeof(buf), _sockfp))
 		{
-		    if (buf[strlen(buf)-1] == '\n')
+		    if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\n')
 			buf[strlen(buf)-1] = '\0';
-		    if (buf[strlen(buf)-1] == '\r')
-			buf[strlen(buf)-1] = '\r';
+		    if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\r')
+			buf[strlen(buf)-1] = '\0';
 
 		    if (_protologging)
 	  	      _logger.logError(DTM_FALSE, "%s< %s", proto_name(), buf);
 
  		    if (buf[0] == '.')
  			break;
- 		    else if (sscanf(buf, "%d %s", &curmsg, curuidstr) == 2)
+ 		    else if (sscanf(buf, "%d %128s", &curmsg, curuidstr) == 2)
 		    {
 			char	*uidliststr = NULL;
 
@@ -283,10 +283,10 @@ POP3Server::ptrans_msgsizes(int, int *sizes)
     {
 	int curmsg, cursize;
 
-	if (buf[strlen(buf)-1] == '\n')
+	if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\n')
 	  buf[strlen(buf)-1] = '\0';
-	if (buf[strlen(buf)-1] == '\r')
-	  buf[strlen(buf)-1] = '\r';
+	if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\r')
+	  buf[strlen(buf)-1] = '\0';
 
 	if (_protologging)
 	  _logger.logError(DTM_FALSE, "%s< %s", proto_name(), buf);
@@ -317,7 +317,7 @@ POP3Server::ptrans_msgisold(int msg)
 	char	*uidliststr = NULL;
 
 	uidliststr = uidlist_find(_uidlist_current, msg, NULL);
- 	if (sscanf(uidliststr, "%d %s", &curmsg, curuidstr) == 2)
+ 	if (sscanf(uidliststr, "%d %128s", &curmsg, curuidstr) == 2)
 	  uidliststr = uidlist_find(_uidlist_old, -1, curuidstr);
 	else
 	  uidliststr = NULL;
@@ -341,10 +341,10 @@ POP3Server::ptrans_parse_response (char *argbuf)
 
     if (SockGets(buf, sizeof(buf), _sockfp))
     {
-	if (buf[strlen(buf)-1] == '\n')
+	if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\n')
 	  buf[strlen(buf)-1] = '\0';
-	if (buf[strlen(buf)-1] == '\r')
-	  buf[strlen(buf)-1] = '\r';
+	if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\r')
+	  buf[strlen(buf)-1] = '\0';
 
 	if (_protologging)
 	  _logger.logError(DTM_FALSE, "%s< %s", proto_name(), buf);
@@ -440,7 +440,7 @@ POP3Server::uidlist_find(
 	char	curuidstr[DTMAS_IDSIZE+1];
 
 	uidliststr = (*uidlist)[i];
- 	if (sscanf(uidliststr, "%d %s", &curmsg, curuidstr) == 2)
+ 	if (sscanf(uidliststr, "%d %128s", &curmsg, curuidstr) == 2)
 	{
 	    if ((msg < 0 || msg == curmsg) &&
 		(uidstr == NULL || 0 == strcasecmp(uidstr, curuidstr)))
@@ -484,7 +484,7 @@ POP3Server::uidlist_read(DtVirtArray<char*> *uidlist)
 	int	curmsg;
 
 	while (NULL != fgets(uidliststr, DTMAS_POPBUFSIZE, fp))
- 	  if (sscanf(uidliststr, "%d %s", &curmsg, curuidstr) == 2)
+ 	  if (sscanf(uidliststr, "%d %128s", &curmsg, curuidstr) == 2)
 	    uidlist->append(strdup(uidliststr));
 
 	fclose(fp);
