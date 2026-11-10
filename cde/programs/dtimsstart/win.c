@@ -24,6 +24,10 @@
 
 #include	<stdint.h>
 #include	<time.h>
+#include	<errno.h>
+#include	<fcntl.h>
+#include	<unistd.h>
+#include	<sys/wait.h>
 
 #include	<X11/X.h>
 #include	<X11/Xlib.h>
@@ -43,6 +47,10 @@
 #include	<Xm/TextF.h>
 #include	<Xm/Text.h>
 
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
 #include	"xims.h"
 #include	<limits.h>
 
@@ -407,29 +415,59 @@ int	save_RM(void)
     return saved_xdefs ? True : False;
 }
 
+/* Run argv directly (no shell: the file names may hold any character),
+ * output discarded; returns the exit status, or -1. */
+static int	run_quiet(char **argv)
+{
+    pid_t	pid;
+    int		status, fd;
+
+    if ((pid = fork()) < 0)	return -1;
+    if (pid == 0) {
+	if ((fd = open("/dev/null", O_RDWR)) >= 0) {
+	    dup2(fd, 1); dup2(fd, 2);
+	    if (fd > 2)	close(fd);
+	}
+	execv(argv[0], argv);
+	{   /* not at the configured path: look it up in PATH */
+	    char *base = strrchr(argv[0], '/');
+
+	    if (base)	execvp(base + 1, argv);
+	}
+	_exit(127);
+    }
+    while (waitpid(pid, &status, 0) < 0)
+	if (errno != EINTR)	return -1;
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+}
+
 int	merge_RM(char *res1, char *res2)
 {
-    char	cmdbuf[BUFSIZ*2];
-    int		ret;
+    char	*argv[10];
+    int		n = 0, ret = 0;
 
     if (!Dpy)	return False;
 
-    cmdbuf[0] = 0;
-    if (isDT()) {
-	char	*dtres_cmd = DTSESSION_RES_PATH;
-	if (is_executable(dtres_cmd)) {
-	    sprintf(cmdbuf, "%s -merge -system -xdefaults ", dtres_cmd);
-	    if (res1) {	strcat(cmdbuf, " -file "); strcat(cmdbuf, res1); }
-	    if (res2) {	strcat(cmdbuf, " -file "); strcat(cmdbuf, res2); }
-	    strcat(cmdbuf, " >/dev/null 2>&1");
+    if (isDT() && is_executable(DTSESSION_RES_PATH)) {
+	argv[n++] = DTSESSION_RES_PATH;
+	argv[n++] = "-merge"; argv[n++] = "-system"; argv[n++] = "-xdefaults";
+	if (res1) { argv[n++] = "-file"; argv[n++] = res1; }
+	if (res2) { argv[n++] = "-file"; argv[n++] = res2; }
+	argv[n] = NULL;
+	ret = run_quiet(argv);
+    } else {
+	/* xrdb each file in turn (was: cat res1 res2 | xrdb -merge -) */
+	char	*files[2];
+	int	i;
+
+	files[0] = res1; files[1] = res2;
+	for (i = 0; i < 2; i++) {
+	    if (!files[i])	continue;
+	    argv[0] = XRDB_PATH; argv[1] = "-merge"; argv[2] = "-quiet";
+	    argv[3] = files[i]; argv[4] = NULL;
+	    if (run_quiet(argv) != 0)	ret = -1;
 	}
     }
-    if (!cmdbuf[0]) {
-	sprintf(cmdbuf, "%s %s %s 2>/dev/null | %s -merge -quiet - 2>/dev/null",
-					CAT_PATH, res1, res2, XRDB_PATH);
-    }
-
-    ret = system(cmdbuf);
 
     DPR2(("merge_RM(): '%s' & '%s' merged to RESOURCE_MANAGER\n", res1, res2));
     return ret == 0 ? True : False;
