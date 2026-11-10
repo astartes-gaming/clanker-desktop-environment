@@ -80,7 +80,8 @@ _DtCm_yylex(void)
 	if (token == NUMBER)
 		sscanf(_DtCm_yytext, "%d", &_DtCm_yylval.number);
 	if (token == DATE)
-		strcpy(_DtCm_yylval.date, _DtCm_yytext);
+		snprintf(_DtCm_yylval.date, sizeof(_DtCm_yylval.date), "%s",
+		    _DtCm_yytext);
 
 	return (token);
 }

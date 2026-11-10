@@ -1978,7 +1978,11 @@ _CheckCalendarName(char *owner, char *cname, cms_attribute_value *val)
 
 	/* make sure it's the same as the user running the application */
 	if (isuser == B_TRUE) {
-		sprintf(user, "%s%s", val->item.string_value, (ptr ? ptr : ""));
+		/* the value comes from the caller: a name too long
+		 * for the buffer can't match the owner */
+		if (snprintf(user, sizeof(user), "%s%s",
+		    val->item.string_value, (ptr ? ptr : "")) >= sizeof(user))
+			return (CSA_E_INVALID_ATTRIBUTE_VALUE);
 		return (_CheckNameAtHost(owner, user));
 	}
 
