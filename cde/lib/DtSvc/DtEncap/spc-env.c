@@ -347,12 +347,18 @@ XeString *SPC_Fixup_Environment(XeString *envp,
       XeString screenptr;
       XeChar null=XeChar_NULL;
 
-      dispBuf =
-	(XeChar*) malloc(MAXHOSTNAMELEN + sizeof((XeString)"DISPLAY=:0.0") + 1);
+      size_t dispLen;
+
+      /* Clanker: size it from the strings: the old size took sizeof a
+       * pointer for "DISPLAY=:0.0" and ignored the length of the screen
+       * part, which comes from the request's environment. */
+      screenptr=strchr(disp, Colon);
+      dispLen = sizeof("DISPLAY=") + strlen(official_hostname) +
+                (screenptr ? strlen(screenptr) : 0);
+      dispBuf = (XeChar*) malloc(dispLen);
       if (dispBuf)
       {
-          screenptr=strchr(disp, Colon);
-          sprintf(dispBuf, "DISPLAY=%s%s",
+          snprintf(dispBuf, dispLen, "DISPLAY=%s%s",
 	          official_hostname,
 	          screenptr ? screenptr : &null);
 

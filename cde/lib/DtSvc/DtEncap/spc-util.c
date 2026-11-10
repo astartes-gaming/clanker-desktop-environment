@@ -266,6 +266,11 @@ Boolean _path_search (XeString path, XeString filename, path_search_predicate p)
     
     if(next_colon) { /* found colon */
       path_component_len = next_colon-path_rest;
+      if (path_component_len > MAXPATHLEN) {
+	/* Clanker: longer than any path; skip it (it overflowed buffer) */
+	path_rest = next_colon + 1;
+	continue;
+      }
       strncpy(buffer, path_rest, path_component_len);
       buffer[path_component_len]='\0';
       path_rest=next_colon+1;
@@ -275,6 +280,8 @@ Boolean _path_search (XeString path, XeString filename, path_search_predicate p)
 	path_rest=".";
     } else {         /* no colon */
       path_component_len = strlen(path_rest);
+      if (path_component_len > MAXPATHLEN)
+	break;			/* Clanker: as above */
       strcpy(buffer, path_rest);
       path_rest=NULL;
     }

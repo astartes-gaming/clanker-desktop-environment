@@ -67,7 +67,17 @@ features stay optional or detected at run time.
       replaced?), so the fix is in dtsession/dtwm.  Icons drawn in the
       old colors also keep them.
 
+- [ ] On systems without PAM, dtsession is installed setuid root, and
+      libdbus then ignores DBUS_SESSION_BUS_ADDRESS: no
+      org.freedesktop.ScreenSaver there.  Connect explicitly, only after
+      the effective uid is the user's.
+
 ## Done
+
+- SPC protocol (dtspcd, root, network): request length check was off by
+  up to 19 bytes (heap overflow); data now NUL-terminated; peer-supplied
+  string counts bounded; host name, DISPLAY, $VARIABLE expansion,
+  context path and PATH-component buffers bounded.
 
 - Larger Motif controls for touch (scroll bars, menu items, buttons, list
   rows, check boxes): Settings > Accessibility, on by default when a

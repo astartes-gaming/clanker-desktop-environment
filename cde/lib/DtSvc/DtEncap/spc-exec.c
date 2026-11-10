@@ -651,6 +651,8 @@ static char *get_path_from_context (
    if (context == NULL)
       return (NULL);
 
+   if (strlen (context) >= sizeof (tmp))	/* Clanker: was unbounded */
+      return (NULL);
    (void) strcpy (tmp, context);
    file = tmp;
 
@@ -951,6 +953,11 @@ resolve_variable_reference(
        * get its value.  If the variable doesn't exist, leave its
        * name in the string.
        */
+      if (n >= (int) sizeof (variable)) {
+	 /* Clanker: too long to be a variable name we can look up */
+	 pbeg = pch;
+	 continue;
+      }
       (void) strncpy (variable, var_start, n);
       variable[n] = '\0';
 
@@ -974,6 +981,17 @@ resolve_variable_reference(
        * of 'value' and finally, the characters after the environment 
        * variable.
        */
+      /* Clanker: make room for prefix + value + rest (the buffer was a
+       * fixed 2048 bytes, overflowed by long values or strings) */
+      {
+	 size_t need = (string_end - string_start) + strlen (value) +
+		       strlen (pch) + 1;
+	 char *nbuf = realloc (buf, need > 2048 ? need : 2048);
+
+	 if (nbuf == NULL)
+	    break;
+	 buf = nbuf;
+      }
       if (string_end == string_start)
 	 /*
 	  * There is nothing to prepend before 'value'.
