@@ -31,6 +31,8 @@
  */
 
 #include "TermHeader.h"
+#include <stdio.h>
+#include <unistd.h>
 #include "TermPrimOSDepI.h"
 #include "TermPrimP.h"
 #include "TermPrimData.h"
@@ -569,6 +571,18 @@ suidInit(void)
     _DtTermProcessUnlock();
 }
 
+/* Clanker: a privilege drop that failed must not go unnoticed: in a
+ * setuid dtterm the user's shell would run as root. */
+static void
+suidCheckDropped(const char *what)
+{
+    if (uid_user != 0 &&
+        (geteuid() != uid_user || getegid() != gid_user)) {
+	(void) fprintf(stderr, "dtterm: cannot drop privileges (%s)\n", what);
+	_exit(1);
+    }
+}
+
 void
 _DtTermPrimRemoveSuidRoot(void)
 {
@@ -583,6 +597,11 @@ _DtTermPrimRemoveSuidRoot(void)
     (void) setgid(gid_user);
     (void) setuid(uid_user);
 #endif	/* !HAS_SETRESUID && !HAS_SETREUID */
+    suidCheckDropped("remove");
+    if (uid_user != 0 && (getuid() != uid_user || getgid() != gid_user)) {
+	(void) fprintf(stderr, "dtterm: cannot drop privileges (real ids)\n");
+	_exit(1);
+    }
 }
 
 void
@@ -597,6 +616,8 @@ _DtTermPrimToggleSuidRoot(Boolean root)
     (void) seteuid(root ? uid_root : uid_user);
     (void) setegid(root ? gid_root : gid_user);
 #endif	/* HAS_SETEUID */
+    if (!root)
+	suidCheckDropped("toggle");
 }
 
 void
