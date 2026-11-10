@@ -57,6 +57,7 @@
  *****************************************************************************
  *************************************<+>*************************************/
 #include <stdio.h>
+#include <signal.h>
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
@@ -2514,19 +2515,28 @@ SetAlternateSession (
 			 * a copy of its entire directory because all
 			 * of the sessions state is needed.
 			 */
-			char		*tmp;
-			
-			tmp = XtMalloc (strlen (alt_dir) + 
-					strlen (session_dir) + 10);
-			if (!tmp)
-				return (False);
+			/* Run cp directly, not through the shell: the
+			 * paths may hold spaces or shell characters. */
+			pid_t		pid;
+			int		status;
+			sigset_t	set, oset;
 
-			(void) sprintf (tmp, "cp -r %s %s",
-					alt_dir, session_dir);
-
-			if ((system (tmp)) == -1)
+			sigemptyset(&set);
+			sigaddset(&set, SIGCHLD);
+			sigprocmask(SIG_BLOCK, &set, &oset);
+			if ((pid = fork()) == 0) {
+				sigprocmask(SIG_SETMASK, &oset, NULL);
+				execlp("cp", "cp", "-r", alt_dir,
+				       session_dir, (char *) NULL);
+				_exit(127);
+			}
+			if (pid > 0)
+				while (waitpid(pid, &status, 0) < 0 &&
+				       errno == EINTR)
+					;
+			sigprocmask(SIG_SETMASK, &oset, NULL);
+			if (pid < 0)
 				return (False);
-			XtFree (tmp);
 
 			if ((stat(session_dir, &buf)) != 0)
 				/*
