@@ -61,8 +61,11 @@ features stay optional or detected at run time.
 - [ ] Move touched code to C99 idioms (`stdbool.h`, `stdint.h`,
       declarations where used) as it is worked on; no mass rewrites.
 
-- [ ] Live palette: the workspace buttons' colors, and icons drawn in
-      the old colors, still need a restart.
+- [ ] Live palette: the Front Panel's workspace buttons keep the old
+      colors; even a dtwm started after the change gets them from a
+      stale source (dtsession's pixel set data is appended to, not
+      replaced?), so the fix is in dtsession/dtwm.  Icons drawn in the
+      old colors also keep them.
 
 ## Done
 

@@ -147,6 +147,9 @@ extern void _DtLivePaletteInitialize(Widget w);
 /* ...and applications that handle root window events themselves pass
  * each one here. */
 extern void _DtLivePaletteEvent(XEvent *event);
+/* dtsession: called with the new palette ("Name.dp") before
+ * applications recolor. */
+extern void _DtLivePaletteSetHook(void (*hook)(const char *palette));
 
 #ifdef __cplusplus
 }
