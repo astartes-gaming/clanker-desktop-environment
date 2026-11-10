@@ -675,8 +675,22 @@ GetMwmHints(
      *    since Mwm 1.1.n won't try to access the extra elements.
      */
 
-    if ((ret_val == Success) && (actual_type == wmGD.xa_MWM_HINTS))
+    if ((ret_val == Success) && (actual_type == wmGD.xa_MWM_HINTS) &&
+	(actual_format == 32) && property && (nitems > 0))
     {
+	/*
+	 * A client may set fewer elements than we read: give the
+	 * missing ones as 0 (unset) instead of reading past the data.
+	 */
+	if (nitems < PROP_MWM_HINTS_ELEMENTS)
+	{
+	    PropMwmHints *full = (PropMwmHints *) calloc (1, sizeof (PropMwmHints));
+
+	    if (full)
+		memcpy (full, property, nitems * sizeof (long));
+	    XFree ((char *)property);
+	    return (full);
+	}
 	return (property);			/* indicate success */
     }
 
