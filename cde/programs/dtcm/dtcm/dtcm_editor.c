@@ -953,8 +953,10 @@ load_cb(
 				 */
 				
 				strcpy(filename, "/tmp/cmXXXXXX");
-				mktemp(filename);
-				if ((fp = fopen(filename, "w")) == 0) {
+				{ int _fd = mkstemp(filename);
+				  fp = (_fd < 0) ? NULL : fdopen(_fd, "w");
+				  if (_fd >= 0 && fp == NULL) close(_fd); }
+				if (fp == NULL) {
 					tttk_message_fail( msg, TT_DESKTOP_ENODATA, 0, 1 );
 					return 0;
 				}
@@ -1038,9 +1040,11 @@ handle_drop_cb(
 			 * Save data to a file so we can pass it to drag_load_proc().
 			 */
 			strcpy(filename, "/tmp/cmXXXXXX");
-			mktemp(filename);
+			{ int _fd = mkstemp(filename);
+			  fp = (_fd < 0) ? NULL : fdopen(_fd, "w");
+			  if (_fd >= 0 && fp == NULL) close(_fd); }
 	
-			if ((fp = fopen(filename, "w")) == 0) {
+			if (fp == NULL) {
 				transfer_info->status = DtDND_FAILURE;
 				return;
 			}
