@@ -312,7 +312,7 @@ _DtCmsV4ReminderToReminderRef(
 			break;
 		}
 
-		sprintf(buf, "%ld:%s@%s", ids->id, calname,
+		snprintf(buf, sizeof(buf), "%ld:%s@%s", ids->id, calname,
 			_DtCmGetHostAtDomain());
 
 		if ((rptr->entryid = strdup(buf)) == NULL) {
@@ -962,11 +962,11 @@ _Appt4ToCmsentryAttrs(
 	ptr1 = strchr(calname, '@');
 	ptr2 = (ptr1 ? strchr(ptr1, '.') : NULL);
 	if (ptr1) {
-		sprintf(buf, "%ld:%s%s%s", a4->appt_id.key, calname,
+		snprintf(buf, sizeof(buf), "%ld:%s%s%s", a4->appt_id.key, calname,
 			(ptr2 == NULL ? "." : ""),
 			(ptr2 == NULL ? _DtCmGetLocalDomain(ptr1+1) : ""));
 	} else {
-		sprintf(buf, "%ld:%s@%s", a4->appt_id.key, calname,
+		snprintf(buf, sizeof(buf), "%ld:%s@%s", a4->appt_id.key, calname,
 			_DtCmGetHostAtDomain());
 	}
 	opq.size = strlen(buf);

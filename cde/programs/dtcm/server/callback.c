@@ -371,7 +371,7 @@ _DtCmsDoOpenCalCallback(
 	if (rlist == NULL)
 		return (rlist);
 
-	sprintf(calendar, "%s@%s", cal, _DtCmGetLocalHost());
+	snprintf(calendar, sizeof(calendar), "%s@%s", cal, _DtCmGetLocalHost());
 	args.calendar = calendar;
 	args.user = user;
 	args.data.reason = CSA_CB_CALENDAR_LOGON;
@@ -394,7 +394,7 @@ _DtCmsDoRemoveCalCallback(
 	if (rlist == NULL)
 		return (rlist);
 
-	sprintf(calendar, "%s@%s", cal, _DtCmGetLocalHost());
+	snprintf(calendar, sizeof(calendar), "%s@%s", cal, _DtCmGetLocalHost());
 	args.calendar = calendar;
 	args.user = user;
 	args.data.reason = CSA_CB_CALENDAR_DELETED;
@@ -422,7 +422,7 @@ _DtCmsDoUpdateCalAttrsCallback(
 	if (rlist == NULL)
 		return (rlist);
 
-	sprintf(calendar, "%s@%s", cal, _DtCmGetLocalHost());
+	snprintf(calendar, sizeof(calendar), "%s@%s", cal, _DtCmGetLocalHost());
 
 	/* set up update info */
 	if (num_attrs > 0 &&
@@ -464,7 +464,7 @@ _DtCmsDoInsertEntryCallback(
 	if (rlist == NULL)
 		return (rlist);
 
-	sprintf(calendar, "%s@%s", cal, _DtCmGetLocalHost());
+	snprintf(calendar, sizeof(calendar), "%s@%s", cal, _DtCmGetLocalHost());
 
 	/* set up update info */
 	sprintf(buf, "%ld", id);
@@ -496,7 +496,7 @@ _DtCmsDoDeleteEntryCallback(
 	if (rlist == NULL)
 		return (rlist);
 
-	sprintf(calendar, "%s@%s", cal, _DtCmGetLocalHost());
+	snprintf(calendar, sizeof(calendar), "%s@%s", cal, _DtCmGetLocalHost());
 
 	/* set up update info */
 	sprintf(buf, "%ld", id);
@@ -531,7 +531,7 @@ _DtCmsDoUpdateEntryCallback(
 	if (rlist == NULL)
 		return (rlist);
 
-	sprintf(calendar, "%s@%s", cal, _DtCmGetLocalHost());
+	snprintf(calendar, sizeof(calendar), "%s@%s", cal, _DtCmGetLocalHost());
 
 	/* set up update info */
 	sprintf(obuf, "%ld", oldid);
