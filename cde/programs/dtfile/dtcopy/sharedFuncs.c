@@ -96,6 +96,41 @@
 #include <X11/bitmaps/xm_question>
 #include <X11/bitmaps/xm_warning>
 #include <X11/bitmaps/xm_working>
+#include <wordexp.h>
+
+/*
+ * Expand environment variables (and ~, globs) in a typed path the way
+ * "echo path" did, but with wordexp() and command substitution refused,
+ * so a path holding $(...) or `...` can't run commands.  Returns the
+ * words joined by spaces (or only the first word), or NULL.
+ */
+static char *
+ExpandPathVars(const char *path, int first_only)
+{
+    wordexp_t we;
+    char *out;
+    size_t i, len = 0;
+
+    if (wordexp(path, &we, WRDE_NOCMD) != 0)
+        return NULL;
+    if (we.we_wordc == 0) {
+        wordfree(&we);
+        return NULL;
+    }
+    if (first_only)
+        len = strlen(we.we_wordv[0]) + 1;
+    else
+        for (i = 0; i < we.we_wordc; i++)
+            len += strlen(we.we_wordv[i]) + 1;
+    out = XtMalloc(len);
+    out[0] = '\0';
+    for (i = 0; i < (first_only ? 1 : we.we_wordc); i++) {
+        if (i) strcat(out, " ");
+        strcat(out, we.we_wordv[i]);
+    }
+    wordfree(&we);
+    return out;
+}
 
 Widget G_toplevel;
 int    G_dialog_closed = FALSE;
@@ -579,27 +614,13 @@ _DtCopyPathFromInput(char *input_string, char *current_dir)
     /* Strip any spaces from name -- input is overwritten */
     path = (char *) _DtStripSpaces(path);
 
-    /* Resolve, if there're any, environement variables */
+    /* Resolve, if there're any, environment variables */
     {
-        FILE *pfp;
-        char command[MAX_PATH];
+        char *exp = ExpandPathVars(path, 1);
 
-        sprintf(command,"echo %s",path);
-        if((pfp=popen(command,"r")) == NULL)
-        {
-
-        }
-        else
-        {
-            if (fscanf(pfp,"%s",command) >= 1)
-            {
-                XtFree(path);
-                path = XtNewString(command);
-            }
-            else
-                path = NULL;
-
-            pclose(pfp);
+        if (exp) {
+            XtFree(path);
+            path = exp;
         }
     }
 
