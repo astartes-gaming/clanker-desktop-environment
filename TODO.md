@@ -66,6 +66,10 @@ features stay optional or detected at run time.
 
 ## Done
 
+- Larger Motif controls for touch (scroll bars, menu items, buttons, list
+  rows, check boxes): Settings > Accessibility, on by default when a
+  touchscreen is found at login.
+
 - dtlogin opens the PAM session in the process that waits for the
   session, so logind no longer marks CDE sessions "logged out" as they
   start (pam_systemd's descriptor was closed by the exec of Xsession).

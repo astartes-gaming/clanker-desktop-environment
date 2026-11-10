@@ -14,6 +14,7 @@ enum {
     ACC_TOGGLES,	/* Shift x5 / held Shift turn these on and off */
     ACC_BIGCURSOR,	/* a large mouse pointer (new applications) */
     ACC_KEYBOARD,	/* show the on-screen keyboard at login */
+    ACC_TOUCHSIZE,	/* larger controls for fingers (new applications) */
     ACC_COUNT
 };
 

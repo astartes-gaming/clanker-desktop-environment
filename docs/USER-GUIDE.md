@@ -124,6 +124,10 @@ one with your package manager, e.g. `apt install onboard`).
 `DT_KEYBOARD` in `~/.dtprofile` picks another. Settings >
 Accessibility can show it at every login.
 
+With a touchscreen, CDE's applications also get **larger controls**
+(scroll bars, menus, buttons, list rows) that are easier to hit with a
+finger; Settings > Accessibility turns them off or on.
+
 Tuning, in `~/.dtprofile`: `DT_TOUCH_HOLD_MS` (long-press time, default
 600), `DT_TOUCH_SCROLL_PX` (finger travel per scroll step, default 40).
 `DT_NO_TOUCH=1` turns the gestures off; `DT_TOUCH=1` turns them on even
@@ -145,6 +149,10 @@ Settings > Accessibility. Each line is a switch: select it and press
   for sticky keys, or hold Shift for eight seconds for slow keys.
 - **Large mouse pointer**: for applications started afterwards.
 - **Show the on-screen keyboard at login**.
+- **Larger controls for touch**: wider scroll bars, taller menu items,
+  buttons and list rows, bigger check boxes, for applications started
+  afterwards. On when a touchscreen is found at login, unless you turn
+  it off here.
 
 **On-Screen Keyboard** in the same window shows or hides the keyboard
 right away.

@@ -2891,6 +2891,7 @@ static const struct {
     { 101, "Turn these on and off from the keyboard (Shift five times)" },
     { 102, "Large mouse pointer (applications started afterwards)" },
     { 103, "Show the on-screen keyboard at login" },
+    { 109, "Larger controls for touch (applications started afterwards)" },
 };
 
 static Panel *accPanel = NULL;
