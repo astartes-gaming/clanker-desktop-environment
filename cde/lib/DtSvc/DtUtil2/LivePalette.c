@@ -51,6 +51,15 @@ static Pixel        lp_old[NCOLORS];	/* the colors in use now */
 static int          lp_have_old;
 static XtEventDispatchProc lp_prev;
 static int          lp_debug;		/* DT_LIVE_PALETTE_DEBUG */
+static void       (*lp_hook)(const char *);	/* dtsession's color server */
+
+/* The session manager's color server is told of a new palette first,
+ * so that applications started afterwards get its colors. */
+void
+_DtLivePaletteSetHook(void (*hook)(const char *palette))
+{
+    lp_hook = hook;
+}
 
 /* The resources of a widget that hold palette colors. */
 static const char *const lp_resources[] = {
@@ -187,9 +196,15 @@ Recolor(Widget w, const Pixel *from, const Pixel *to)
         if (val[j] == (Pixel) ~0UL)
             continue;			/* the widget has no such resource */
         for (k = 0; k < NCOLORS; k++)
-            if (from[k] == val[j] && to[k] != val[j]) {
-                XtSetArg(args[n], (String) lp_resources[j], to[k]);
-                n++;
+            if (from[k] == val[j]) {
+                if (to[k] != val[j]) {
+                    XtSetArg(args[n], (String) lp_resources[j], to[k]);
+                    n++;
+                    if (lp_debug)
+                        fprintf(stderr, "livepalette: %s %s %06lx -> %06lx\n",
+                                XtName(w), lp_resources[j],
+                                (unsigned long) val[j], (unsigned long) to[k]);
+                }
                 break;
             }
         if (lp_debug && k == NCOLORS)
@@ -277,9 +292,11 @@ PaletteChanged(void)
     }
     if (db)
         XFree(db);
-    if (strcmp(name, lp_name) == 0 || !lp_have_old)
+    if (strcmp(name, lp_name) == 0)
         return;
-    if (NewPixels(name, to)) {
+    if (lp_hook)
+        (*lp_hook)(name);
+    if (lp_have_old && NewPixels(name, to)) {
         XErrorHandler old;
 
         XSync(lp_dpy, False);
@@ -298,7 +315,7 @@ PaletteChanged(void)
 void
 _DtLivePaletteEvent(XEvent *ev)
 {
-    if (lp_dpy && lp_have_old && ev->type == PropertyNotify &&
+    if (lp_dpy && ev->type == PropertyNotify &&
         ev->xproperty.window == RootWindow(lp_dpy, 0) &&
         ev->xproperty.atom == XA_RESOURCE_MANAGER)
         PaletteChanged();
@@ -330,20 +347,22 @@ _DtLivePaletteInitialize(Widget w)
     if (v->class == PseudoColor || v->class == GrayScale)
         return;				/* the color server does it */
 
-    if (!XmeGetColorObjData(XtScreenOfObject(w), &use, sets,
-                            XmCO_NUM_COLORS, &a, &i, &p, &s, &t) ||
-        use == XmCO_BLACK_WHITE)
-        return;
-    for (k = 0; k < NSETS; k++) {
-        lp_old[k * 5 + 0] = sets[k].bg;
-        lp_old[k * 5 + 1] = sets[k].fg;
-        lp_old[k * 5 + 2] = sets[k].ts;
-        lp_old[k * 5 + 3] = sets[k].bs;
-        lp_old[k * 5 + 4] = sets[k].sc;
+    if (XmeGetColorObjData(XtScreenOfObject(w), &use, sets,
+                           XmCO_NUM_COLORS, &a, &i, &p, &s, &t) &&
+        use != XmCO_BLACK_WHITE) {
+        for (k = 0; k < NSETS; k++) {
+            lp_old[k * 5 + 0] = sets[k].bg;
+            lp_old[k * 5 + 1] = sets[k].fg;
+            lp_old[k * 5 + 2] = sets[k].ts;
+            lp_old[k * 5 + 3] = sets[k].bs;
+            lp_old[k * 5 + 4] = sets[k].sc;
+        }
+        lp_have_old = 1;
     }
-    lp_have_old = 1;
+    /* Without color object data (the color server itself) the palette
+     * is still watched, for the hook. */
     lp_debug = getenv("DT_LIVE_PALETTE_DEBUG") != NULL;
-    if (lp_debug)
+    if (lp_debug && lp_have_old)
         for (k = 0; k < NSETS; k++)
             fprintf(stderr, "livepalette: set %d bg %06lx fg %06lx ts %06lx "
                     "bs %06lx sc %06lx\n", k + 1, sets[k].bg, sets[k].fg,

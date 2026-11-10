@@ -172,6 +172,7 @@ Widget shell[MAX_NUM_SCREENS];
 
 /********    Static Function Declarations    ********/
 
+static void PaletteChanged(const char *name);
 static Boolean AllocateColors(
                         Display *dpy) ;
 static char *convert_pixel_set(
@@ -321,7 +322,43 @@ InitializeDtcolor(
 
     _DtCacheProperties(dpy, XtWindow(shell[0])) ;
 
+    /* Clanker: on TrueColor, follow palette changes made in Settings */
+    _DtLivePaletteSetHook(PaletteChanged);
+
     return(0);
+}
+
+/************************************************************************
+**
+** PaletteChanged - Settings > Color chose a new palette ("Name.dp").
+**      On PseudoColor dtstyle rewrites the shared color cells itself.
+**      On other visuals the color server's pixel sets would stay those
+**      of the login palette, and applications started afterwards would
+**      get them: load the new palette, allocate its colors, and publish
+**      them (the selection reads pCurrentPalette; the cached property
+**      is replaced).  Running applications recolor themselves
+**      (libDtSvc LivePalette.c).
+**
+************************************************************************/
+static void
+PaletteChanged(const char *name)
+{
+    Display *dpy = XtDisplay(shell[0]);
+    struct _palette *p;
+    Atom pixel_set_atom;
+
+    if (colorSrv.TypeOfMonitor[0] == XmCO_BLACK_WHITE ||
+        colorSrv.DynamicColor[0] == True || name == NULL || !*name)
+        return;
+    if ((p = GetPaletteDefinition(dpy, 0, (char *) name)) == NULL)
+        return;
+    colorSrv.pCurrentPalette[0] = p;	/* the old one stays allocated */
+    AllocReadOnly(dpy, 0);
+    p->converted = NULL;
+    pixel_set_atom = XInternAtom(dpy, XmSPIXEL_SET_PROP, FALSE);
+    XDeleteProperty(dpy, XtWindow(shell[0]), pixel_set_atom);
+    _DtCacheProperties(dpy, XtWindow(shell[0]));
+    XFlush(dpy);
 }
 
 static void
