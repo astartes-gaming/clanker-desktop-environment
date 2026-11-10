@@ -262,6 +262,10 @@ static void StopCallback(
                         Widget w,
                         XtPointer client_data,
                         XtPointer call_data) ;
+static String AppendQuoted(
+        String buf,
+        int *size,
+        const char *str) ;
 static String GrowBuffer(
                         String buf,
                         int *size,
@@ -1652,6 +1656,43 @@ GrowBuffer(
 }
 
 
+/*
+ * Append str to the command in single quotes (with ' written as '\''),
+ * then a space, so the shell takes it as one literal word: folder and
+ * file names and the typed text may hold spaces, $, ` or ;.
+ */
+static String
+AppendQuoted(
+        String buf,
+        int *size,
+        const char *str)
+{
+   const char *p;
+   char *d;
+   int n = 3;
+
+   for (p = str; *p; p++)
+      n += (*p == '\'') ? 4 : 1;
+   buf = GrowBuffer (buf, size, n + 1);
+   d = buf + strlen (buf);
+   *d++ = '\'';
+   for (p = str; *p; p++)
+   {
+      if (*p == '\'')
+      {
+         memcpy (d, "'\\''", 4);
+         d += 4;
+      }
+      else
+         *d++ = *p;
+   }
+   *d++ = '\'';
+   *d++ = ' ';
+   *d = '\0';
+   return buf;
+}
+
+
 
 
 /************************************************************************
@@ -1851,8 +1892,7 @@ ExecuteFind(
 
    /* Add path to the command string */
 
-   (void) strcat (command, path);
-   (void) strcat (command, " ");
+   command = AppendQuoted (command, &commandLen, path);
    XtFree ((char *) path);
 
    /* Add on the rest of the search constraints */
@@ -1873,9 +1913,7 @@ ExecuteFind(
 
           /* The string needs to be quoted */
           (void) strcat (command, NAME_OPTION);
-          (void) strcat (command, "\"");
-          (void) strcat (command, find_data->filter);
-          (void) strcat (command, "\" ");
+          command = AppendQuoted (command, &commandLen, find_data->filter);
        }
 
    }
@@ -1974,10 +2012,8 @@ ExecuteGrep( FindRec * find_rec)
 
    command = GrowBuffer (command, &commandLen, strlen(contents) + 4);
 
-   (void) strcat (command, "\"");
-   (void) strcat (command, contents);
-   (void) strcat (command, "\"");
-   (void) strcat (command, " ");
+   (void) strcat (command, "-e ");	/* a pattern may start with '-' */
+   command = AppendQuoted (command, &commandLen, contents);
 
    if( ptr == NULL)
       ptr = buffer;
@@ -2036,8 +2072,7 @@ ExecuteGrep( FindRec * find_rec)
 
       /* Add buffer to the command string */
 
-      (void) strcat (command, ptr);
-      (void) strcat (command, " ");
+      command = AppendQuoted (command, &commandLen, ptr);
       *ptr2 = ',';
       *ptr2++;
       ptr = ptr2;
