@@ -173,10 +173,10 @@ IMAPServer::ptrans_msgsizes(int count, int *sizes)
     {
 	int num, size;
 
-	if (buf[strlen(buf)-1] == '\n')
+	if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\n')
 	  buf[strlen(buf)-1] = '\0';
-	if (buf[strlen(buf)-1] == '\r')
-	  buf[strlen(buf)-1] = '\r';
+	if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\r')
+	  buf[strlen(buf)-1] = '\0';
 
 	if (_protologging)
 	  _logger.logError(DTM_FALSE, "%s< %s", proto_name(), buf);
@@ -273,10 +273,10 @@ IMAPServer::ptrans_parse_response(char *argbuf)
 	    return DTME_MailServerAccess_SocketIOError;
 	}
 
-	if (buf[strlen(buf)-1] == '\n')
+	if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\n')
 	  buf[strlen(buf)-1] = '\0';
-	if (buf[strlen(buf)-1] == '\r')
-	  buf[strlen(buf)-1] = '\r';
+	if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\r')
+	  buf[strlen(buf)-1] = '\0';
 
 	if (_protologging)
 	  _logger.logError(DTM_FALSE, "%s< %s", proto_name(), buf);
