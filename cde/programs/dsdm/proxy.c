@@ -881,6 +881,37 @@ AtomCompare(const void *a1, const void *a2)
 }
 
 /* Get the Motif TARGETS */
+static int
+TargetsListValid(motif_targets_t *list, unsigned long length)
+{
+    char byte_order;
+    unsigned long off;
+    int i, n;
+    CARD16 cnt;
+
+    if (length < sizeof(motif_targets_t))
+	return 0;
+    byte_order = list->byte_order;
+    /* the size field is what later code trusts: it must be inside
+     * what was read (a writer may pad) and hold the header */
+    if (Swap4Bytes(byte_order, list->size) > length ||
+	Swap4Bytes(byte_order, list->size) < sizeof(motif_targets_t))
+	return 0;
+    length = Swap4Bytes(byte_order, list->size);
+    n = Swap2Bytes(byte_order, list->num_target_lists);
+    off = sizeof(motif_targets_t);
+    for (i = 0; i < n; i++) {
+	if (off + sizeof(CARD16) > length)
+	    return 0;
+	memcpy(&cnt, (BYTE *) list + off, sizeof(cnt));
+	off += sizeof(CARD16) +
+	       (unsigned long) Swap2Bytes(byte_order, cnt) * sizeof(CARD32);
+	if (off > length)
+	    return 0;
+    }
+    return 1;
+}
+
 static void
 GetTargetsList(Display *dpy, motif_targets_t **targets_list_p)
 {
@@ -900,6 +931,13 @@ GetTargetsList(Display *dpy, motif_targets_t **targets_list_p)
                              &length,
                              &bytes_after,
                              (unsigned char **) &targets_list);
+    /* The property can be written by any client: only use it if its
+     * header and every sub-list fit in the bytes actually read. */
+    if (status == Success && type == ATOM_MOTIF_TARGETS && length != 0 &&
+        !TargetsListValid(targets_list, length)) {
+	XFree(targets_list);
+	length = 0;
+    }
     if ((status != Success) || (type != ATOM_MOTIF_TARGETS) || (length == 0)) {
 	/* allocate targets_list of zero targets */
 	targets_list = (motif_targets_t *) malloc(sizeof(motif_targets_t));
