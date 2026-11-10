@@ -204,6 +204,19 @@ GetOLWinAttr(
 	property = prop_new;
     }
 
+    else if (property &&
+	     (nitems < sizeof(OLWinAttr) / sizeof(unsigned long)))
+    {
+	/* Shorter than either layout: give the missing fields as 0
+	 * instead of reading past the data. */
+	OLWinAttr *full = (OLWinAttr *) calloc (1, sizeof(OLWinAttr));
+
+	if (full)
+	    memcpy (full, property, nitems * sizeof(unsigned long));
+	XFree ((char *) property);
+	property = full;
+    }
+
     /* convert pin state for old clients */
     if (property && (property->flags & WA_PINSTATE))
     {
