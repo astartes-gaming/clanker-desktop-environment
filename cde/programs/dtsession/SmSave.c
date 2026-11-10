@@ -558,8 +558,7 @@ PruneSessionDirectory (void)
                 	if (((stat (saveDir, &buf)) == 0) && 
 					S_ISDIR (buf.st_mode)) {
 
-				sprintf (clientDB, "/bin/rm -rf %s", saveDir);
-				SystemCmd (clientDB);
+				RemoveTree (saveDir);
 
 				sprintf (oldestDir, "%s/%s", smGD.savePath, 
 					SM_CURRENT_DIRECTORY);

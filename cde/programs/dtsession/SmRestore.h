@@ -83,6 +83,7 @@ extern void CreateExecString(char *) ;
 extern void KillParent( void ) ;
 extern void ScanWhitespace( unsigned char **) ;
 extern void SystemCmd (char *pchCmd);
+extern void RemoveTree (char *path);
 
 extern Boolean StartClient (
 	char 			* program, 
