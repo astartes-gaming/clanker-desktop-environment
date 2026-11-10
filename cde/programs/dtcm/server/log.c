@@ -30,6 +30,7 @@
 
 #include <EUSCompat.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -88,6 +89,36 @@ static CSA_return_code create_log(char *owner, char *file, int version);
 static char *attrs_to_attrliststr(int len, cms_attribute *attrs,
 				boolean_t write_hash, boolean_t entryattrs);
 static char *grow_n_concat(char *base, char *newstr, int newcount);
+
+/* A string that grows as it is appended to. */
+struct logbuf { char *s; size_t len, cap; };
+
+static int
+lb_printf(struct logbuf *b, const char *fmt, ...)
+{
+	va_list	ap;
+	int	n;
+	char	*t;
+
+	va_start(ap, fmt);
+	n = vsnprintf(NULL, 0, fmt, ap);
+	va_end(ap);
+	if (n < 0)
+		return (-1);
+	if (b->len + n + 1 > b->cap) {
+		size_t cap = (b->len + n + 1) * 2;
+
+		if ((t = realloc(b->s, cap)) == NULL)
+			return (-1);
+		b->s = t;
+		b->cap = cap;
+	}
+	va_start(ap, fmt);
+	vsnprintf(b->s + b->len, b->cap - b->len, fmt, ap);
+	va_end(ap);
+	b->len += n;
+	return (0);
+}
 static char *get_access_list_string(cms_access_entry *list);
 static char *get_date_time_list_string(CSA_date_time_list list);
 
@@ -314,111 +345,103 @@ _DtCmsAppendAppt4ByFD(int f, Appt_4 *appt, _DtCmsLogOps op)
 {
 	char *cptr;
 	char tmpbuf[BUFSIZ];
-	char buf[BUFSIZ*3], buf2[BUFSIZ*2]; /* 1 BUFSIZ for what fields, 
-					       1 BUFSIZ for mailto field,
-					       and 1 BUFSIZ for the rest */
+	CSA_return_code stat;
+	/* The record grows to fit: the strings come from the client. */
+	struct logbuf sb = { NULL, 0, 0 };
 
 	cptr = ctime (&appt->appt_id.tick);
 	cptr[24] = '\0';		/* strip off CR */
 
-	buf[0] = '\0';
 	switch (op) {
 	case _DtCmsLogAdd:
-		sprintf(buf, "(add \"%s\" key: %ld ", cptr, appt->appt_id.key);
+		if (lb_printf(&sb, "(add \"%s\" key: %ld ", cptr, appt->appt_id.key)) goto nomem;
 		if (appt->what) {
 			cptr = cr_to_str(appt->what, strlen(appt->what));
 			if (cptr != NULL) {
-				sprintf(buf2, "what: \"%s\" ", cptr);
-				strcat(buf, buf2);
+				int r = lb_printf(&sb, "what: \"%s\" ", cptr);
+
 				free(cptr);
-			} else {
-				return (CSA_E_INSUFFICIENT_MEMORY);
-			}
+				if (r) goto nomem;
+			} else
+				goto nomem;
 		}
 		if (appt->client_data) {
-			sprintf(buf2, "details: \"%s\" ", appt->client_data);
-			strcat(buf, buf2);
+			if (lb_printf(&sb, "details: \"%s\" ", appt->client_data)) goto nomem;
 		}
 		if (appt->duration) {
-			sprintf(buf2, "duration: %d ", appt->duration);
-			strcat(buf, buf2);
+			if (lb_printf(&sb, "duration: %d ", appt->duration)) goto nomem;
 		}
 
 		periodtostr (appt->period.period, tmpbuf);
-		sprintf(buf2, "period: %s ", tmpbuf);
-		strcat(buf, buf2);
+		if (lb_printf(&sb, "period: %s ", tmpbuf)) goto nomem;
 
 		if (appt->period.nth != 0) {
-			sprintf (buf2, "nth: %d ", appt->period.nth);
-			strcat(buf, buf2);
+			if (lb_printf(&sb, "nth: %d ", appt->period.nth)) goto nomem;
 		}
 		if (appt->period.enddate != 0) {
 			cptr = ctime (&(appt->period.enddate));
 			cptr[24] = '\0'; /* strip off CR */
-			sprintf(buf2, "enddate: \"%s\" ", cptr);
-			strcat(buf, buf2);
+			if (lb_printf(&sb, "enddate: \"%s\" ", cptr)) goto nomem;
 		}
 
-		sprintf(buf2, "ntimes: %d ", appt->ntimes);
-		strcat(buf, buf2);
+		if (lb_printf(&sb, "ntimes: %d ", appt->ntimes)) goto nomem;
 
 		if (appt->exception != NULL) {
 			struct Except_4 *e = appt->exception;
-			strcat(buf, "exceptions: (");
+			if (lb_printf(&sb, "%s", "exceptions: (")) goto nomem;
 			while(e != NULL) {
-				sprintf(buf2, "%d ", e->ordinal);
-				strcat(buf, buf2);
+				if (lb_printf(&sb, "%d ", e->ordinal)) goto nomem;
 				e = e->next;
 			}
-			strcat(buf, ") ");
+			if (lb_printf(&sb, "%s", ") ")) goto nomem;
 		}
 
 		if (appt->author != NULL) {
-			sprintf(buf2, "author: \"%s\" ", appt->author);
-			strcat(buf, buf2);
+			if (lb_printf(&sb, "author: \"%s\" ", appt->author)) goto nomem;
 		}
 		if (appt->attr != NULL) {
 			struct Attribute_4 *item = appt->attr;
-			strcat(buf, "attributes: (");
+			if (lb_printf(&sb, "%s", "attributes: (")) goto nomem;
 			while(item != NULL) {
-				sprintf(buf2, "(\"%s\",\"%s\",\"%s\")",
+				if (lb_printf(&sb, "(\"%s\",\"%s\",\"%s\")",
 					item->attr, item->value,
-					item->clientdata);
-				strcat(buf, buf2);
+					item->clientdata)) goto nomem;
 				item = item->next;
 			}
-			strcat(buf, ") ");
+			if (lb_printf(&sb, "%s", ") ")) goto nomem;
 		}
 		if (appt->tag != NULL) {
 			struct Tag_4 *item = appt->tag;
-			strcat(buf, "tags: (");
+			if (lb_printf(&sb, "%s", "tags: (")) goto nomem;
 			while(item != NULL) {
 				tagstostr(item->tag, tmpbuf);
-				sprintf(buf2, "(%s , %d)", tmpbuf,
-					item->showtime);
-				strcat(buf, buf2);
+				if (lb_printf(&sb, "(%s , %d)", tmpbuf,
+					item->showtime)) goto nomem;
 				item = item->next;
 			}
-			strcat(buf, ") ");
+			if (lb_printf(&sb, "%s", ") ")) goto nomem;
 		}
 
 		apptstatustostr(appt->appt_status, tmpbuf);
-		sprintf(buf2, "apptstat: %s ", tmpbuf);
-		strcat(buf, buf2);
+		if (lb_printf(&sb, "apptstat: %s ", tmpbuf)) goto nomem;
 
 		privacytostr(appt->privacy, tmpbuf);
-		sprintf(buf2, "privacy: %s )\n", tmpbuf);
-		strcat(buf, buf2);
+		if (lb_printf(&sb, "privacy: %s )\n", tmpbuf)) goto nomem;
 
 		break;    
 
 	case _DtCmsLogRemove:
-		sprintf(buf, "(remove \"%s\" key: %ld)\n", cptr,
-			appt->appt_id.key);
+		if (lb_printf(&sb, "(remove \"%s\" key: %ld)\n", cptr,
+			appt->appt_id.key)) goto nomem;
 		break;
 	}
 
-	return (append_log(f, buf));
+	stat = append_log(f, sb.s ? sb.s : "");
+	free(sb.s);
+	return (stat);
+nomem:
+	free(sb.s);
+	return (CSA_E_INSUFFICIENT_MEMORY);
 }
 
 extern CSA_return_code
