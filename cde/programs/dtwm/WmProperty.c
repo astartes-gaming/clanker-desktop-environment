@@ -550,7 +550,7 @@ GetWMState(
 		  &nitems, &leftover, (unsigned char **)&property);
 
     if (!((ret_val == Success) && (actual_type == wmGD.xa_WM_STATE) &&
-         (nitems == PROP_WM_STATE_ELEMENTS)))
+         (actual_format == 32) && (nitems == PROP_WM_STATE_ELEMENTS)))
     {
         /*
          * The property could not be retrieved or is not correctly set up.
@@ -751,7 +751,7 @@ PropMwmInfo *GetMwmInfo (Window rootWindowOfScreen)
                                      (unsigned char **)&property);
 
     if ((ret_val == Success) && (actual_type == wmGD.xa_MWM_INFO) &&
-        (nitems == PROP_MWM_INFO_ELEMENTS)) 
+        (actual_format == 32) && (nitems == PROP_MWM_INFO_ELEMENTS))
     {
 	return (property);			/* indicate success */
     }
@@ -1980,7 +1980,7 @@ void UpdateNetWmState (Window window, Atom *states, unsigned long nstates,
     if (!(XGetWindowProperty (DISPLAY, window, type, 0L, 1000000L, False,
 			      XA_ATOM, &actualType, &actualFormat, &nold,
 			      &leftover, (unsigned char **) &oldStates)
-	== Success && actualType == XA_ATOM)) nold = 0;
+	== Success && actualType == XA_ATOM && actualFormat == 32)) nold = 0;
 
     newStates = malloc ((1 + nstates + nold) * sizeof (Atom));
 
