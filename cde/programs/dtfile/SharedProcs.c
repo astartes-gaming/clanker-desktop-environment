@@ -131,6 +131,41 @@ extern XmWidgetExtData _XmGetWidgetExtData(
 #include "Common.h"
 #include "Main.h"
 #include "SharedProcs.h"
+#include <wordexp.h>
+
+/*
+ * Expand environment variables (and ~, globs) in a typed path the way
+ * "echo path" did, but with wordexp() and command substitution refused,
+ * so a path holding $(...) or `...` can't run commands.  Returns the
+ * words joined by spaces (or only the first word), or NULL.
+ */
+static char *
+ExpandPathVars(const char *path, int first_only)
+{
+    wordexp_t we;
+    char *out;
+    size_t i, len = 0;
+
+    if (wordexp(path, &we, WRDE_NOCMD) != 0)
+        return NULL;
+    if (we.we_wordc == 0) {
+        wordfree(&we);
+        return NULL;
+    }
+    if (first_only)
+        len = strlen(we.we_wordv[0]) + 1;
+    else
+        for (i = 0; i < we.we_wordc; i++)
+            len += strlen(we.we_wordv[i]) + 1;
+    out = XtMalloc(len);
+    out[0] = '\0';
+    for (i = 0; i < (first_only ? 1 : we.we_wordc); i++) {
+        if (i) strcat(out, " ");
+        strcat(out, we.we_wordv[i]);
+    }
+    wordfree(&we);
+    return out;
+}
 
 extern char *pathcollapse(const char *, char *, boolean);
 
@@ -1627,52 +1662,14 @@ _DtPathFromInput(
    /* Strip any spaces from name -- input is overwritten */
    path = (char *) _DtStripSpaces(path);
 
-   /* Resolve, if there're any, environment variables */
+   /* Resolve, if there're any, environment variables (the path is
+    * kept as typed if it can't be expanded) */
    {
-      FILE *pfp = NULL;
-      char command[MAXPATHLEN];
+      char *exp = ExpandPathVars(path, 0);
 
-      memset(command, 0, sizeof(command));
-      sprintf(command,"echo %s",path);
-
-      if((pfp=popen(command,"r")) != NULL)
-      {
-	  int read_ok = 1;
-
-          if (NULL == (fgets(command,MAXPATHLEN,pfp))) 
-	  {
-	      /*
-	       * Try a few more reads and if the read still fails, 
-	       * just use the path as is.
-	       */
-	      int i;
-	      for (i=0; i < 5; i++) 
-	      {
-	 	  sleep (1);
- 		  if (NULL != (fgets(command,MAXPATHLEN,pfp))) 
-		      break;
-              }
-	     if (i >= 5)
-		 read_ok = 0;
-	 }
-
-	 if (read_ok)
-	 {
-             int slen = strlen(command);
-             /* need to remove the trailing newline safely*/
-             if (slen >= 1)
-                 command[slen-1] = '\0';
-
-             XtFree(path);
-             path = XtNewString(command);
-             pclose(pfp);
-             pfp = NULL;
-	 }
-      }
-      if (pfp)
-      {
-          pclose(pfp);
-          pfp = NULL;
+      if (exp) {
+          XtFree(path);
+          path = exp;
       }
    }
 
