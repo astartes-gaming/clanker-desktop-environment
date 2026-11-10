@@ -923,7 +923,6 @@ SetResSet( void )
 void 
 UndoSetSavePath (void)
 {
-	char			* buf;
 
 	if (strcmp ("", savedDir)) {
 
@@ -933,10 +932,7 @@ UndoSetSavePath (void)
 		 *    ~/.dt/<session_dir>/current
 		 *    ~/.dt/<session_dir>/home
 		 */
-		buf = XtMalloc (strlen (savedDir) + 9);
-		sprintf (buf, "rm -rf %s", savedDir);
-		SystemCmd (buf);
-		XtFree (buf);
+		RemoveTree (savedDir);
 
 		if (strcmp ("", savedOldDir)) {
 

@@ -484,6 +484,28 @@ SystemCmd (char *pchCmd)
     signal (SIGCHLD, signalHandler);
 } /* END OF FUNTION SystemCmd */
 
+/*
+ * RemoveTree: "rm -rf path", run directly rather than through the
+ * shell, so a path with spaces or shell characters is one argument.
+ */
+void
+RemoveTree (char *path)
+{
+    void (*signalHandler) (int);
+    pid_t pid;
+    int status;
+
+    signalHandler = signal (SIGCHLD, SIG_DFL);
+    if ((pid = fork ()) == 0) {
+        execl ("/bin/rm", "rm", "-rf", "--", path, (char *) NULL);
+        _exit (127);
+    }
+    if (pid > 0)
+        while (waitpid (pid, &status, 0) < 0 && errno == EINTR)
+            ;
+    signal (SIGCHLD, signalHandler);
+}
+
 
 
 /*************************************<->*************************************
