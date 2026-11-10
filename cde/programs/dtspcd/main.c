@@ -561,7 +561,12 @@ int Client_Register(protocol_request_ptr prot)
      * to construct the tmpfile name.
      */
     strcpy(tmpnam_buf, "/tmp/dtspcd_XXXXXX");
-    { int _tf = mkstemp(tmpnam_buf); if (_tf >= 0) close(_tf); }
+    { int _tf = mkstemp(tmpnam_buf);
+      if (_tf >= 0) {
+        close(_tf);
+        unlink(tmpnam_buf);	/* Clanker: only its unique name is used */
+      }
+    }
     spc_suffix = basename(tmpnam_buf); /* Don't free result - not alloc'd! */
 
     /* Allocate space for tmppath, spc_prefix, and spc_suffix. */
@@ -680,7 +685,11 @@ int Client_Register(protocol_request_ptr prot)
     return(SPC_ERROR);
   }
 
-  if (S_ISLNK(buf.st_mode))
+  /* Clanker: a hard link to someone else's setuid file (e.g. a setuid
+   * root program, linked into a shared authentication directory) would
+   * pass the owner and setuid tests below and log the client in as that
+   * file's owner.  The client creates a new file: one link, regular. */
+  if (S_ISLNK(buf.st_mode) || !S_ISREG(buf.st_mode) || buf.st_nlink != 1)
     {				/* somebody is jerkin us around */
       SPC_Write_Protocol_Request(client_connection, NULL, LOGFILE_REPLY,
                                  FAILED_FILE_NAME, NULL, NULL);
