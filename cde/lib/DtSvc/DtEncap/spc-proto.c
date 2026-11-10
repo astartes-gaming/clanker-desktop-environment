@@ -261,8 +261,8 @@ SPC_Connection_Ptr SPC_Make_Connection(XeString hostname)
   if((conn = SPC_Alloc_Connection())==SPC_ERROR)
     return(SPC_ERROR);
 
-  if(hostname)
-    strcpy(conn->hostname, hostname);
+  if(hostname)	/* resolver names can be longer than MAXHOSTNAMELEN */
+    snprintf(conn->hostname, sizeof(conn->hostname), "%s", hostname);
   
   SPC_Add_Connection(conn);
   return(conn);
@@ -458,8 +458,14 @@ protocol_request_ptr SPC_Read_Protocol(SPC_Connection_Ptr connection)
   
   /* we have the header.  Parse out the fields */
   
-  READ_HEADER(dptr,
-	      &channel_id, &prot->request_type, &dptr->len, &prot->seqno);
+  /* Clanker: a header that doesn't parse would leave the length (and
+   * the rest) uninitialized */
+  if (READ_HEADER(dptr, &channel_id, &prot->request_type, &dptr->len,
+                  &prot->seqno) != 4) {
+    SPC_Close_Connection(connection);
+    SPC_Free_Protocol_Ptr(prot);
+    return(SPC_ERROR);
+  }
   prot->channel=SPC_Lookup_Channel(channel_id, connection);
   
 
@@ -468,7 +474,10 @@ protocol_request_ptr SPC_Read_Protocol(SPC_Connection_Ptr connection)
   /* MAXREQLEN */
   /* CERT - VU#172583 */
 
-  if (dptr->len >= MAXREQLEN)
+  /* Clanker: the data goes after the header, so it must fit in
+   * SPC_BUFSIZ (the old test allowed REQUEST_HEADER_LENGTH-1 bytes too
+   * many), with room for the terminating NUL the parsers rely on. */
+  if (dptr->len < 0 || dptr->len >= SPC_BUFSIZ)
     {				/* we have a problem.  Initiate DefCon 1 */
 				/* and launch our missiles. */
       XeString connection_hostname = CONNECTION_HOSTNAME(connection);
@@ -488,6 +497,10 @@ protocol_request_ptr SPC_Read_Protocol(SPC_Connection_Ptr connection)
     SPC_Free_Protocol_Ptr(prot);
     return(SPC_ERROR);
   }
+  /* Terminate the data, and clear the rest of the buffer: the request
+   * parsers (sscan_counted_string ...) walk NUL-terminated strings. */
+  memset(dptr->data + REQUEST_HEADER_LENGTH + len, 0,
+         MAXREQLEN - REQUEST_HEADER_LENGTH - len);
 
   dptr->offset=REQUEST_HEADER_LENGTH;
   return(prot);
@@ -1329,6 +1342,23 @@ int sprint_counted_string(XeString buf,
   return(bufptr-buf);
 }
 
+/* True if the next n bytes are all NUL: a run of empty strings that can
+ * only be the zeroed tail of the request buffer, not sent data (a
+ * request is shorter than SPC_BUFSIZ, so n < SPC_BUFSIZ bytes of zeros
+ * stay inside the buffer of MAXREQLEN). */
+static int
+SPC_All_Zero(const char *p, int n)
+{
+  int i;
+
+  if (n > 64)
+    n = 64;		/* enough: no request sends 64 empty strings in a row */
+  for (i = 0; i < n; i++)
+    if (p[i])
+      return 0;
+  return 1;
+}
+
 /*----------------------------------------------------------------------+*/
 XeString *sscan_counted_string(XeString buf,
   			       XeString *newbuf)
@@ -1340,7 +1370,13 @@ XeString *sscan_counted_string(XeString buf,
   XeString *tmpptr;
   XeString *tmpidx;
   
-  sscanf(buf, (XeString)"%x", &numstrings);
+  /* Clanker: the count comes from the peer.  Each string takes at
+   * least one byte of a request of at most SPC_BUFSIZ bytes, and the
+   * buffer after the data is zeroed (SPC_Read_Protocol), so a larger
+   * count would only walk off the end of the buffer. */
+  if (sscanf(buf, (XeString)"%x", &numstrings) != 1 ||
+      numstrings < 0 || numstrings >= SPC_BUFSIZ)
+    return((XeString *) SPC_ERROR);
   len=strlen(buf)+1;
   bufptr=buf+len;
   
@@ -1348,6 +1384,15 @@ XeString *sscan_counted_string(XeString buf,
   tmpidx=tmpptr;
   
   for(i=0; i<numstrings; (i++, tmpidx++)){
+    if (*bufptr == '\0' && bufptr[1] == '\0' && i + 1 < numstrings &&
+        SPC_All_Zero(bufptr, numstrings - i)) {
+      /* more strings claimed than sent: stop before the buffer end */
+      *tmpidx = NULL;
+      for (tmpidx = tmpptr; *tmpidx; tmpidx++)
+        XeFree(*tmpidx);
+      XeFree(tmpptr);
+      return((XeString *) SPC_ERROR);
+    }
     len=strlen(bufptr)+1;  /* len is string SIZE (with room for NULL) */
     *tmpidx=(XeString)XeMalloc(len);
     strncpy(*tmpidx, bufptr, len);
