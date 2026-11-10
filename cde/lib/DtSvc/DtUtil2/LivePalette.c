@@ -50,6 +50,7 @@ static char         lp_name[256];	/* current palette, "Name.dp" */
 static Pixel        lp_old[NCOLORS];	/* the colors in use now */
 static int          lp_have_old;
 static XtEventDispatchProc lp_prev;
+static int          lp_debug;		/* DT_LIVE_PALETTE_DEBUG */
 
 /* The resources of a widget that hold palette colors. */
 static const char *const lp_resources[] = {
@@ -191,9 +192,22 @@ Recolor(Widget w, const Pixel *from, const Pixel *to)
                 n++;
                 break;
             }
+        if (lp_debug && k == NCOLORS)
+            fprintf(stderr, "livepalette: %s %s=%06lx not in the palette\n",
+                    XtName(w), lp_resources[j], (unsigned long) val[j]);
     }
-    if (n)
+    if (n) {
         XtSetValues(w, args, n);
+        /* Some widgets (CDE's icon gadgets without a shadow) redraw only
+         * part of themselves on a color change: repaint all of it. */
+        if (XtIsRealized(XtIsWidget(w) ? w : XtParent(w))) {
+            if (XtIsWidget(w))
+                XClearArea(lp_dpy, XtWindow(w), 0, 0, 0, 0, True);
+            else if (XtIsRectObj(w))
+                XClearArea(lp_dpy, XtWindow(XtParent(w)), w->core.x,
+                           w->core.y, w->core.width, w->core.height, True);
+        }
+    }
 
     if (XtIsComposite(w)) {
         CompositeWidget c = (CompositeWidget) w;
@@ -207,17 +221,28 @@ Recolor(Widget w, const Pixel *from, const Pixel *to)
 }
 
 /* Every top-level widget of this client: the windows of the X tree
- * that Xt knows (frames of the window manager are skipped). */
+ * that Xt knows (frames of the window manager are skipped).  Each
+ * widget tree is recolored once, however many windows it has. */
+#define LP_MAX_ROOTS 32
+static Widget lp_done[LP_MAX_ROOTS];
+static int    lp_ndone;
+
 static void
 RecolorWindows(Window win, const Pixel *from, const Pixel *to, int depth)
 {
     Window   root, parent, *kids = NULL;
     unsigned n, i;
     Widget   w = XtWindowToWidget(lp_dpy, win);
+    int      k;
 
     if (w) {
         while (XtParent(w))
             w = XtParent(w);
+        for (k = 0; k < lp_ndone; k++)
+            if (lp_done[k] == w)
+                return;
+        if (lp_ndone < LP_MAX_ROOTS)
+            lp_done[lp_ndone++] = w;
         Recolor(w, from, to);
         return;
     }
@@ -259,6 +284,7 @@ PaletteChanged(void)
 
         XSync(lp_dpy, False);
         old = XSetErrorHandler(IgnoreErrors);
+        lp_ndone = 0;
         RecolorWindows(RootWindow(lp_dpy, lp_screen), lp_old, to, 0);
         XSync(lp_dpy, False);
         XSetErrorHandler(old);
@@ -316,6 +342,12 @@ _DtLivePaletteInitialize(Widget w)
         lp_old[k * 5 + 4] = sets[k].sc;
     }
     lp_have_old = 1;
+    lp_debug = getenv("DT_LIVE_PALETTE_DEBUG") != NULL;
+    if (lp_debug)
+        for (k = 0; k < NSETS; k++)
+            fprintf(stderr, "livepalette: set %d bg %06lx fg %06lx ts %06lx "
+                    "bs %06lx sc %06lx\n", k + 1, sets[k].bg, sets[k].fg,
+                    sets[k].ts, sets[k].bs, sets[k].sc);
 
     db = ResourceString();
     if (!PaletteName(db, lp_name, sizeof(lp_name)))
