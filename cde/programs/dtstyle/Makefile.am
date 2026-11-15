@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-bin_PROGRAMS = dtstyle dttouchpad dtaccess
+bin_PROGRAMS = dtstyle dttouchpad dtaccess dtappfind
 
 dtstyle_CPPFLAGS = -DCDE_CONFIGURATION_TOP=\"$(CDE_CONFIGURATION_TOP)\"	\
 	-DCDE_INSTALLATION_TOP=\"$(CDE_INSTALLATION_TOP)\" -I../dthelp	\
@@ -28,6 +28,10 @@ dttouchpad_LDADD = $(XILIB) $(XTOOLLIB)
 # Applies Settings > Accessibility at login (XKB AccessX)
 dtaccess_SOURCES = dtaccess.c Access.c Access.h
 dtaccess_LDADD = $(XTOOLLIB)
+
+# Find and start an application by typing (Workspace menu, Front Panel)
+dtappfind_SOURCES = dtappfind.c
+dtappfind_LDADD = $(XTOOLLIB)
 
 if SOLARIS
 dtstyle_SOURCES += OWsync.c

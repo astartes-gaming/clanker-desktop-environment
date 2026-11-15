@@ -1611,6 +1611,12 @@ static char     *fpAppName[FP_APPS_MAX], *fpAppExec[FP_APPS_MAX],
 static int       fpNApps;
 static Boolean   fpChooseAdd;		/* the chooser adds to a drawer */
 static char      fpChooseFor[64];	/* ...of this button */
+/* The chooser's list, sorted by name, and what typing has narrowed it
+ * to: typing in the text field filters the list (any part of the name,
+ * any case), so one application among hundreds is quick to find. */
+static int *fpOrder = NULL, fpNOrder = 0;
+static int  fpFirstShown = -1;		/* first match, for Enter */
+
 
 static void
 FpUserFile(char *buf, size_t len, const char *ext)
@@ -2264,6 +2270,16 @@ FpChooserDoneCB(Widget w, XtPointer client_data, XtPointer call_data)
     for (i = 0; i < fpNApps; i++)
         if (strcmp(fpAppName[i], t) == 0)
             break;
+    /* typed part of a name and pressed Enter: the first match, unless
+     * the text is a command that exists */
+    if (i == fpNApps && fpFirstShown >= 0)
+    {
+        char cmd[256];
+
+        snprintf(cmd, sizeof(cmd), "%.*s", (int) strcspn(t, " "), t);
+        if (!SysCmdHave(cmd))
+            i = fpFirstShown;
+    }
     if (i < fpNApps)
     {
         snprintf(label, sizeof(label), "%s", fpAppName[i]);
@@ -2310,11 +2326,64 @@ FpChooserDoneCB(Widget w, XtPointer client_data, XtPointer call_data)
     FpApply(p);
 }
 
+static Boolean
+FpMatches(const char *name, const char *want)
+{
+    size_t n = strlen(want);
+    const char *s;
+
+    if (n == 0)
+        return True;
+    for (s = name; *s; s++)
+        if (strncasecmp(s, want, n) == 0)
+            return True;
+    return False;
+}
+
+static void
+FpFilter(const char *want)
+{
+    XmString *items;
+    int       i, n = 0;
+    Widget    list = XmSelectionBoxGetChild(fpChooser, XmDIALOG_LIST);
+
+    items = (XmString *) XtMalloc((fpNOrder ? fpNOrder : 1) * sizeof(XmString));
+    fpFirstShown = -1;
+    for (i = 0; i < fpNOrder; i++)
+        if (FpMatches(fpAppName[fpOrder[i]], want))
+        {
+            if (fpFirstShown < 0)
+                fpFirstShown = fpOrder[i];
+            items[n++] = CMPSTR(fpAppName[fpOrder[i]]);
+        }
+    XmListDeleteAllItems(list);
+    XmListAddItemsUnselected(list, items, n, 1);
+    for (i = 0; i < n; i++)
+        XmStringFree(items[i]);
+    XtFree((char *) items);
+}
+
+/* Typing in the text field (but not a click in the list, which sets
+ * the text to a full name): narrow the list. */
+static void
+FpFilterCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    char *t = XmTextFieldGetString(w);
+    int   i;
+
+    for (i = 0; i < fpNApps; i++)	/* a name chosen from the list */
+        if (strcmp(fpAppName[i], t) == 0)
+            break;
+    if (i == fpNApps)
+        FpFilter(FpTrim(t));
+    XtFree(t);
+}
+
 static void
 FpChoose(Panel *p, const char *button, Boolean add)
 {
-    int       i, *order;
-    XmString *items, s;
+    int       i;
+    XmString  s;
     char      title[300];
     FpControl *c = FpControlNamed(button);
 
@@ -2337,6 +2406,8 @@ FpChoose(Panel *p, const char *button, Boolean add)
                                                XmDIALOG_HELP_BUTTON));
         XtUnmanageChild(XmSelectionBoxGetChild(fpChooser,
                                                XmDIALOG_APPLY_BUTTON));
+        XtAddCallback(XmSelectionBoxGetChild(fpChooser, XmDIALOG_TEXT),
+                      XmNvalueChangedCallback, FpFilterCB, NULL);
     }
     if (add)
         snprintf(title, sizeof(title), "%s - %s",
@@ -2347,22 +2418,20 @@ FpChoose(Panel *p, const char *button, Boolean add)
                  MSG(62, "Settings - Choose Application"));
     XtVaSetValues(XtParent(fpChooser), XmNtitle, title, NULL);
 
-    order = (int *) XtMalloc((fpNApps ? fpNApps : 1) * sizeof(int));
+    XtFree((char *) fpOrder);
+    fpOrder = (int *) XtMalloc((fpNApps ? fpNApps : 1) * sizeof(int));
     for (i = 0; i < fpNApps; i++)
-        order[i] = i;
-    qsort(order, fpNApps, sizeof(int), FpNameCmp);
-    items = (XmString *) XtMalloc((fpNApps ? fpNApps : 1) * sizeof(XmString));
-    for (i = 0; i < fpNApps; i++)
-        items[i] = CMPSTR(fpAppName[order[i]]);
+        fpOrder[i] = i;
+    fpNOrder = fpNApps;
+    qsort(fpOrder, fpNApps, sizeof(int), FpNameCmp);
     s = CMPSTR("");
-    XtVaSetValues(fpChooser, XmNlistItems, items, XmNlistItemCount, fpNApps,
-                  XmNtextString, s, XmNlistVisibleItemCount, 12, NULL);
+    XtVaSetValues(fpChooser, XmNtextString, s, XmNlistVisibleItemCount, 12,
+                  NULL);
     XmStringFree(s);
-    for (i = 0; i < fpNApps; i++)
-        XmStringFree(items[i]);
-    XtFree((char *) items);
-    XtFree((char *) order);
+    FpFilter("");
     XtManageChild(fpChooser);
+    XmProcessTraversal(XmSelectionBoxGetChild(fpChooser, XmDIALOG_TEXT),
+                       XmTRAVERSE_CURRENT);
 }
 
 /* Change...: what a button opens (a drawer row changes its button). */

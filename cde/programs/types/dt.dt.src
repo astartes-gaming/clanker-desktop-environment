@@ -186,6 +186,18 @@ ACTION Dtstyle
         DESCRIPTION     %|nls-2009-#The#|
 }
 
+ACTION Dtappfind
+{
+	LABEL		Find Application
+        ARG_COUNT       0
+        ICON		Fpapps
+        TYPE            COMMAND
+        WINDOW_TYPE     NO_STDIO
+        EXEC_STRING     CDE_INSTALLATION_TOP/bin/dtappfind
+        DESCRIPTION     Find an installed application by typing part \
+                        of its name, and start it.
+}
+
 XCOMM ######
 
 ACTION OpenDtIntro

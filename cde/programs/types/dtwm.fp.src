@@ -342,6 +342,23 @@ CONTROL IconEditor
   HELP_VOLUME		FPanel
 }
 
+SUBPANEL AppsSubpanel
+{
+  CONTAINER_NAME	Applications
+  TITLE			Applications
+}
+
+CONTROL FindApp
+{
+  TYPE			icon
+  CONTAINER_NAME	AppsSubpanel
+  CONTAINER_TYPE	SUBPANEL
+  POSITION_HINTS	1
+  ICON			Fpapps
+  LABEL			Find Application
+  PUSH_ACTION		Dtappfind
+}
+
 SUBPANEL PersPrintersSubpanel
 {
    CONTAINER_NAME	Printer

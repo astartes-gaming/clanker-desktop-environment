@@ -52,6 +52,8 @@ $ * Functions (second column) should not be changed unless it is required in *
 $ * your language.                                                           *
 $ *--------------------------------------------------------------------------*
 6 "Workspace Menu"			f.title\n\
+    "Applications..."			f.exec "/usr/dt/bin/dtappfind"\n\
+     no-label				f.separator\n\
     "Shuffle Up"			f.circle_up\n\
     "Shuffle Down"			f.circle_down\n\
     "Refresh"				f.refresh\n\
