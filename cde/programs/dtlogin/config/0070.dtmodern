@@ -120,9 +120,54 @@ fi
 #    OnlyShowIn/NotShowIn for "CDE".  Runs in the background once the
 #    window manager is up, so started applications get decorated.
 #
+#    Only one polkit authentication agent is started: several of them
+#    (lxpolkit, mate-polkit...) list CDE, and every one after the first
+#    fails with "An authentication agent already exists".
+#
+# Print the autostart files to start for CDE, user files overriding
+# system ones of the same name.
+_dtm_autostart_files() {
+  _dtm_seen=" "
+  for _dtm_d in "${XDG_CONFIG_HOME:-$HOME/.config}/autostart" \
+      `echo "${XDG_CONFIG_DIRS:-/etc/xdg}" | tr ':' ' ' |
+       sed 's|\([^ ][^ ]*\)|\1/autostart|g'`; do
+    for _dtm_f in "$_dtm_d"/*.desktop; do
+      [ -f "$_dtm_f" ] || continue
+      _dtm_b=`basename "$_dtm_f"`
+      case "$_dtm_seen" in *" $_dtm_b "*) continue ;; esac
+      _dtm_seen="$_dtm_seen$_dtm_b "
+      grep -i '^Hidden=true' "$_dtm_f" >/dev/null && continue
+      _dtm_only=`sed -n 's/^OnlyShowIn=//p' "$_dtm_f" | head -1`
+      _dtm_not=`sed -n 's/^NotShowIn=//p' "$_dtm_f" | head -1`
+      if [ -n "$_dtm_only" ]; then
+        case ";$_dtm_only;" in *";CDE;"*) ;; *) continue ;; esac
+      fi
+      case ";$_dtm_not;" in *";CDE;"*) continue ;; esac
+      echo "$_dtm_f"
+    done
+  done
+}
+
 if [ -z "$DT_NO_XDG_AUTOSTART" ]; then
   if _dtm_have dex; then
-    _dtm_autostart="dex -a -e CDE"
+    _dtm_autostart="_dtm_dex_autostart"
+    _dtm_dex_autostart() {
+      _dtm_agent=""
+      _dtm_autostart_files | while read _dtm_f; do
+        if grep -i -E '^Exec=.*(polkit|authentication-agent)' "$_dtm_f" \
+             >/dev/null; then
+          # TryExec missing: dex skips it, so it doesn't count
+          _dtm_t=`sed -n 's/^TryExec=//p' "$_dtm_f" | head -1`
+          if [ -n "$_dtm_t" ] && ! _dtm_have "$_dtm_t" &&
+             [ ! -x "$_dtm_t" ]; then
+            continue
+          fi
+          [ -n "$_dtm_agent" ] && continue
+          _dtm_agent=1
+        fi
+        dex "$_dtm_f"
+      done
+    }
   elif _dtm_have systemctl &&
        systemctl --user cat xdg-desktop-autostart.target >/dev/null 2>&1; then
     _dtm_autostart="systemctl --user start xdg-desktop-autostart.target"
