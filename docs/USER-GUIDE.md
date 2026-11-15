@@ -101,6 +101,7 @@ icons. `DT_NO_SYSTRAY=1` turns the tray off.
 | Front Panel | What each button opens, and the drawers (see above) |
 | Session | Options in `~/.dtprofile` (below), and Xfce applications |
 | Accessibility | Sticky, slow and bounce keys, mouse keys, large pointer, on-screen keyboard at login |
+| Shortcuts | Your own keyboard shortcuts: **Add...**, press the keys (with Ctrl, Alt or Super, or a function key), type the command. They work in every application, also with xfwm4. Kept in `~/.dt/shortcuts.dtwmrc`. |
 | Network, Bluetooth, Updates | Wi-Fi, Bluetooth devices, system updates (shown when the system supports them). With [topgrade](https://github.com/topgrade-rs/topgrade) installed, Updates also has **Update Everything**: Flatpak, Snap, firmware and more |
 
 Changes take effect at once, except the Session options, which are used

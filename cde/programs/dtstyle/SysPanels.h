@@ -17,6 +17,7 @@
 #define FRONTPANEL "FrontPanel"
 #define SESSION   "Session"
 #define ACCESS    "Accessibility"
+#define SHORTCUTS "Shortcuts"
 
 #define NETWORK_ICON   "DtNetwk"
 #define BLUETOOTH_ICON "DtBlue"
@@ -25,8 +26,10 @@
 #define FRONTPANEL_ICON "Fpapps.l"
 #define SESSION_ICON    "DtSystem.l"
 #define ACCESS_ICON     "DtAccess"
+#define SHORTCUTS_ICON  "DtKeybd"
 
 extern void popup_networkBB(Widget shell);
+extern void popup_shortcutsBB(Widget shell);
 extern void popup_bluetoothBB(Widget shell);
 extern void popup_updatesBB(Widget shell);
 extern void popup_autostartBB(Widget shell);
