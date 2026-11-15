@@ -733,6 +733,17 @@ activateCB(
   */
   if (cbs->reason != XmCR_ACTIVATE) return;
 
+  OpenPanel(cd);
+}
+
+/*
+ * Open the panel named cd (COLOR, FONT, ... ACCESS): the main window's
+ * buttons and "dtstyle -open NAME" (e.g. the Front Panel's
+ * Accessibility button).
+ */
+void
+OpenPanel(char *cd)
+{
   if (strcmp(cd, COLOR) == 0)
     Customize(style.shell);
   
