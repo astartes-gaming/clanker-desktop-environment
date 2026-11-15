@@ -834,6 +834,7 @@ $quote "
 109 "Larger controls for touch (applications started afterwards)"
 110 "Update Everything (topgrade)..."
 111 "Update Everything"
+112 "Hide automatically"
 
 $set 99
 $    DO NOT TRANSLATE THESE MESSAGES
