@@ -52,6 +52,12 @@ see the [README](../README.md).
 **Moving the panel**: drag it by the handles at either end. It reserves
 its screen edge only while it sits on one.
 
+**Hiding the panel**: Settings > Front Panel > **Hide automatically**.
+The panel slides off its edge (top or bottom) a moment after the pointer
+leaves it, unless a drawer or menu is open, and comes back when the
+pointer touches that edge. While hidden it doesn't reserve the edge, so
+maximized windows use the whole screen.
+
 **Choosing what a button opens**: Settings > Front Panel. Select a
 button, press **Change...**, and pick an installed application or type
 a command. **Reset** puts the original back.
