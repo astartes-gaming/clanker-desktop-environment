@@ -234,9 +234,15 @@ ArrowCB (Widget    w,
    }
    else
    {
-      /*  Execute the window manager function to unpost the subpanel  */
+      /*  Execute the window manager function to unpost the subpanel.  */
+      /*  Under another window manager (dtwm -panelonly) dtwm does not  */
+      /*  manage the subpanel, so F_Kill would do nothing: unpost it    */
+      /*  here, as the window manager's close would.                    */
 
-      CallWmFunction (F_Kill, NULL, subpanel_data->shell, NULL);
+      if (wmGD.panelOnly)
+         SubpanelUnmapCB (w, client_data, NULL);
+      else
+         CallWmFunction (F_Kill, NULL, subpanel_data->shell, NULL);
    }
 }
 
@@ -2623,4 +2629,33 @@ CustomizeTransferDropCB (Widget    w,
       transfer_data->status = DtDND_FAILURE;
 
    transfer_data->completeMove = False;
+}
+
+
+
+/************************************************************************
+ *
+ *  CloseOpenSubpanels
+ *	A click on the desktop: close the subpanels (drawers) that are
+ *	open and not torn off, as clicking outside a menu closes it.
+ *
+ ************************************************************************/
+
+void
+CloseOpenSubpanels (void)
+{
+   int i, j;
+
+   for (i = 0; i < panel.box_data_count; i++)
+   {
+      for (j = 0; j < panel.box_data[i]->control_data_count; j++)
+      {
+         ControlData  * control = panel.box_data[i]->control_data[j];
+         SubpanelData * subpanel = control->subpanel_data;
+
+         if (subpanel != NULL && subpanel->torn == False &&
+             XtIsManaged (subpanel->shell))
+            ArrowCB (control->arrow, (XtPointer) control, NULL);
+      }
+   }
 }

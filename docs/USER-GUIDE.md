@@ -36,7 +36,7 @@ see the [README](../README.md).
 
 | Part | What it does |
 |---|---|
-| Clock, calendar, Home Folder, Text Editor, Mail | Start those applications. Click the small arrow above a button to open its drawer. |
+| Clock, calendar, Home Folder, Text Editor, Mail | Start those applications. Click the small arrow above a button to open its drawer; it closes when you start something from it, click the arrow again, or click the desktop. |
 | Lock (padlock) | Locks the screen. |
 | Keyboard (below the lock) | Shows the on-screen keyboard; press again to hide it. |
 | Workspace buttons | Switch workspaces. Double-click a name to rename it. |
