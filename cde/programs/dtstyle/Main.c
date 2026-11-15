@@ -63,6 +63,7 @@
 
 /* #include <sys/dir.h> */
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include <Xm/MwmUtil.h>
 
 #include <Xm/Xm.h>
@@ -447,6 +448,72 @@ putDialog(
 
 /*++++++++++++++++++++++++++++++++++++++*/
 /* main                                 */
+/*
+ * One Settings at a time: the running dtstyle owns the selection
+ * _CLANKER_DTSTYLE; "dtstyle -open NAME" started meanwhile writes NAME
+ * to _CLANKER_DTSTYLE_OPEN on the owner's window and exits, and the
+ * running one opens that panel.
+ */
+static char *openPanelName = NULL;
+
+static Boolean
+HandOffToRunning(Display *dpy, const char *name)
+{
+    Atom   sel = XInternAtom(dpy, "_CLANKER_DTSTYLE", False);
+    Atom   req = XInternAtom(dpy, "_CLANKER_DTSTYLE_OPEN", False);
+    Window owner = XGetSelectionOwner(dpy, sel);
+
+    if (owner == None)
+        return False;
+    XChangeProperty(dpy, owner, req, XA_STRING, 8, PropModeReplace,
+                    (unsigned char *) name, strlen(name));
+    XSync(dpy, False);
+    return True;
+}
+
+static void
+OpenRequestEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
+{
+    Atom           req = XInternAtom(XtDisplay(w), "_CLANKER_DTSTYLE_OPEN",
+                                     False);
+    Atom           type;
+    int            format;
+    unsigned long  n, after;
+    unsigned char *data = NULL;
+
+    if (ev->type != PropertyNotify || ev->xproperty.atom != req ||
+        ev->xproperty.state != PropertyNewValue)
+        return;
+    if (XGetWindowProperty(XtDisplay(w), XtWindow(w), req, 0, 64, True,
+                           XA_STRING, &type, &format, &n, &after,
+                           &data) == Success && data)
+    {
+        if (format == 8 && n > 0 && n < 64)
+        {
+            char name[64];
+
+            memcpy(name, data, n);
+            name[n] = '\0';
+            XMapRaised(XtDisplay(w), XtWindow(w));
+            OpenPanel(name);
+        }
+        XFree(data);
+    }
+}
+
+static void
+BecomeRunningInstance(void)
+{
+    Display *dpy = XtDisplay(style.shell);
+
+    if (!XtIsRealized(style.shell))
+        return;
+    XSetSelectionOwner(dpy, XInternAtom(dpy, "_CLANKER_DTSTYLE", False),
+                       XtWindow(style.shell), CurrentTime);
+    XtAddEventHandler(style.shell, PropertyChangeMask, False,
+                      OpenRequestEH, NULL);
+}
+
 /*++++++++++++++++++++++++++++++++++++++*/
 int 
 main(
@@ -472,9 +539,29 @@ malloc_trace(0);
     _DtEnvControl(DT_ENV_SET); 
     
 
+    /* "-open NAME": open that panel (Accessibility, Updates...) */
+    {
+        int i;
+
+        for (i = 1; i + 1 < argc; i++)
+            if (strcmp(argv[i], "-open") == 0)
+            {
+                openPanelName = argv[i + 1];
+                memmove(&argv[i], &argv[i + 2],
+                        (argc - i - 1) * sizeof(char *));
+                argc -= 2;
+                break;
+            }
+    }
+
     /* Initialize the toolkit and open the display */
     style.shell = 
         XtInitialize(argv[0], XMCLASS, option_list, 1, (int *)&argc, argv);
+
+    /* Settings already running: ask it to open the panel, and leave. */
+    if (openPanelName && HandOffToRunning(XtDisplay(style.shell),
+                                          openPanelName))
+        exit(0);
 
     /* Allow all WS manipulation functions except resize and maximize */
     mwmFunc = MWM_FUNC_ALL ^ (MWM_FUNC_RESIZE | MWM_FUNC_MAXIMIZE); 
@@ -619,6 +706,10 @@ malloc_trace(0);
 
         XtAppAddWorkProc(XtWidgetToApplicationContext(style.shell), 
                         NewCreateD, style.shell);
+
+    BecomeRunningInstance();
+    if (openPanelName)
+        OpenPanel(openPanelName);
 
     XtAppMainLoop(XtWidgetToApplicationContext(style.shell));
 

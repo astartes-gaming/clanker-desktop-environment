@@ -1,0 +1,66 @@
+#!/bin/sh
+#####################################################################
+##  dtscreenshot - save a screenshot (Print key: the whole screen;
+##  Alt+Print: the active window) as a PNG in the Pictures folder
+##  (XDG_PICTURES_DIR, else ~/Pictures, else ~), named by date.
+##
+##  Usage: dtscreenshot [-window]
+##
+##  Uses the first installed of: scrot, maim, ImageMagick's import,
+##  xwd (+ convert, or kept as .xwd).  Beeps when done (twice if it
+##  could not).
+##
+##  Bourne shell only.  Part of the Clanker Desktop Environment
+##  (LGPL-2.0-or-later).
+#####################################################################
+have() { type "$1" >/dev/null 2>&1; }
+
+window=
+[ "$1" = -window ] && window=yes
+
+# Where to save
+dir=
+if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs" ]; then
+    dir=`sed -n 's/^XDG_PICTURES_DIR="\(.*\)"$/\1/p' \
+         "${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs" |
+         sed "s|\\\$HOME|$HOME|"`
+fi
+[ -n "$dir" ] && [ -d "$dir" ] || dir=$HOME/Pictures
+[ -d "$dir" ] || dir=$HOME
+file="$dir/Screenshot-`date +%Y-%m-%d-%H%M%S`.png"
+
+# The active window (EWMH), for -window
+win=
+if [ -n "$window" ] && have xprop; then
+    win=`xprop -root _NET_ACTIVE_WINDOW 2>/dev/null |
+         sed -n 's/.*window id # *\(0x[0-9a-fA-F]*\).*/\1/p'`
+    [ "$win" = 0x0 ] && win=
+fi
+
+ok=
+if have scrot; then
+    if [ -n "$win" ]; then scrot -u "$file" && ok=yes
+    else scrot "$file" && ok=yes; fi
+elif have maim; then
+    if [ -n "$win" ]; then maim -i "$win" "$file" && ok=yes
+    else maim "$file" && ok=yes; fi
+elif have import; then
+    import -window "${win:-root}" "$file" && ok=yes
+elif have xwd; then
+    src=-root
+    [ -n "$win" ] && src="-id $win"
+    if have convert; then
+        xwd -silent $src | convert xwd:- "$file" && ok=yes
+    else
+        file=`echo "$file" | sed 's/\.png$/.xwd/'`
+        xwd -silent $src -out "$file" && ok=yes
+    fi
+fi
+
+if [ -n "$ok" ]; then
+    have xkbbell && xkbbell >/dev/null 2>&1
+else
+    printf '\a\a' >/dev/tty 2>/dev/null
+    echo "dtscreenshot: no screenshot tool (scrot, maim, import, xwd)" >&2
+    exit 1
+fi

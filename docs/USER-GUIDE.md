@@ -24,10 +24,14 @@ see the [README](../README.md).
   ends the session.
 - **Workspaces**: four desktops (One to Four), switched with the
   buttons in the middle of the Front Panel.
-- **Finding an application**: Workspace menu > **Applications...**, or
-  the Applications drawer's **Find Application**. Type part of a name
-  (or what it does: "browser", "music"), use Up and Down, and press
-  Enter.
+- **Finding an application**: Workspace menu > **Applications...**,
+  **Alt+F2**, or the Applications drawer's **Find Application**. Type
+  part of a name (or what it does: "browser", "music"), use Up and
+  Down, and press Enter. Text that matches no application runs as a
+  command.
+- **Screenshots**: **Print** saves the whole screen, **Alt+Print** the
+  active window, as a PNG in your Pictures folder (with scrot, maim,
+  ImageMagick or xwd, whichever is installed).
 - **Workspace menu**: right-click the desktop for applications, Lock
   Screen, Suspend, Restart and Shut Down.
 - **Settings**: everything you can change (it was called Style Manager in
@@ -42,7 +46,7 @@ see the [README](../README.md).
 |---|---|
 | Clock, calendar, Home Folder, Text Editor, Mail | Start those applications. Click the small arrow above a button to open its drawer; it closes when you start something from it, click the arrow again, or click the desktop. |
 | Lock (padlock) | Locks the screen. |
-| Keyboard (below the lock) | Shows the on-screen keyboard; press again to hide it. |
+| Accessibility (below the lock) | Opens Settings > Accessibility: sticky, slow and bounce keys, mouse keys, large pointer, larger controls, and the **On-Screen Keyboard** button. |
 | Workspace buttons | Switch workspaces. Double-click a name to rename it. |
 | Light above Exit | Blinks while an application starts. Click it to open the **Task Manager**. |
 | Exit | Logs out. |
@@ -51,6 +55,12 @@ see the [README](../README.md).
 
 **Moving the panel**: drag it by the handles at either end. It reserves
 its screen edge only while it sits on one.
+
+**Hiding the panel**: Settings > Front Panel > **Hide automatically**.
+The panel slides off its edge (top or bottom) a moment after the pointer
+leaves it, unless a drawer or menu is open, and comes back when the
+pointer touches that edge. While hidden it doesn't reserve the edge, so
+maximized windows use the whole screen.
 
 **Choosing what a button opens**: Settings > Front Panel. Select a
 button, press **Change...**, and pick an installed application or type

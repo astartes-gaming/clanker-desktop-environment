@@ -1254,7 +1254,7 @@ static void
 generate_recurrence_rule(Dtcm_appointment *appt, int version) {
 
 	char            *str,
-                         rule_buf1[32],
+                         rule_buf1[80],	/* "W1 MO TU WE TH FR " + "#<long>" */
                          rule_buf2[32];
 	CSA_sint32	repeat_type;
 	CSA_uint32	repeat_nth = 0;
@@ -1344,7 +1344,8 @@ generate_recurrence_rule(Dtcm_appointment *appt, int version) {
         	else
                 	sprintf(rule_buf2, "#%ld", repeat_for);
 	
-		strcat (rule_buf1, rule_buf2);
+		strncat (rule_buf1, rule_buf2,
+			 sizeof(rule_buf1) - strlen(rule_buf1) - 1);
 
 		appt->attrs = realloc(appt->attrs,
                                       sizeof(CSA_attribute) * (appt->count + 1));
@@ -1522,13 +1523,13 @@ parse_appt_from_file(nl_catd catd, char *file, CmDataList *list, Props *p,
 		case START_KEY:
 			cm_strcpy(s_buf, val_str);
 			len = cm_strlen(s_buf) - 1;
-			if (s_buf[len] == 'a' || s_buf[len] == 'p')
+			if (len >= 0 && (s_buf[len] == 'a' || s_buf[len] == 'p'))
 				cm_strcat(s_buf, "m");
 			break;
 		case STOP_KEY:
 			cm_strcpy(e_buf, val_str);
 			len = cm_strlen(e_buf) - 1;
-			if (e_buf[len] == 'a' || e_buf[len] == 'p')
+			if (len >= 0 && (e_buf[len] == 'a' || e_buf[len] == 'p'))
 				cm_strcat(e_buf, "m");
 			break;
 		case DURATION_KEY:
@@ -2523,7 +2524,7 @@ validate_dssw(Dtcm_appointment *a, char *s_buf, char *e_buf, char *d_buf,
 		/*
 		 * We have something in the start buffer, is it valid?
 		 */
-		sprintf(buf, "%s %s", d_buf, s_buf);
+		snprintf(buf, sizeof(buf), "%s %s", d_buf, s_buf);
 		if ((appt_time = cm_getdate(buf, NULL)) < 0)
 			return INVALID_START;
 
@@ -2544,7 +2545,7 @@ validate_dssw(Dtcm_appointment *a, char *s_buf, char *e_buf, char *d_buf,
 			 * No duration, but something in the end buffer.  If
 			 * it's valid set the end tick to it's value.
 			 */
-			sprintf(buf, "%s %s", d_buf, e_buf);
+			snprintf(buf, sizeof(buf), "%s %s", d_buf, e_buf);
 			if ((end_tick = cm_getdate(buf, NULL)) < 0)
 				return INVALID_STOP;
 			a->end_time->value->item.date_time_value = malloc(BUFSIZ);
@@ -2570,7 +2571,7 @@ validate_dssw(Dtcm_appointment *a, char *s_buf, char *e_buf, char *d_buf,
 		 * date was correct.  If so, set duration to 1 minute and
 		 * showtime to false.
 		 */
-		sprintf(buf, "%s 3:41am", d_buf);
+		snprintf(buf, sizeof(buf), "%s 3:41am", d_buf);
 
 		if ((appt_time = cm_getdate(buf, NULL)) < 0)
 			return INVALID_DATE;

@@ -186,6 +186,19 @@ ACTION Dtstyle
         DESCRIPTION     %|nls-2009-#The#|
 }
 
+ACTION DtAccessibility
+{
+	LABEL		Accessibility
+        ARG_COUNT       0
+        ICON		DtAccess
+        TYPE            COMMAND
+        WINDOW_TYPE     NO_STDIO
+        EXEC_STRING     CDE_INSTALLATION_TOP/bin/dtstyle -open Accessibility
+        DESCRIPTION     Accessibility settings: sticky and slow keys, \
+                        mouse keys, a large pointer, larger controls, \
+                        and the on-screen keyboard.
+}
+
 ACTION Dtappfind
 {
 	LABEL		Find Application
