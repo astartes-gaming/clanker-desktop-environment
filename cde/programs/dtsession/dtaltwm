@@ -76,10 +76,18 @@ if [ -z "$DT_ALTWM_NO_PANEL" ]; then
     # or a sleep that takes fractions, wait the old 2 seconds.
     (
         if type xprop >/dev/null 2>&1 && sleep 0.1 2>/dev/null; then
+            # The root property can be left over from an earlier window
+            # manager: only a check window that exists and names itself
+            # counts (EWMH).
+            wmup() {
+                id=`xprop -root _NET_SUPPORTING_WM_CHECK 2>/dev/null |
+                    sed -n 's/.*window id # *//p'`
+                [ -n "$id" ] &&
+                xprop -id "$id" _NET_SUPPORTING_WM_CHECK 2>/dev/null |
+                    grep "window id # *$id" >/dev/null
+            }
             n=0
-            while [ $n -lt 50 ] &&
-                  ! xprop -root _NET_SUPPORTING_WM_CHECK 2>/dev/null |
-                    grep "window id" >/dev/null; do
+            while [ $n -lt 50 ] && ! wmup; do
                 sleep 0.1; n=`expr $n + 1`
             done
         else
