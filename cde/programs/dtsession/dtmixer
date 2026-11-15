@@ -1,0 +1,20 @@
+#!/bin/sh
+#####################################################################
+##  dtmixer - open the sound settings: the first installed of
+##  pavucontrol, pwvucontrol, pavucontrol-qt, mate-volume-control,
+##  xfce4-mixer, gnome-alsamixer, or alsamixer in a terminal.
+##
+##  Bourne shell only.  Part of the Clanker Desktop Environment
+##  (LGPL-2.0-or-later).
+#####################################################################
+have() { type "$1" >/dev/null 2>&1; }
+for m in pavucontrol pwvucontrol pavucontrol-qt mate-volume-control \
+         xfce4-mixer gnome-alsamixer; do
+    have $m && exec $m
+done
+if have alsamixer; then
+    if have dtterm; then exec dtterm -title "Sound" -e alsamixer; fi
+    exec xterm -title "Sound" -e alsamixer
+fi
+echo "dtmixer: no sound mixer installed (pavucontrol, alsamixer...)" >&2
+exit 1

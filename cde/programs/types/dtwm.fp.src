@@ -359,6 +359,78 @@ CONTROL FindApp
   PUSH_ACTION		Dtappfind
 }
 
+SUBPANEL QuickSettingsSubpanel
+{
+  CONTAINER_NAME	Style
+  TITLE			Sound and Screen
+}
+
+CONTROL VolumeUp
+{
+  TYPE			icon
+  CONTAINER_NAME	QuickSettingsSubpanel
+  CONTAINER_TYPE	SUBPANEL
+  POSITION_HINTS	1
+  ICON			Dthvol
+  LABEL			Volume Up
+  PUSH_ACTION		DtVolumeUp
+}
+
+CONTROL VolumeDown
+{
+  TYPE			icon
+  CONTAINER_NAME	QuickSettingsSubpanel
+  CONTAINER_TYPE	SUBPANEL
+  POSITION_HINTS	2
+  ICON			Dthvol
+  LABEL			Volume Down
+  PUSH_ACTION		DtVolumeDown
+}
+
+CONTROL VolumeMute
+{
+  TYPE			icon
+  CONTAINER_NAME	QuickSettingsSubpanel
+  CONTAINER_TYPE	SUBPANEL
+  POSITION_HINTS	3
+  ICON			DtBeep
+  LABEL			Mute
+  PUSH_ACTION		DtVolumeMute
+}
+
+CONTROL BrightnessUp
+{
+  TYPE			icon
+  CONTAINER_NAME	QuickSettingsSubpanel
+  CONTAINER_TYPE	SUBPANEL
+  POSITION_HINTS	4
+  ICON			DtScrn
+  LABEL			Brightness Up
+  PUSH_ACTION		DtBrightnessUp
+}
+
+CONTROL BrightnessDown
+{
+  TYPE			icon
+  CONTAINER_NAME	QuickSettingsSubpanel
+  CONTAINER_TYPE	SUBPANEL
+  POSITION_HINTS	5
+  ICON			DtScrn
+  LABEL			Brightness Down
+  PUSH_ACTION		DtBrightnessDown
+}
+
+CONTROL SoundSettings
+{
+  TYPE			icon
+  CONTAINER_NAME	QuickSettingsSubpanel
+  CONTAINER_TYPE	SUBPANEL
+  POSITION_HINTS	6
+  ICON			Dtaudio
+  LABEL			Sound Settings
+  PUSH_ACTION		DtSoundSettings
+}
+
 SUBPANEL PersPrintersSubpanel
 {
    CONTAINER_NAME	Printer

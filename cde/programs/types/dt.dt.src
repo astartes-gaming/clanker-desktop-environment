@@ -175,6 +175,66 @@ XCOMM
 %|nls-12-#HASH Actions#|
 XCOMM 
 XCOMM ##################################################################
+ACTION DtVolumeUp
+{
+	LABEL		Volume Up
+        ARG_COUNT       0
+        ICON		Dthvol
+        TYPE            COMMAND
+        WINDOW_TYPE     NO_STDIO
+        EXEC_STRING     CDE_INSTALLATION_TOP/bin/dthwkeys volume-up
+}
+
+ACTION DtVolumeDown
+{
+	LABEL		Volume Down
+        ARG_COUNT       0
+        ICON		Dthvol
+        TYPE            COMMAND
+        WINDOW_TYPE     NO_STDIO
+        EXEC_STRING     CDE_INSTALLATION_TOP/bin/dthwkeys volume-down
+}
+
+ACTION DtVolumeMute
+{
+	LABEL		Mute
+        ARG_COUNT       0
+        ICON		DtBeep
+        TYPE            COMMAND
+        WINDOW_TYPE     NO_STDIO
+        EXEC_STRING     CDE_INSTALLATION_TOP/bin/dthwkeys volume-mute
+}
+
+ACTION DtBrightnessUp
+{
+	LABEL		Brightness Up
+        ARG_COUNT       0
+        ICON		DtScrn
+        TYPE            COMMAND
+        WINDOW_TYPE     NO_STDIO
+        EXEC_STRING     CDE_INSTALLATION_TOP/bin/dthwkeys brightness-up
+}
+
+ACTION DtBrightnessDown
+{
+	LABEL		Brightness Down
+        ARG_COUNT       0
+        ICON		DtScrn
+        TYPE            COMMAND
+        WINDOW_TYPE     NO_STDIO
+        EXEC_STRING     CDE_INSTALLATION_TOP/bin/dthwkeys brightness-down
+}
+
+ACTION DtSoundSettings
+{
+	LABEL		Sound Settings
+        ARG_COUNT       0
+        ICON		Dtaudio
+        TYPE            COMMAND
+        WINDOW_TYPE     NO_STDIO
+        EXEC_STRING     CDE_INSTALLATION_TOP/bin/dtmixer
+}
+
 ACTION Dtstyle
 {
 	LABEL		%|nls-2008-#Style Manager#|

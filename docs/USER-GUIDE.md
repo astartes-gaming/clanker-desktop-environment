@@ -47,6 +47,7 @@ see the [README](../README.md).
 | Light above Exit | Blinks while an application starts. Click it to open the **Task Manager**. |
 | Exit | Logs out. |
 | Printer, Settings, Applications, Help, Trash | Start those. |
+| Settings drawer (arrow above Settings) | Volume up and down, mute, screen brightness up and down, and the sound settings (pavucontrol, alsamixer… whichever is installed). |
 | System tray (right end) | Icons of running applications (network, sound, chat, …). Click or right-click them as usual. |
 
 **Moving the panel**: drag it by the handles at either end. It reserves
