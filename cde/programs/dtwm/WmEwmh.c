@@ -286,7 +286,9 @@ void SetupWmEwmh (void)
 	XA__NET_WM_STATE_MAXIMIZED_HORZ,
 	XA__NET_WM_STATE_FULLSCREEN,
 	XA__NET_WM_STATE_ABOVE,
-	XA__NET_WM_STATE_BELOW
+	XA__NET_WM_STATE_BELOW,
+	XA__NET_CLIENT_LIST,
+	XA__NET_CLIENT_LIST_STACKING
     };
 
     static char *atom_names[] = {
@@ -304,7 +306,9 @@ void SetupWmEwmh (void)
 	_XA__NET_WM_STATE_MAXIMIZED_HORZ,
 	_XA__NET_WM_STATE_FULLSCREEN,
 	_XA__NET_WM_STATE_ABOVE,
-	_XA__NET_WM_STATE_BELOW
+	_XA__NET_WM_STATE_BELOW,
+	"_NET_CLIENT_LIST",
+	"_NET_CLIENT_LIST_STACKING"
     };
 
     Atom atoms[XtNumber(atom_names)];
@@ -326,6 +330,8 @@ void SetupWmEwmh (void)
     wmGD.xa__NET_WM_STATE_FULLSCREEN = atoms[XA__NET_WM_STATE_FULLSCREEN];
     wmGD.xa__NET_WM_STATE_ABOVE = atoms[XA__NET_WM_STATE_ABOVE];
     wmGD.xa__NET_WM_STATE_BELOW = atoms[XA__NET_WM_STATE_BELOW];
+    wmGD.xa__NET_CLIENT_LIST = atoms[XA__NET_CLIENT_LIST];
+    wmGD.xa__NET_CLIENT_LIST_STACKING = atoms[XA__NET_CLIENT_LIST_STACKING];
 
     for (scr = 0; scr < wmGD.numScreens; ++scr)
     {
@@ -356,4 +362,56 @@ void SetupWmEwmh (void)
 			XtNumber(atom_names) - XA__NET_SUPPORTING_WM_CHECK);
     }
     UpdateNetActiveWindow ();
+    for (scr = 0; scr < wmGD.numScreens; ++scr)
+	if (wmGD.Screens[scr].managed)
+	    UpdateNetClientList (&wmGD.Screens[scr]);
+}
+
+/*
+ * _NET_CLIENT_LIST (oldest first) and _NET_CLIENT_LIST_STACKING (bottom
+ * to top) on the root window: the managed client windows, for pagers,
+ * window switchers, wmctrl, xdotool...  Called when the stacking list
+ * changes (WmWinList.c).
+ */
+void UpdateNetClientList (WmScreenData *pSD)
+{
+    ClientListEntry *e;
+    ClientData *pCD;
+    Window *wins;
+    int n = 0, cap = 64, i;
+
+    if (!pSD || !pSD->managed || wmGD.xa__NET_CLIENT_LIST == None ||
+        wmGD.panelOnly)
+	return;
+    if (!(wins = (Window *) malloc (cap * sizeof (Window))))
+	return;
+    /* clientList is top first: walk from the bottom */
+    for (e = pSD->lastClient; e; e = e->prevSibling)
+    {
+	pCD = e->pCD;
+	/* (a window being managed is still WITHDRAWN here; unmanaged
+	 * ones leave the list) */
+	if (!pCD || e->type != NORMAL_STATE)
+	    continue;
+	for (i = 0; i < n && wins[i] != pCD->client; i++)
+	    ;
+	if (i < n)
+	    continue;
+	if (n == cap)
+	{
+	    Window *w = (Window *) realloc (wins, 2 * cap * sizeof (Window));
+
+	    if (!w)
+		break;
+	    wins = w;
+	    cap *= 2;
+	}
+	wins[n++] = pCD->client;
+    }
+    XChangeProperty (DISPLAY, pSD->rootWindow,
+	wmGD.xa__NET_CLIENT_LIST_STACKING, XA_WINDOW, 32, PropModeReplace,
+	(unsigned char *) wins, n);
+    XChangeProperty (DISPLAY, pSD->rootWindow, wmGD.xa__NET_CLIENT_LIST,
+	XA_WINDOW, 32, PropModeReplace, (unsigned char *) wins, n);
+    free (wins);
 }

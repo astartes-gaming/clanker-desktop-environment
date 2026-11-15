@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-bin_PROGRAMS = dtwm dtfplist
+bin_PROGRAMS = dtwm dtfplist dtswitch
 
 configdir = $(CDE_DATA_TOP)/config/C
 dist_config_DATA = sys.dtwmrc
@@ -54,3 +54,7 @@ sys.dtwmrc: sys.dtwmrc.src
 	$(RM) $@
 	$(GENCPP) -P -DXCOMM=# $(SCRIPTFLAGS) $< > $@
 
+
+# Alt+Tab window switcher (sys.dtwmrc)
+dtswitch_SOURCES = dtswitch.c
+dtswitch_LDADD = $(XTOOLLIB)

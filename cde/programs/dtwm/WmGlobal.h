@@ -1994,6 +1994,8 @@ typedef struct _WmGlobalData
     Atom	xa_WMSAVE_HINT;
 
     Atom	xa__NET_ACTIVE_WINDOW;
+    Atom	xa__NET_CLIENT_LIST;
+    Atom	xa__NET_CLIENT_LIST_STACKING;
     Atom	xa_UTF8_STRING;
     Atom	xa__NET_WM_NAME;
     Atom	xa__NET_WM_ICON_NAME;

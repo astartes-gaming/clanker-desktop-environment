@@ -34,4 +34,6 @@ void ProcessNetActiveWindow (ClientData *pCD, Time timestamp);
 void UpdateNetActiveWindow (void);
 void SetupWmEwmh (void);
 
+void UpdateNetClientList (WmScreenData *pSD);
+
 #endif
