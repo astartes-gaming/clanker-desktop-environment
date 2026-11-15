@@ -9,7 +9,8 @@
  *   Bluetooth  BlueZ's bluetoothctl
  *   Updates    PackageKit (pkcon), apt, dnf, zypper, pacman, or the BSD
  *              package tools; installing runs in a terminal so sudo,
- *              doas or su can ask for the password there
+ *              doas or su can ask for the password there; with
+ *              topgrade installed, also "Update Everything"
  *
  * When a tool is missing the panel says so and stays harmless; the
  * buttons only appear in the Style Manager main window when the tool
@@ -1157,6 +1158,15 @@ UpdNowCB(Widget w, XtPointer client_data, XtPointer call_data)
     XtFree(cmd);
 }
 
+/* topgrade (when installed) updates everything it finds: the system's
+ * packages, Flatpak, Snap, firmware, language package managers...  It
+ * asks for the root password itself (sudo/doas). */
+static void
+UpdTopgradeCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    SysCmdTerminal(MSG(111, "Update Everything"), "topgrade");
+}
+
 void
 popup_updatesBB(Widget shell)
 {
@@ -1168,6 +1178,9 @@ popup_updatesBB(Widget shell)
         upd->refresh = UpdRefresh;
         PanelButton(upd, MSG(41, "Check for Updates"), UpdCheckCB);
         PanelButton(upd, MSG(47, "Update Now..."), UpdNowCB);
+        if (SysCmdHave("topgrade"))
+            PanelButton(upd, MSG(110, "Update Everything (topgrade)..."),
+                        UpdTopgradeCB);
         _DtTurnOffHourGlass(shell);
     }
     if (XtIsManaged(upd->dialog))
