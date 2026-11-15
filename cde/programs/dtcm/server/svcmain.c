@@ -83,6 +83,7 @@
 
 int debug;
 static int standalone;			/* default is 0 */
+static int allow_network = 0;		/* -n: answer other hosts too */
 static int received_sighup = 0;		/* 1 means we get SIGHUP */
 static int rpc_in_process = 0;		/* 1 means processing client request */
 static int garbage_collection_time = 240; /* in min; default time is 4:00am */
@@ -139,7 +140,7 @@ parse_args(int argc, char **argv)
 	else
 		pgname = argv[0];
 
-	while ((opt = getopt (argc, argv, "dsg:")) != -1)
+	while ((opt = getopt (argc, argv, "dsng:")) != -1)
 	{
 		switch (opt)
 		{
@@ -148,6 +149,9 @@ parse_args(int argc, char **argv)
 			break;
 		case 's':
 			standalone = 1;
+			break;
+		case 'n':
+			allow_network = 1;
 			break;
 		case 'g':
 			if (_GetGtime(optarg))
@@ -198,7 +202,7 @@ parse_args(int argc, char **argv)
 #endif
 		
 error:
-	fprintf (stderr, "Usage: %s [-d] [-s] [-g hhmm]\n", pgname);
+	fprintf (stderr, "Usage: %s [-d] [-s] [-n] [-g hhmm]\n", pgname);
 	exit (-1);
 }
 
@@ -375,6 +379,49 @@ lock_it(void)
 	return (0);
 }
 
+/*
+ * Is the caller on this machine (127.0.0.0/8 or ::1)?  Run standalone,
+ * rpc.cmsd listens on every interface; without -n it answers only
+ * local callers, so the calendars aren't reachable from the network.
+ */
+static int
+caller_is_local(SVCXPRT *transp)
+{
+	struct sockaddr *sa;
+
+#ifdef svc_getrpccaller
+	struct netbuf *nb = svc_getrpccaller(transp);
+
+	if (nb == NULL || nb->buf == NULL)
+		return 0;
+	sa = (struct sockaddr *) nb->buf;
+#else
+	sa = (struct sockaddr *) svc_getcaller(transp);
+	if (sa == NULL)
+		return 0;
+#endif
+	if (sa->sa_family == AF_INET)
+		return (ntohl(((struct sockaddr_in *) sa)->sin_addr.s_addr) >> 24)
+		       == 127;
+#ifdef AF_INET6
+	if (sa->sa_family == AF_INET6) {
+		const unsigned char *a =
+		    ((struct sockaddr_in6 *) sa)->sin6_addr.s6_addr;
+		static const unsigned char v4map[12] =
+		    { 0,0,0,0, 0,0,0,0, 0,0,0xff,0xff };
+		int i;
+
+		for (i = 0; i < 15 && a[i] == 0; i++)
+			;
+		if (i == 15 && a[15] == 1)
+			return 1;			/* ::1 */
+		if (memcmp(a, v4map, 12) == 0 && a[12] == 127)
+			return 1;			/* ::ffff:127.x */
+	}
+#endif
+	return 0;
+}
+
 static void
 program(struct svc_req *rqstp, SVCXPRT *transp)
 {
@@ -385,6 +432,11 @@ program(struct svc_req *rqstp, SVCXPRT *transp)
 
 	/* set rpc_in_process so that sighup handler won't exit right away */
 	rpc_in_process = 1;
+
+	if (standalone && !allow_network && !caller_is_local(transp)) {
+		svcerr_auth(transp, AUTH_TOOWEAK);
+		goto done;
+	}
  
         /* first do some bounds checking: */
         if (rqstp->rq_vers >= ph->nvers) {

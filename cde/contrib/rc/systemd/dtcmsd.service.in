@@ -1,0 +1,21 @@
+# CDE Calendar server.  On older systems inetd started rpc.cmsd on
+# demand (see contrib/xinetd/cmsd); systemd has no inetd, so Calendar
+# found no server.  Enable it with:
+#     systemctl enable --now dtcmsd.service
+# rpc.cmsd -s answers only callers on this machine (add -n to share
+# calendars over the network).
+[Unit]
+Description=CDE calendar server (rpc.cmsd)
+Documentation=man:rpc.cmsd(1)
+Requires=rpcbind.service
+After=rpcbind.service network.target
+
+[Service]
+ExecStart=@CDE_BINDIR@/rpc.cmsd -s
+Restart=on-failure
+# A second fence besides rpc.cmsd's own check: local traffic only.
+IPAddressDeny=any
+IPAddressAllow=localhost
+
+[Install]
+WantedBy=multi-user.target

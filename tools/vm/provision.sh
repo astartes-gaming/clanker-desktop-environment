@@ -52,6 +52,8 @@ install -m 0644 "$P/dtlogin.service" /etc/systemd/system/dtlogin.service
 ln -sf /etc/systemd/system/dtlogin.service \
        /etc/systemd/system/display-manager.service
 systemctl enable rpcbind.service rpcbind.socket >/dev/null 2>&1 || true
+# Calendar server (no inetd): installed by make install.
+systemctl enable /usr/dt/config/systemd/dtcmsd.service >/dev/null 2>&1 || true
 systemctl set-default graphical.target
 
 # Test account; the password is generated on the host (out/credentials).
