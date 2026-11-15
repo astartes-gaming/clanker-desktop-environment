@@ -24,6 +24,10 @@ see the [README](../README.md).
   ends the session.
 - **Workspaces**: four desktops (One to Four), switched with the
   buttons in the middle of the Front Panel.
+- **Finding an application**: Workspace menu > **Applications...**, or
+  the Applications drawer's **Find Application**. Type part of a name
+  (or what it does: "browser", "music"), use Up and Down, and press
+  Enter.
 - **Workspace menu**: right-click the desktop for applications, Lock
   Screen, Suspend, Restart and Shut Down.
 - **Settings**: everything you can change (it was called Style Manager in
@@ -56,7 +60,8 @@ a command. **Reset** puts the original back.
 of its drawer.
 
 - **Add to Drawer...** adds an application to the selected button's
-  drawer. A button without a drawer gets one.
+  drawer. A button without a drawer gets one. Type part of the name to narrow the
+  list of installed applications, then press Enter.
 - **Remove** takes an item out of a drawer. Items that came with the
   desktop are only hidden: select them and press **Reset** to bring
   them back.
