@@ -69,9 +69,9 @@ esac
 
 panel=
 if [ -z "$DT_ALTWM_NO_PANEL" ]; then
-    # Give the window manager a moment to take the screen, so it
-    # receives the panel's desktop setup.
-    ( sleep 2; exec $DTWM -panelonly ) &
+    # dtwm -panelonly waits until the window manager has the screen
+    # (it used to start 2 seconds later, every time).
+    $DTWM -panelonly &
     panel=$!
 fi
 fulldtwm() {
