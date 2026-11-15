@@ -29,6 +29,10 @@ CLEANFILES = parser.c parser.h y.tab.c  y.tab.h
 
 AM_YFLAGS = -d
 
+# systemd unit (no inetd to start rpc.cmsd on demand); see the unit.
+systemddir = $(CDE_DATA_TOP)/config/systemd
+systemd_DATA = $(top_builddir)/contrib/rc/systemd/dtcmsd.service
+
 parser.c parser.h: parser.y
 	$(YACC) $(AM_YFLAGS) $<
 	$(SED) -e "s/yy/yyy/g" -e "/# line/d" y.tab.c > parser.c

@@ -256,5 +256,11 @@ Deleting one of these returns that part of the desktop to its defaults
   Workspace menu > Restart Workspace Manager).
 - **A setting doesn't take effect**: Session options and the window
   manager are read at login; log out and in again.
+- **Calendar says "rpc.cmsd is not responding"**: the calendar server
+  isn't running. Systems without inetd (most current Linux) start it
+  with systemd; once, as root:
+  `systemctl enable --now /usr/dt/config/systemd/dtcmsd.service`.
+  It only answers this computer; add `-n` to its `ExecStart` line to
+  share calendars over the network.
 - **Return to plain CDE**: put `DT_WINDOW_MANAGER=dtwm` and the
   `DT_NO_...` variables you want in `~/.dtprofile`.

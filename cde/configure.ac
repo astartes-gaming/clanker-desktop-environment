@@ -1254,6 +1254,7 @@ lib/tt/bin/ttauth/ttauth.man
 contrib/desktopentry/cde.desktop
 contrib/desktopentry/cde-xwayland.desktop
 contrib/rc/systemd/dtlogin.service
+contrib/rc/systemd/dtcmsd.service
 contrib/rc/linux/dtlogin
 contrib/rc/freebsd/dtlogin
 contrib/rc/netbsd/dtlogin
