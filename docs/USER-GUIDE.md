@@ -86,7 +86,7 @@ icons. `DT_NO_SYSTRAY=1` turns the tray off.
 | Front Panel | What each button opens, and the drawers (see above) |
 | Session | Options in `~/.dtprofile` (below), and Xfce applications |
 | Accessibility | Sticky, slow and bounce keys, mouse keys, large pointer, on-screen keyboard at login |
-| Network, Bluetooth, Updates | Wi-Fi, Bluetooth devices, system updates (shown when the system supports them) |
+| Network, Bluetooth, Updates | Wi-Fi, Bluetooth devices, system updates (shown when the system supports them). With [topgrade](https://github.com/topgrade-rs/topgrade) installed, Updates also has **Update Everything**: Flatpak, Snap, firmware and more |
 
 Changes take effect at once, except the Session options, which are used
 at the next login.

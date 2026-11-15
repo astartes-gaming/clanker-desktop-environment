@@ -832,6 +832,8 @@ $quote "
 107 "Use Xfce applications when installed (Thunar, Mousepad, Terminal; at once)"
 108 "The applications could not be changed."
 109 "Larger controls for touch (applications started afterwards)"
+110 "Update Everything (topgrade)..."
+111 "Update Everything"
 
 $set 99
 $    DO NOT TRANSLATE THESE MESSAGES
