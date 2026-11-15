@@ -128,22 +128,20 @@ RFCFormat::writeHeaders(DtMailEnv & error,
 	// we will make one up using the sender, and the current
 	// date.
 	//
-	char *unix_from = new char[100];
-	strcpy(unix_from, "From ");
+	// The sender's address comes from the message: size the line
+	// for it (it used to be a fixed 100 bytes).
+	const char *who = "nobody@nowhere";
+	DtMailAddressSeq * addrSeq = NULL;
 	
 	DtMailValueSeq sender;
 	env->getHeader(error, DtMailMessageSender, DTM_TRUE, sender);
-	if (error.isSet()) {
-	    // We no longer know who this is really from.
-	    //
-	    strcat(unix_from, "nobody@nowhere");
+	if (!error.isSet()) {
+	    addrSeq = sender[0]->toAddress();
+	    if (addrSeq && addrSeq->length() > 0 &&
+		(*addrSeq)[0]->dtm_address)
+		who = (*addrSeq)[0]->dtm_address;
 	}
-	else {
-	    DtMailAddressSeq * addrSeq = sender[0]->toAddress();
-	    
-	    strcat(unix_from, (*addrSeq)[0]->dtm_address);
-	    delete addrSeq;
-	}
+	// otherwise we no longer know who this is really from
 	error.clear();
 
 	time_t now = time(NULL);
@@ -151,8 +149,11 @@ RFCFormat::writeHeaders(DtMailEnv & error,
 	
 	SafeCtime(&now, time_format, sizeof(time_format));
 	
-	strcat(unix_from, " ");
-	strcat(unix_from, time_format);
+	size_t len = strlen("From ") + strlen(who) + 1 +
+		     strlen(time_format) + 1;
+	char *unix_from = new char[len];
+	snprintf(unix_from, len, "From %s %s", who, time_format);
+	delete addrSeq;
 	buf.appendData(unix_from, strlen(unix_from));
 	delete [] unix_from;
     }
