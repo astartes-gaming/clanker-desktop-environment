@@ -270,6 +270,10 @@ PanelOnlyDesktopEvent(XEvent *event)
 {
     if (!desktopWin || event->xany.window != desktopWin)
         return False;
+    /* a menu that is no longer up (unposted some other way) */
+    if (wmGD.menuActive && (!wmGD.menuActive->menuWidget ||
+                            !XtIsManaged (wmGD.menuActive->menuWidget)))
+        wmGD.menuActive = NULL;
     if (event->type == ButtonPress && wmGD.menuActive) {
         /*
          * A menu is posted.  Its pointer grab sends clicks on dtwm's own
