@@ -69,9 +69,32 @@ esac
 
 panel=
 if [ -z "$DT_ALTWM_NO_PANEL" ]; then
-    # Give the window manager a moment to take the screen, so it
-    # receives the panel's desktop setup.
-    ( sleep 2; exec $DTWM -panelonly ) &
+    # Start the panel once the window manager has the screen (so it
+    # receives the panel's desktop setup): as soon as it announces
+    # itself on the root window, checked every 0.1 s for at most 5 s.
+    # (This used to be a fixed 2 seconds, every login.)  Without xprop,
+    # or a sleep that takes fractions, wait the old 2 seconds.
+    (
+        if type xprop >/dev/null 2>&1 && sleep 0.1 2>/dev/null; then
+            # The root property can be left over from an earlier window
+            # manager: only a check window that exists and names itself
+            # counts (EWMH).
+            wmup() {
+                id=`xprop -root _NET_SUPPORTING_WM_CHECK 2>/dev/null |
+                    sed -n 's/.*window id # *//p'`
+                [ -n "$id" ] &&
+                xprop -id "$id" _NET_SUPPORTING_WM_CHECK 2>/dev/null |
+                    grep "window id # *$id" >/dev/null
+            }
+            n=0
+            while [ $n -lt 50 ] && ! wmup; do
+                sleep 0.1; n=`expr $n + 1`
+            done
+        else
+            sleep 2
+        fi
+        exec $DTWM -panelonly
+    ) &
     panel=$!
 fi
 fulldtwm() {
