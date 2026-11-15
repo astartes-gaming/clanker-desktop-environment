@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <signal.h>
+#include <stdint.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
@@ -28,6 +29,8 @@
 #include <Xm/Label.h>
 #include <Xm/TextF.h>
 #include <Xm/List.h>
+#include <Xm/RowColumn.h>
+#include <Xm/PushB.h>
 #include <Xm/Protocols.h>
 
 #define MAX_APPS 2000
@@ -35,7 +38,54 @@
 typedef struct {
     char *name, *generic, *keywords, *exec;
     Boolean terminal;
+    unsigned cats;		/* bit i: in categories[i] */
 } App;
+
+/* The menu's categories, from the freedesktop.org main categories (an
+ * application lists them in Categories=). */
+static const struct {
+    const char *label, *xdg;	/* xdg: ";"-separated */
+} categories[] = {
+    { "All",          "" },
+    { "Accessories",  "Utility;" },
+    { "Development",  "Development;" },
+    { "Education",    "Education;Science;" },
+    { "Games",        "Game;" },
+    { "Graphics",     "Graphics;" },
+    { "Internet",     "Network;" },
+    { "Multimedia",   "AudioVideo;Audio;Video;" },
+    { "Office",       "Office;" },
+    { "Settings",     "Settings;" },
+    { "System",       "System;" },
+};
+#define NCATS ((int) (sizeof(categories) / sizeof(categories[0])))
+static int curCat = 0;			/* 0: all */
+
+static unsigned
+CategoryBits(const char *list)
+{
+    unsigned bits = 0;
+    char     want[64];
+    int      i;
+    const char *p, *e;
+
+    for (p = list; *p; p = (*e ? e + 1 : e))
+    {
+        e = strchr(p, ';');
+        if (!e)
+            e = p + strlen(p);
+        if (e - p > 0 && e - p < (int) sizeof(want) - 1)
+        {
+            snprintf(want, sizeof(want), "%.*s;", (int) (e - p), p);
+            for (i = 1; i < NCATS; i++)
+                if (strstr(categories[i].xdg, want) &&
+                    (categories[i].xdg == strstr(categories[i].xdg, want) ||
+                     strstr(categories[i].xdg, want)[-1] == ';'))
+                    bits |= 1u << i;
+        }
+    }
+    return bits;
+}
 
 static App     apps[MAX_APPS];
 static int     nApps;
@@ -97,6 +147,7 @@ ReadDir(const char *dir)
     struct dirent *e;
     char   path[4200], line[2048], *v;
     char   name[256], generic[256], keywords[512], exec[2048], tryexec[512];
+    char   cats[512];
     FILE  *fp;
     size_t len;
     int    i;
@@ -113,6 +164,7 @@ ReadDir(const char *dir)
         if ((fp = fopen(path, "r")) == NULL)
             continue;
         name[0] = generic[0] = keywords[0] = exec[0] = tryexec[0] = '\0';
+        cats[0] = '\0';
         in = hide = app = term = False;
         while (fgets(line, sizeof(line), fp))
         {
@@ -129,6 +181,8 @@ ReadDir(const char *dir)
                 snprintf(name, sizeof(name), "%s", v);
             else if (strcmp(line, "GenericName") == 0)
                 snprintf(generic, sizeof(generic), "%s", v);
+            else if (strcmp(line, "Categories") == 0)
+                snprintf(cats, sizeof(cats), "%s", v);
             else if (strcmp(line, "Keywords") == 0)
                 snprintf(keywords, sizeof(keywords), "%s", v);
             else if (strcmp(line, "Exec") == 0)
@@ -155,6 +209,7 @@ ReadDir(const char *dir)
         apps[nApps].name = XtNewString(name);
         apps[nApps].generic = XtNewString(generic);
         apps[nApps].keywords = XtNewString(keywords);
+        apps[nApps].cats = CategoryBits(cats);
         apps[nApps].exec = ExecToCommand(exec);
         apps[nApps].terminal = term;
         nApps++;
@@ -225,6 +280,8 @@ Filter(const char *want)
             Boolean inName = Contains(apps[i].name, want, n);
             Boolean hit;
 
+            if (curCat > 0 && !(apps[i].cats & (1u << curCat)))
+                continue;
             if (pass == 0)
                 hit = (n == 0 || starts);
             else if (pass == 1)
@@ -285,6 +342,18 @@ Selected(void)
         XtFree((char *) pos);
     }
     return p;
+}
+
+static void
+CategoryCB(Widget w, XtPointer client, XtPointer call)
+{
+    char *t;
+
+    curCat = (int) (intptr_t) client;
+    t = XmTextFieldGetString(field);
+    Filter(t);
+    XtFree(t);
+    XmProcessTraversal(field, XmTRAVERSE_CURRENT);
 }
 
 static void
@@ -399,6 +468,33 @@ main(int argc, char **argv)
                                     XmNtopAttachment, XmATTACH_FORM,
                                     XmNleftAttachment, XmATTACH_FORM, NULL);
     XmStringFree(s);
+    {
+        Widget pull, opt, b;
+        int    i;
+
+        pull = XmCreatePulldownMenu(form, "categoryMenu", NULL, 0);
+        for (i = 0; i < NCATS; i++)
+        {
+            s = XmStringCreateLocalized((char *) categories[i].label);
+            b = XtVaCreateManagedWidget("category", xmPushButtonWidgetClass,
+                                        pull, XmNlabelString, s, NULL);
+            XmStringFree(s);
+            XtAddCallback(b, XmNactivateCallback, CategoryCB,
+                          (XtPointer) (intptr_t) i);
+        }
+        s = XmStringCreateLocalized("Category:");
+        n = 0;
+        XtSetArg(a[n], XmNsubMenuId, pull); n++;
+        XtSetArg(a[n], XmNlabelString, s); n++;
+        XtSetArg(a[n], XmNtopAttachment, XmATTACH_FORM); n++;
+        XtSetArg(a[n], XmNleftAttachment, XmATTACH_FORM); n++;
+        opt = XmCreateOptionMenu(form, "category", a, n);
+        XmStringFree(s);
+        XtManageChild(opt);
+        /* the category row on top, then the label, then the field */
+        XtVaSetValues(label, XmNtopAttachment, XmATTACH_WIDGET,
+                      XmNtopWidget, opt, XmNtopOffset, 6, NULL);
+    }
     field = XtVaCreateManagedWidget("search", xmTextFieldWidgetClass, form,
                                     XmNcolumns, 34,
                                     XmNtopAttachment, XmATTACH_WIDGET,
