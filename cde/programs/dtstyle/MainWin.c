@@ -570,6 +570,12 @@ ProcessComponentList(
 	  dtIcon = _DtGetIconFileName(style.screen, AUTOSTART_ICON, NULL, NULL, 0);
           helpTag = HELP_MAIN_WINDOW;
       }
+      else if (strcmp(string, SHORTCUTS) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 68, "Shortcuts"));
+	  dtIcon = _DtGetIconFileName(style.screen, SHORTCUTS_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
       else if (strcmp(string, ACCESS) == 0)
       {
           cmp_string = CMPSTR(GETMESSAGE(4, 67, "Accessibility"));
@@ -791,6 +797,9 @@ OpenPanel(char *cd)
 
   else if (strcmp(cd, SESSION) == 0)
     popup_sessionBB(style.shell);
+
+  else if (strcmp(cd, SHORTCUTS) == 0)
+    popup_shortcutsBB(style.shell);
 
   else if (strcmp(cd, ACCESS) == 0)
     popup_accessBB(style.shell);

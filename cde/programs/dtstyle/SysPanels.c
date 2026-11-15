@@ -32,7 +32,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <stdint.h>
+#include <ctype.h>
 
+#include <X11/XKBlib.h>
+#include <X11/keysym.h>
+#include <X11/Xutil.h>
 #include <Xm/Xm.h>
 #include <Xm/Form.h>
 #include <Xm/LabelG.h>
@@ -3080,4 +3085,352 @@ popup_accessBB(Widget shell)
     else
         XtManageChild(accPanel->dialog);
     XMapRaised(style.display, XtWindow(XtParent(accPanel->dialog)));
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Shortcuts: keyboard shortcuts that run commands                    */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Kept in ~/.dt/shortcuts.dtwmrc, which sys.dtwmrc includes: a
+ * "Keys DtKeyBindings" block (dtwm adds it to its own bindings), with a
+ * "#@ LABEL<TAB>COMMAND" comment before each binding so the list can be
+ * shown again.  dtwm is restarted to apply changes.  Under xfwm4,
+ * dtwm -panelonly still takes these keys.
+ */
+
+#define SC_MAX 64
+
+typedef struct {
+    char label[64];		/* "Ctrl+Alt+T" */
+    char spec[96];		/* "Ctrl Alt<Key>t" */
+    char cmd[512];
+} Shortcut;
+
+static Panel   *scPanel = NULL;
+static Shortcut scList[SC_MAX];
+static int      scN;
+static Widget   scDialog = NULL, scKeyField, scCmdField;
+static char     scNewLabel[64], scNewSpec[96];
+
+static void
+ScPath(char *buf, size_t len)
+{
+    snprintf(buf, len, "%s/.dt/shortcuts.dtwmrc", style.home);
+}
+
+static void
+ScRead(void)
+{
+    char  path[1100], line[1024], *tab;
+    FILE *fp;
+
+    scN = 0;
+    ScPath(path, sizeof(path));
+    if ((fp = fopen(path, "r")) == NULL)
+        return;
+    while (fgets(line, sizeof(line), fp) && scN < SC_MAX)
+    {
+        line[strcspn(line, "\r\n")] = '\0';
+        if (strncmp(line, "#@ ", 3) != 0 || !(tab = strchr(line + 3, '\t')))
+            continue;
+        *tab = '\0';
+        snprintf(scList[scN].label, sizeof(scList[scN].label), "%s",
+                 line + 3);
+        snprintf(scList[scN].cmd, sizeof(scList[scN].cmd), "%s", tab + 1);
+        /* the spec is on the next line: "    SPEC root|... f.exec ..." */
+        if (fgets(line, sizeof(line), fp))
+        {
+            char *s = line, *e;
+
+            while (*s == ' ' || *s == '\t')
+                s++;
+            e = strstr(s, "\troot|icon|window");
+            if (e && e - s < (int) sizeof(scList[scN].spec))
+            {
+                snprintf(scList[scN].spec, sizeof(scList[scN].spec), "%.*s",
+                         (int) (e - s), s);
+                scN++;
+            }
+        }
+    }
+    fclose(fp);
+}
+
+/* An existing ~/.dt/dtwmrc (a user copy of sys.dtwmrc) needs the
+ * include too. */
+static void
+ScIncludeInUserRc(void)
+{
+    char  path[1100], line[1024];
+    FILE *fp;
+    Boolean has = False;
+
+    snprintf(path, sizeof(path), "%s/.dt/dtwmrc", style.home);
+    if ((fp = fopen(path, "r")) == NULL)
+        return;
+    while (fgets(line, sizeof(line), fp))
+        if (strstr(line, "shortcuts.dtwmrc"))
+            has = True;
+    fclose(fp);
+    if (!has && (fp = fopen(path, "a")) != NULL)
+    {
+        fprintf(fp, "\n# Settings > Shortcuts\ninclude\n{\n"
+                    "    ~/.dt/shortcuts.dtwmrc\n}\n");
+        fclose(fp);
+    }
+}
+
+static Boolean
+ScWrite(void)
+{
+    char  path[1100], tmp[1200];
+    FILE *fp;
+    int   i, fd;
+
+    ScPath(path, sizeof(path));
+    snprintf(tmp, sizeof(tmp), "%s.XXXXXX", path);
+    if ((fd = mkstemp(tmp)) < 0)
+        return False;
+    if ((fp = fdopen(fd, "w")) == NULL)
+    {
+        close(fd);
+        unlink(tmp);
+        return False;
+    }
+    fprintf(fp, "# Keyboard shortcuts, written by Settings > Shortcuts.\n"
+                "Keys DtKeyBindings\n{\n");
+    for (i = 0; i < scN; i++)
+        fprintf(fp, "#@ %s\t%s\n    %s\troot|icon|window\tf.exec \"%s\"\n",
+                scList[i].label, scList[i].cmd, scList[i].spec,
+                scList[i].cmd);
+    fprintf(fp, "}\n");
+    if (fclose(fp) != 0 || rename(tmp, path) != 0)
+    {
+        unlink(tmp);
+        return False;
+    }
+    ScIncludeInUserRc();
+    _DtWmRestartNoConfirm(style.display,
+                          RootWindow(style.display, style.screenNum));
+    return True;
+}
+
+static void
+ScRefresh(Panel *p)
+{
+    char label[600];
+    int  i;
+
+    ScRead();
+    PanelClearItems(p);
+    for (i = 0; i < scN; i++)
+    {
+        snprintf(label, sizeof(label), "%-20s %s", scList[i].label,
+                 scList[i].cmd);
+        PanelAddItem(p, label, scList[i].label, NULL);
+    }
+    PanelSetStatus(p, scN ? MSG(114, "Your keyboard shortcuts "
+                                     "(they work in every application):")
+                          : MSG(122, "No shortcuts yet: press Add..."));
+}
+
+/* A key pressed in the shortcut field becomes the shortcut, e.g.
+ * "Ctrl+Alt+T" / "Ctrl Alt<Key>t".  Plain Tab still moves on. */
+static void
+ScKeyEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
+{
+    KeySym ks;
+    char  *name, label[64], spec[96];
+    unsigned int st = ev->xkey.state;
+    Boolean special;
+
+    if (ev->type != KeyPress)
+        return;
+    ks = XkbKeycodeToKeysym(XtDisplay(w), ev->xkey.keycode, 0, 0);
+    if (ks == NoSymbol || IsModifierKey(ks))
+        return;
+    if ((ks == XK_Tab || ks == XK_ISO_Left_Tab) &&
+        !(st & (ControlMask | Mod1Mask | Mod4Mask)))
+        return;				/* keyboard traversal */
+    *cont = False;
+    if (!(name = XKeysymToString(ks)))
+        return;
+    special = (ks >= XK_F1 && ks <= XK_F35) || ks == XK_Print ||
+              ks == XK_Pause || strncmp(name, "XF86", 4) == 0;
+    if (!special && !(st & (ControlMask | Mod1Mask | Mod4Mask)))
+    {
+        XmTextFieldSetString(w, "");
+        scNewSpec[0] = '\0';
+        XBell(XtDisplay(w), 0);			/* not a shortcut */
+        PanelSetStatus(scPanel, MSG(119, "Press a key with Ctrl, Alt or "
+                                         "Super (or a function key)."));
+        return;
+    }
+    snprintf(label, sizeof(label), "%s%s%s%s%s%s",
+             (st & ControlMask) ? "Ctrl+" : "", (st & Mod1Mask) ? "Alt+" : "",
+             (st & ShiftMask) ? "Shift+" : "", (st & Mod4Mask) ? "Super+" : "",
+             strlen(name) == 1 ? "" : "", name);
+    if (strlen(name) == 1)		/* "t" -> "T" in the label */
+        label[strlen(label) - 1] = toupper((unsigned char) name[0]);
+    snprintf(spec, sizeof(spec), "%s%s%s%s<Key>%s",
+             (st & ControlMask) ? "Ctrl " : "", (st & Mod1Mask) ? "Alt " : "",
+             (st & ShiftMask) ? "Shift " : "", (st & Mod4Mask) ? "Mod4 " : "",
+             name);
+    snprintf(scNewLabel, sizeof(scNewLabel), "%s", label);
+    snprintf(scNewSpec, sizeof(scNewSpec), "%s", spec);
+    XmTextFieldSetString(w, label);
+    XmTextFieldSetInsertionPosition(w, strlen(label));
+}
+
+static void
+ScDialogCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    char *cmd;
+    int   i;
+
+    if ((intptr_t) client_data == 0)		/* Cancel */
+    {
+        XtUnmanageChild(scDialog);
+        return;
+    }
+    cmd = XmTextFieldGetString(scCmdField);
+    if (!scNewSpec[0])
+        PanelSetStatus(scPanel, MSG(119, "Press a key with Ctrl, Alt or "
+                                         "Super (or a function key)."));
+    /* dtwm reads the command as a quoted string: no quotes, backslashes
+     * or line breaks in it */
+    else if (!*cmd || strpbrk(cmd, "\"\\\n\t") || strlen(cmd) >= 500)
+        PanelSetStatus(scPanel, MSG(120, "Type the command to run."));
+    else
+    {
+        for (i = 0; i < scN; i++)		/* the same keys: replace */
+            if (strcmp(scList[i].spec, scNewSpec) == 0)
+                break;
+        if (i < SC_MAX)
+        {
+            if (i == scN)
+                scN++;
+            snprintf(scList[i].label, sizeof(scList[i].label), "%s",
+                     scNewLabel);
+            snprintf(scList[i].spec, sizeof(scList[i].spec), "%s",
+                     scNewSpec);
+            snprintf(scList[i].cmd, sizeof(scList[i].cmd), "%s", cmd);
+            if (!ScWrite())
+                PanelSetStatus(scPanel, MSG(121, "The shortcuts could "
+                                                 "not be saved."));
+            ScRefresh(scPanel);
+        }
+        XtUnmanageChild(scDialog);
+    }
+    XtFree(cmd);
+}
+
+static void
+ScAddCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    if (!scDialog)
+    {
+        Widget form, l1, l2, ok, cancel;
+        XmString s;
+
+        scDialog = XmCreateFormDialog(style.shell, "shortcutDialog", NULL, 0);
+        XtVaSetValues(XtParent(scDialog), XmNtitle,
+                      MSG(116, "Settings - Add Shortcut"), NULL);
+        form = scDialog;
+        XtVaSetValues(form, XmNmarginWidth, 10, XmNmarginHeight, 10, NULL);
+        s = CMPSTR(MSG(117, "Shortcut (press the keys here):"));
+        l1 = XtVaCreateManagedWidget("keyLabel", xmLabelGadgetClass, form,
+                                     XmNlabelString, s,
+                                     XmNtopAttachment, XmATTACH_FORM,
+                                     XmNleftAttachment, XmATTACH_FORM, NULL);
+        XmStringFree(s);
+        scKeyField = XtVaCreateManagedWidget("keyField",
+                                     xmTextFieldWidgetClass, form,
+                                     XmNcolumns, 30,
+                                     XmNtopAttachment, XmATTACH_WIDGET,
+                                     XmNtopWidget, l1,
+                                     XmNleftAttachment, XmATTACH_FORM,
+                                     XmNrightAttachment, XmATTACH_FORM, NULL);
+        XtAddEventHandler(scKeyField, KeyPressMask, False, ScKeyEH, NULL);
+        s = CMPSTR(MSG(118, "Command to run:"));
+        l2 = XtVaCreateManagedWidget("cmdLabel", xmLabelGadgetClass, form,
+                                     XmNlabelString, s,
+                                     XmNtopAttachment, XmATTACH_WIDGET,
+                                     XmNtopWidget, scKeyField,
+                                     XmNtopOffset, 8,
+                                     XmNleftAttachment, XmATTACH_FORM, NULL);
+        XmStringFree(s);
+        scCmdField = XtVaCreateManagedWidget("cmdField",
+                                     xmTextFieldWidgetClass, form,
+                                     XmNcolumns, 30,
+                                     XmNtopAttachment, XmATTACH_WIDGET,
+                                     XmNtopWidget, l2,
+                                     XmNleftAttachment, XmATTACH_FORM,
+                                     XmNrightAttachment, XmATTACH_FORM, NULL);
+        s = CMPSTR((String) _DtOkString);
+        ok = XtVaCreateManagedWidget("ok", xmPushButtonGadgetClass, form,
+                                     XmNlabelString, s,
+                                     XmNtopAttachment, XmATTACH_WIDGET,
+                                     XmNtopWidget, scCmdField,
+                                     XmNtopOffset, 10,
+                                     XmNleftAttachment, XmATTACH_FORM,
+                                     XmNbottomAttachment, XmATTACH_FORM,
+                                     NULL);
+        XmStringFree(s);
+        s = CMPSTR((String) _DtCancelString);
+        cancel = XtVaCreateManagedWidget("cancel", xmPushButtonGadgetClass,
+                                     form, XmNlabelString, s,
+                                     XmNtopAttachment, XmATTACH_WIDGET,
+                                     XmNtopWidget, scCmdField,
+                                     XmNtopOffset, 10,
+                                     XmNrightAttachment, XmATTACH_FORM,
+                                     XmNbottomAttachment, XmATTACH_FORM,
+                                     NULL);
+        XmStringFree(s);
+        XtAddCallback(ok, XmNactivateCallback, ScDialogCB, (XtPointer) 1);
+        XtAddCallback(cancel, XmNactivateCallback, ScDialogCB, (XtPointer) 0);
+        XtAddCallback(scCmdField, XmNactivateCallback, ScDialogCB,
+                      (XtPointer) 1);
+    }
+    scNewLabel[0] = scNewSpec[0] = '\0';
+    XmTextFieldSetString(scKeyField, "");
+    XmTextFieldSetString(scCmdField, "");
+    XtManageChild(scDialog);
+    XmProcessTraversal(scKeyField, XmTRAVERSE_CURRENT);
+}
+
+static void
+ScRemoveCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    Panel *p = (Panel *) client_data;
+    int    row = PanelSelected(p);
+
+    if (row < 0 || row >= scN)
+        return;
+    memmove(&scList[row], &scList[row + 1],
+            (scN - row - 1) * sizeof(Shortcut));
+    scN--;
+    if (!ScWrite())
+        PanelSetStatus(p, MSG(121, "The shortcuts could not be saved."));
+    ScRefresh(p);
+}
+
+void
+popup_shortcutsBB(Widget shell)
+{
+    if (!scPanel)
+    {
+        scPanel = PanelCreate(shell, "shortcutsDialog",
+                              MSG(113, "Settings - Shortcuts"), NULL);
+        scPanel->refresh = ScRefresh;
+        PanelButton(scPanel, MSG(115, "Add..."), ScAddCB);
+        PanelButton(scPanel, MSG(59, "Remove"), ScRemoveCB);
+    }
+    if (XtIsManaged(scPanel->dialog))
+        ScRefresh(scPanel);
+    else
+        XtManageChild(scPanel->dialog);
+    XMapRaised(style.display, XtWindow(XtParent(scPanel->dialog)));
 }

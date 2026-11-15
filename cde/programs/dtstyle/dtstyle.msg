@@ -195,6 +195,7 @@ $ Style Manager buttons for the Network, Bluetooth and Updates panels
 65 Front Panel
 66 Session
 67 Accessibility
+68 Shortcuts
 
 $set 5
 $ _DtMessage set 5 is for the Font dialog
@@ -835,6 +836,16 @@ $quote "
 110 "Update Everything (topgrade)..."
 111 "Update Everything"
 112 "Hide automatically"
+113 "Settings - Shortcuts"
+114 "Your keyboard shortcuts (they work in every application):"
+115 "Add..."
+116 "Settings - Add Shortcut"
+117 "Shortcut (press the keys here):"
+118 "Command to run:"
+119 "Press a key with Ctrl, Alt or Super (or a function key)."
+120 "Type the command to run."
+121 "The shortcuts could not be saved."
+122 "No shortcuts yet: press Add..."
 
 $set 99
 $    DO NOT TRANSLATE THESE MESSAGES

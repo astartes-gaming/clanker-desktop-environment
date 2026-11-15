@@ -87,6 +87,13 @@ Keys DtKeyBindings
 #endif
 }
 
+XCOMM Your own shortcuts (Settings > Shortcuts): more DtKeyBindings.
+XCOMM A missing file is skipped.
+include
+{
+    ~/.dt/shortcuts.dtwmrc
+}
+
 XCOMM ###
 XCOMM
 XCOMM Mouse Button Bindings Description
