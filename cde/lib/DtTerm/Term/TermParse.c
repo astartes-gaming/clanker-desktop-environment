@@ -133,10 +133,13 @@ _DtTermParsePushNum(Widget w)
    if (!PCOUNT(context)) PCOUNT(context)++ ;/* increment for first number ONLY*/
   }
     
-  if ( ++PCOUNT(context)>NPARAM ) {
+  /* past NPARAM the parameters fall off silently (as on a VT); the
+   * count must stop too: STORELASTARG writes parms[PCOUNT] */
+  if ( PCOUNT(context) >= NPARAM ) {
     Debug('P',fprintf(stderr,">>Too many parameters\n")) ;
     return ;
   }
+  ++PCOUNT(context) ;
 }
 
 void
@@ -148,7 +151,9 @@ _DtTermSaveChar(Widget w)
   context = GetParserContext(w) ;
 
   mbtowc(&c,(char *)context->inputChar,MB_CUR_MAX);
-  if ( context->stringParms[0].length < STR_SIZE && iswprint(c) ) {
+  /* the whole (multibyte) character must fit */
+  if ( context->stringParms[0].length + context->inputCharLen <= STR_SIZE &&
+       iswprint(c) ) {
       strncpy( (
          (char *)&context->stringParms[0].str[context->stringParms[0].length]), 
                 (char *)context->inputChar, context->inputCharLen) ;
