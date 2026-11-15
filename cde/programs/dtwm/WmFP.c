@@ -39,6 +39,7 @@
 
 #include "WmGlobal.h"
 #include "WmPanelOnly.h"
+#include "WmPanelHide.h"
 
 
 #include <Dt/DtP.h>
@@ -870,6 +871,10 @@ WmPanelistShow (Widget w)
    if (wmGD.panelOnly)
       PanelOnlyDockWindow (XtWindow (panel.shell), x, y,
                            XtWidth (panel.shell), XtHeight (panel.shell));
+
+   /*  Settings > Front Panel > Hide automatically  */
+
+   PanelAutoHideInit ();
 
 
    /*  Set the subpanel's transientShell to update transientFor and  */

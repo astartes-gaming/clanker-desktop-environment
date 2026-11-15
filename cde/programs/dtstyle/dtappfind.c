@@ -6,7 +6,7 @@
  * name, generic name ("Web Browser") or keywords; Up and Down move in
  * it; Enter or a double-click starts the selected application (the
  * first one if none is selected) and closes the window; Escape closes
- * it.  Started from the Workspace menu (Applications...) and the Front
+ * it.  Text that matches no application runs as a command (Alt+F2).  Started from the Workspace menu (Applications...) and the Front
  * Panel's Applications drawer.
  *
  * Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
@@ -296,9 +296,39 @@ ChangedCB(Widget w, XtPointer client, XtPointer call)
     XtFree(t);
 }
 
+/* No application matches: run the text as a command (like Alt+F2
+ * "Run" boxes), in the background, and quit. */
+static void
+RunCommand(const char *cmd)
+{
+    pid_t pid;
+
+    while (*cmd == ' ')
+        cmd++;
+    if (!*cmd)
+        return;
+    signal(SIGCHLD, SIG_IGN);
+    if ((pid = fork()) == 0)
+    {
+        setsid();
+        close(ConnectionNumber(XtDisplay(top)));
+        execl("/bin/sh", "sh", "-c", cmd, (char *) NULL);
+        _exit(127);
+    }
+    exit(0);
+}
+
 static void
 ActivateCB(Widget w, XtPointer client, XtPointer call)
 {
+    if (nShown == 0)
+    {
+        char *t = XmTextFieldGetString(w);
+
+        RunCommand(t);
+        XtFree(t);
+        return;
+    }
     Launch(Selected());
 }
 
@@ -363,7 +393,7 @@ main(int argc, char **argv)
     form = XtVaCreateManagedWidget("form", xmFormWidgetClass, top,
                                    XmNmarginWidth, 8, XmNmarginHeight, 8,
                                    NULL);
-    s = XmStringCreateLocalized("Type to find an application:");
+    s = XmStringCreateLocalized("Type to find an application, or a command to run:");
     label = XtVaCreateManagedWidget("label", xmLabelWidgetClass, form,
                                     XmNlabelString, s,
                                     XmNtopAttachment, XmATTACH_FORM,

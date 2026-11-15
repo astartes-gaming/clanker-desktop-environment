@@ -2546,13 +2546,47 @@ FpResetCB(Widget w, XtPointer client_data, XtPointer call_data)
         }
 }
 
+/* "Hide automatically": ~/.dt/frontpanel-autohide, read by dtwm when
+ * it starts (so it is restarted, as for the other panel changes). */
+static void
+FpAutoHidePath(char *buf, size_t len)
+{
+    snprintf(buf, len, "%s/.dt/frontpanel-autohide", style.home);
+}
+
+static void
+FpAutoHideCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    char path[1100];
+    FILE *fp;
+
+    FpAutoHidePath(path, sizeof(path));
+    if (XmToggleButtonGadgetGetState(w))
+    {
+        if ((fp = fopen(path, "w")) != NULL)
+            fclose(fp);
+    }
+    else
+        unlink(path);
+    _DtWmRestartNoConfirm(style.display,
+                          RootWindow(style.display, style.screenNum));
+}
+
 void
 popup_frontPanelBB(Widget shell)
 {
     if (!fpPanel)
     {
+        char path[1100];
+
         fpPanel = PanelCreate(shell, "frontPanelDialog",
-                              MSG(60, "Settings - Front Panel"), NULL);
+                              MSG(60, "Settings - Front Panel"),
+                              MSG(112, "Hide automatically"));
+        FpAutoHidePath(path, sizeof(path));
+        XmToggleButtonGadgetSetState(fpPanel->toggle,
+                                     access(path, F_OK) == 0, False);
+        XtAddCallback(fpPanel->toggle, XmNvalueChangedCallback,
+                      FpAutoHideCB, NULL);
         fpPanel->refresh = FpRefresh;
         PanelButton(fpPanel, MSG(64, "Change..."), FpChangeCB);
         PanelButton(fpPanel, MSG(88, "Add to Drawer..."), FpAddCB);

@@ -829,8 +829,10 @@ RFCMIME::writeBase64(Buffer & buf, const char * bp, const unsigned long len)
 void
 RFCMIME::readTextEnriched(char * buf, int & off, const char * bp, const unsigned long bp_len)
 {
-  char c, i, paramct=0, newlinect=0, nofill=0;
+  char c, paramct=0, newlinect=0, nofill=0;
   char token[256], *p;
+  size_t i;		/* was a char: past 127 it wrapped negative and the
+			 * length check below never stopped the copy */
   
   const char *ebp = bp+bp_len;
   for (const char * cur = bp; cur < ebp; cur++) {
