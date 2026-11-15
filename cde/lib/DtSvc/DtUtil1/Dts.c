@@ -342,9 +342,15 @@ set_vals(const char		*fn,
 			char	path[MAXPATHLEN];
 			char	*tmp;
 
-			getcwd(path, MAXPATHLEN);
-			strcat(path, "/");
-			strcat(path, linfo->file_path);
+			if (getcwd(path, MAXPATHLEN) == NULL)
+				path[0] = '\0';
+			/* a too long name stays relative */
+			if (strlen(path) + 1 + strlen(linfo->file_path) >= sizeof(path))
+				snprintf(path, sizeof(path), "%s", linfo->file_path);
+			else {
+				strcat(path, "/");
+				strcat(path, linfo->file_path);
+			}
 
 			tmp = linfo->file_path;
 			linfo->file_path = strdup(path);
@@ -1032,29 +1038,43 @@ _DtDtsGetDataType(const char *file)
 	char		*name;
 	struct stat	file_stat;
 	u_char		*buff = 0;
-	int		start;
+	size_t		start, end, len;
+	ssize_t		got;
 	char		*dt = 0;
-	int		end;
 
-	name = calloc(1, MAXPATHLEN+1);
-	sprintf(name, "%s/%s", file, DtDTS_DT_DIR);
-	if((fd = open(name, O_RDONLY, 0644)) != -1)
+	/*
+	 * A directory's ".dt" file names its data type.  Anyone who can
+	 * write in the directory can make it: only a small regular file
+	 * is read (O_NONBLOCK: a FIFO there would hang the caller), and
+	 * the scan stays inside what was read.
+	 */
+	len = strlen(file) + strlen(DtDTS_DT_DIR) + 2;
+	if ((name = malloc(len)) == NULL)
+		return(0);
+	snprintf(name, len, "%s/%s", file, DtDTS_DT_DIR);
+	if((fd = open(name, O_RDONLY | O_NONBLOCK | O_NOCTTY)) != -1)
 	{
-		if(fstat(fd, &file_stat) == 0)
+		if(fstat(fd, &file_stat) == 0 && S_ISREG(file_stat.st_mode) &&
+		   file_stat.st_size > 0 && file_stat.st_size <= 65536 &&
+		   (buff = (u_char *)calloc((size_t)1,
+					    file_stat.st_size+1)) != NULL &&
+		   (got = read(fd, buff, file_stat.st_size)) > 0)
 		{
-			buff = (u_char *)calloc((size_t)1, file_stat.st_size+1);
-			read(fd, buff, file_stat.st_size);
-		}
-		dt = strstr((char *)buff, DtDTS_DATA_ATTRIBUTES_NAME);
-		if(dt != NULL)
-		{
-			start = dt-(char*)buff;
-			while(!isspace(buff[start])) start++;
-			while(isspace(buff[start]))start++;
-			end = start;
-			while(!isspace(buff[end])) end++;
-			buff[end] = '\0';
-			dt = strdup((char *)&buff[start]);
+			char *p;
+
+			buff[got] = '\0';
+			p = strstr((char *)buff, DtDTS_DATA_ATTRIBUTES_NAME);
+			if(p != NULL)
+			{
+				start = p-(char*)buff;
+				while(buff[start] && !isspace(buff[start])) start++;
+				while(buff[start] && isspace(buff[start])) start++;
+				end = start;
+				while(buff[end] && !isspace(buff[end])) end++;
+				buff[end] = '\0';
+				if (end > start)
+					dt = strdup((char *)&buff[start]);
+			}
 		}
 		close(fd);
 	}
