@@ -595,25 +595,6 @@ void InitWmGlobal (int argc, char *argv [], char *environ [])
     ProcessCommandLine (argc, argv);
 
     /*
-     * -panelonly runs next to another window manager (dtaltwm starts
-     * both at once): wait until that one manages the screen (owns
-     * WM_S<n>, ICCCM 2.0), so it receives the panel's desktop setup.
-     * Usually well under a second; at most 5 seconds.
-     */
-    if (wmGD.panelOnly)
-    {
-	char  name[32];
-	Atom  wmSel;
-	int   tries;
-
-	snprintf (name, sizeof (name), "WM_S%d", DefaultScreen (DISPLAY));
-	wmSel = XInternAtom (DISPLAY, name, False);
-	for (tries = 0; tries < 50 &&
-	     XGetSelectionOwner (DISPLAY, wmSel) == None; tries++)
-	    usleep (100000);
-    }
-
-    /*
      * Make sure backdrops are in our icon search path. 
      * This call MUST occur before ANY icons are looked up either
      * explicitly or through resource processing!!!
