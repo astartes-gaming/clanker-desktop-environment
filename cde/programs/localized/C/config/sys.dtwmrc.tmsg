@@ -183,6 +183,9 @@ $ *
     <Key>XF86AudioLowerVolume	ifkey|root|icon|window	f.exec "dthwkeys volume-down"\n\
     <Key>XF86AudioMute		ifkey|root|icon|window	f.exec "dthwkeys volume-mute"\n\
     <Key>XF86AudioMicMute	ifkey|root|icon|window	f.exec "dthwkeys mic-mute"\n\
+    Alt<Key>F2			root|icon|window	f.exec "dtappfind"\n\
+    <Key>Print			ifkey|root|icon|window	f.exec "dtscreenshot"\n\
+    Alt<Key>Print		ifkey|root|icon|window	f.exec "dtscreenshot -window"\n\
     Alt<Key>F10			root|icon|window	f.menu DtRootMenu
 $ *
 $ * #DtButtonBindings#

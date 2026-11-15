@@ -695,6 +695,18 @@ AC_CHECK_LIB(tirpc, svc_register,
        TIRPCLIB=-ltirpc])
 AC_SUBST(TIRPCLIB)
 
+dnl libtirpc before 1.3.2 sizes per-descriptor tables from the hard
+dnl RLIMIT_NOFILE (__rpc_dtbsize); with systemd's 1048576 every RPC
+dnl client fails ("clnt_dg_create: out of memory") on 32-bit systems.
+dnl libtt then lowers the hard limit at load (tt_global_env.C).
+if test -n "$TIRPCLIB" && test -n "$PKG_CONFIG" &&
+   $PKG_CONFIG --exists libtirpc &&
+   ! $PKG_CONFIG --atleast-version=1.3.2 libtirpc; then
+    AC_MSG_NOTICE([libtirpc < 1.3.2: limiting RLIMIT_NOFILE for RPC])
+    CFLAGS="${CFLAGS} -DTIRPC_HARD_NOFILE_BUG"
+    CXXFLAGS="${CXXFLAGS} -DTIRPC_HARD_NOFILE_BUG"
+fi
+
 dnl see if the rpc_inline_t type exists
 AC_CHECK_TYPE(rpc_inline_t, [],
    [AC_DEFINE_UNQUOTED([rpc_inline_t], [int32_t],

@@ -95,3 +95,18 @@ and `XAUTHORITY=/run/user/UID/dtwayland-Xauthority.1`.
 `sh /root/payload/selftest-greeter.sh` (as root in the VM) restarts
 dtlogin, ending any X11 session, and checks that the login screen
 comes back after SIGHUPs to dtlogin.
+
+## An old PC (archived 32-bit Debian)
+
+```sh
+tools/vm/build-retro.sh                    # Debian 10 i386, no root needed
+tools/vm/retro.sh SOURCE.tar               # Pentium III, 512 MB, IDE, VGA
+VM_OUT=$PWD/tools/vm/out-retro tools/vm/vmctl.py run 'uname -a'
+```
+
+`build-retro.sh` uses `mmdebstrap --mode=unshare` with the Debian
+archive (`RETRO_SUITE=stretch` for older) and `virt-make-fs`.
+`retro.sh` boots it on emulated Pentium III hardware (no SSE2), with a
+tarball as the second IDE disk (`tar -xf /dev/sdb`). KVM keeps it
+usable; `RETRO_TCG=1` emulates the CPU fully. Build CDE inside as
+usual (`./autogen.sh && ./configure && make && make install`).

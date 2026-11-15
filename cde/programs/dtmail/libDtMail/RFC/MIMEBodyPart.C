@@ -474,7 +474,9 @@ MIMEBodyPart::loadBody(DtMailEnv & error)
   if (_body_env && !error.isSet() &&
       ((strncasecmp(*(value[0]), "text/enriched", 13) == 0)
        || (strncasecmp(*(value[0]), "text/richtext", 13) == 0))) {
-    char *new_body = (char *)malloc((unsigned)(_body_len*2));
+    // at most two characters out per character in, plus the final
+    // newline (an empty body used to get a 0-byte buffer)
+    char *new_body = (char *)malloc((size_t)_body_decoded_len * 2 + 2);
     int size = 0;
     RFCMIME::readTextEnriched(new_body, size, _body, _body_decoded_len);
     new_body = (char *)realloc(new_body, size+2);

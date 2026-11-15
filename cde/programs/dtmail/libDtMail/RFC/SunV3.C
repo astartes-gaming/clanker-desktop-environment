@@ -604,7 +604,8 @@ decode_uue_line(char * buf,
     // emitted in groups of four bytes for every three bytes encoded.
     //
     encodedLen = ((decodedLen/3)+((decodedLen%3)!=0))*4;
-    if ((encodedBp + encodedLen) > encodedEndBp || encodedBp[encodedLen] != '\n') {
+    /* encodedEndBp is one past the data: don't read it */
+    if ((encodedBp + encodedLen) >= encodedEndBp || encodedBp[encodedLen] != '\n') {
 	// Well, looks like some trailing white space was lost in
 	// transmission. Lets copy the line and fill in what is needed.
 	// (note: if this does happen the source could be corrupted, as the
@@ -613,7 +614,7 @@ decode_uue_line(char * buf,
 	// we yield correct bytes for the latter??)
 	//
 
-	for (nl = encodedBp; nl <= encodedEndBp && *nl != '\n'; nl++) {
+	for (nl = encodedBp; nl < encodedEndBp && *nl != '\n'; nl++) {
 	    continue;
 	}
 
