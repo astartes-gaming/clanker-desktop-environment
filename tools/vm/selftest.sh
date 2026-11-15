@@ -18,12 +18,15 @@ U=${SELFTEST_USER:-tester}
 PW=$1
 P=$(cd "$(dirname "$0")" && pwd)
 uid=`id -u $U`
+# The session's bus: the per-user bus, or (older systems without
+# dbus-user-session) the one dbus-launch started; set below.
+BUS=unix:path=/run/user/$uid/bus
 pass=0; fail=0; skip=0
 
 x() {
     timeout 30 runuser -u $U -- env DISPLAY=:0 \
         XAUTHORITY=/home/$U/.Xauthority XDG_RUNTIME_DIR=/run/user/$uid \
-        DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus \
+        DBUS_SESSION_BUS_ADDRESS=$BUS \
         HOME=/home/$U PATH=/usr/dt/bin:/usr/bin:/bin "$@"
 }
 # Long-running clients (no timeout).
@@ -32,7 +35,7 @@ x() {
 xbg() {
     setsid runuser -u $U -- env DISPLAY=:0 XAUTHORITY=/home/$U/.Xauthority \
         XDG_RUNTIME_DIR=/run/user/$uid \
-        DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus HOME=/home/$U "$@" \
+        DBUS_SESSION_BUS_ADDRESS=$BUS HOME=/home/$U "$@" \
         </dev/null >/dev/null 2>&1 &
 }
 ok()   { echo "PASS  $*"; pass=$((pass+1)); }
@@ -93,8 +96,15 @@ envf=/tmp/selftest-env.$$
 tr '\0' '\n' < /proc/$sp/environ > $envf 2>/dev/null
 check "session has XDG_RUNTIME_DIR (PAM env)" \
       grep -q "^XDG_RUNTIME_DIR=/run/user/$uid" $envf
-check "session uses the user D-Bus" \
-      grep -q "^DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus" $envf
+sbus=`sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p' $envf`
+[ -n "$sbus" ] && BUS=$sbus
+if [ "$sbus" = "unix:path=/run/user/$uid/bus" ]; then
+    ok "session uses the user D-Bus"
+elif [ -n "$sbus" ]; then
+    ok "session has a D-Bus session bus (dbus-launch: $sbus)"
+else
+    bad "session has no D-Bus session bus"
+fi
 check "logind session is active"    sh -c "loginctl show-session $sid -p Active | grep -q yes"
 check "XDG_CURRENT_DESKTOP=CDE"     grep -q '^XDG_CURRENT_DESKTOP=CDE' $envf
 rm -f $envf

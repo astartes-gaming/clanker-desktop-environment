@@ -34,7 +34,9 @@ SYSTEM="linux-image-686 initramfs-tools systemd-sysv udev ifupdown
 isc-dhcp-client openssh-client curl ca-certificates sudo rpcbind xauth
 xserver-xorg-core xserver-xorg-video-vesa xserver-xorg-video-cirrus
 xserver-xorg-input-evdev xserver-xorg-input-libinput x11-utils xdotool
-xfonts-base xfonts-100dpi xfonts-75dpi dbus-x11 imagemagick"
+xfonts-base xfonts-100dpi xfonts-75dpi dbus-x11 imagemagick
+procps python3 python3-evdev xinput x11-apps xterm libpam-systemd
+policykit-1"
 
 mmdebstrap --mode=unshare --arch=i386 --variant=minbase \
     --aptopt='Acquire::Check-Valid-Until "false"' \
