@@ -205,3 +205,32 @@ drop_mutex()
 
 
 
+
+
+#if defined(TIRPC_HARD_NOFILE_BUG) && defined(__GNUC__)
+#include <sys/resource.h>
+/*
+ * libtirpc before 1.3.2 allocates per-descriptor tables for every RPC
+ * client sized by the *hard* RLIMIT_NOFILE.  systemd sets that to
+ * 1048576, and on 32-bit systems with little memory every RPC call then
+ * fails with "clnt_dg_create: out of memory": ToolTalk, the File
+ * Manager, Calendar.  Every CDE program links libtt, so lower this
+ * process's hard limit (never below its soft limit) as it loads.
+ * Configure enables this only for such libtirpc versions.
+ */
+static void __attribute__((constructor))
+_tt_tirpc_nofile_fix(void)
+{
+	struct rlimit rl;
+	const rlim_t cap = 65536;
+
+	if (getrlimit(RLIMIT_NOFILE, &rl) == 0 &&
+	    (rl.rlim_max == RLIM_INFINITY || rl.rlim_max > cap)) {
+		rl.rlim_max = (rl.rlim_cur != RLIM_INFINITY &&
+			       rl.rlim_cur > cap) ? rl.rlim_cur : cap;
+		if (rl.rlim_cur == RLIM_INFINITY || rl.rlim_cur > rl.rlim_max)
+			rl.rlim_cur = rl.rlim_max;
+		(void) setrlimit(RLIMIT_NOFILE, &rl);
+	}
+}
+#endif

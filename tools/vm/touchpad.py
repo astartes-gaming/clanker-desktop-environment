@@ -15,5 +15,11 @@ cap = {
         (e.ABS_MT_TRACKING_ID, AbsInfo(0, 0, 65535, 0, 0, 0)),
     ],
 }
-ui = UInput(cap, name=name, input_props=[e.INPUT_PROP_POINTER, e.INPUT_PROP_BUTTONPAD])
+try:
+    ui = UInput(cap, name=name,
+                input_props=[e.INPUT_PROP_POINTER, e.INPUT_PROP_BUTTONPAD])
+except (TypeError, AttributeError):
+    # python-evdev before 1.2 (Debian 10) has no input_props; libinput
+    # still sees a touchpad from BTN_TOOL_FINGER and absolute axes.
+    ui = UInput(cap, name=name)
 time.sleep(1000000)
