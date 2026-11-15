@@ -90,6 +90,9 @@ programs/dtstyle/Palettes.iso
 programs/dtstyle/dtstyle
 programs/dtstyle/dttouchpad
 programs/dtstyle/dtaccess
+programs/dtstyle/dtappfind
+programs/dtwm/dtswitch
+programs/dtwm/dtwm.db
 programs/dtsession/dttouch
 programs/dtterm/DtTermFallBackResources.c
 programs/dtterm/DtTermFallBackResources.c.src
@@ -2329,6 +2332,7 @@ contrib/rc/netbsd/dtlogin
 contrib/rc/openbsd/cmsd
 contrib/rc/openbsd/dtlogin
 contrib/rc/systemd/dtlogin.service
+contrib/rc/systemd/dtcmsd.service
 contrib/xinetd/cmsd
 contrib/xinetd/ttdbserver
 
