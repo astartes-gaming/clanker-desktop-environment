@@ -30,6 +30,7 @@
 #include "WmWrkspace.h"
 #include "WmIconBox.h"
 #include "WmEvent.h"
+#include "WmMenu.h"
 
 #include <stdlib.h>
 
@@ -269,6 +270,19 @@ PanelOnlyDesktopEvent(XEvent *event)
 {
     if (!desktopWin || event->xany.window != desktopWin)
         return False;
+    if (event->type == ButtonPress && wmGD.menuActive) {
+        /*
+         * A menu is posted.  Its pointer grab sends clicks on dtwm's own
+         * windows (this one) here instead of to the menu, so the menu
+         * would never see the click outside it: close it, as a click
+         * outside a menu does, and use up the click.
+         */
+        UnpostMenu (wmGD.menuActive);
+        CloseOpenSubpanels ();
+        return True;
+    }
+    if (event->type == ButtonPress)
+        CloseOpenSubpanels ();
     if (event->type == ButtonPress || event->type == ButtonRelease) {
         event->xbutton.window = ACTIVE_ROOT;
         event->xbutton.subwindow = None;

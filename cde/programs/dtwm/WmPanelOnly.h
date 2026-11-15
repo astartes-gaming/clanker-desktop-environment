@@ -16,4 +16,7 @@ extern void PanelOnlyScreenChanged(WmScreenData *pSD);
 extern Boolean PanelOnlyDesktopEvent(XEvent *event);
 extern void PanelOnlyMovePanel(Widget shell, XEvent *event);
 
+/* Close the open (not torn off) Front Panel subpanels; Callback.c. */
+extern void CloseOpenSubpanels (void);
+
 #endif /* _WmPanelOnly_h */
