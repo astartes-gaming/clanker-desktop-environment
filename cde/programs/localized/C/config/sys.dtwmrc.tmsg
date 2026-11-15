@@ -165,8 +165,8 @@ $ *
 \n\
     Shift<Key>Escape		icon|window		f.post_wmenu\n\
     Alt<Key>space		icon|window		f.post_wmenu\n\
-    Alt<Key>Tab			root|icon|window	f.next_key\n\
-    Alt Shift<Key>Tab		root|icon|window	f.prev_key\n\
+    Alt<Key>Tab			root|icon|window	f.exec "dtswitch"\n\
+    Alt Shift<Key>Tab		root|icon|window	f.exec "dtswitch -r"\n\
     Alt<Key>Escape		root|icon|window	f.next_key\n\
     Alt Shift<Key>Escape	root|icon|window	f.prev_key\n\
     Alt<Key>Down		root|icon|window	f.circle_down\n\

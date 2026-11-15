@@ -102,6 +102,10 @@ at the next login.
   to the top to maximize. **Super+Left/Right** tiles, **Super+Up**
   maximizes, **Super+Down** restores. Double-click a title bar to
   maximize.
+- **Switching windows**: hold **Alt** and press **Tab** to see the open
+  windows; each Tab moves down (Shift+Tab up), releasing Alt switches,
+  Escape cancels. A quick Alt+Tab goes back to the previous window.
+  (With xfwm4, xfwm4's own switcher does this.)
 - **Window menu**: the button at the left of each title bar (or
   **Alt+Space**): maximize, minimize, move, resize, always on top, move
   to another workspace, close.

@@ -44,6 +44,7 @@
  * include extern functions
  */
 #include "WmWinList.h"
+#include "WmEwmh.h"
 #include "WmCEvent.h"
 #include "WmEvent.h"
 #include "WmFunction.h"
@@ -310,6 +311,7 @@ void AddEntryToList (WmWorkspaceData *pWS, ClientListEntry *pEntry, Boolean onTo
 	}
     }
 
+    UpdateNetClientList (pWS->pSD);
 } /* END OF FUNCTION AddEntryToList */
 
 
@@ -350,6 +352,7 @@ void MoveEntryInList (WmWorkspaceData *pWS, ClientListEntry *pEntry, Boolean onT
     DeleteEntryFromList (pWS, pEntry);
     AddEntryToList (pWS, pEntry, onTop, pStackEntry);
 
+    UpdateNetClientList (pWS->pSD);
 } /* END OF FUNCTION MoveEntryInList */
 
 
@@ -398,6 +401,7 @@ void DeleteEntryFromList (WmWorkspaceData *pWS, ClientListEntry *pListEntry)
 	pWS->pSD->lastClient = pListEntry->prevSibling;
     }
 
+    UpdateNetClientList (pWS->pSD);
 } /* END OF FUNCTION DeleteEntryFromList */
 
 
