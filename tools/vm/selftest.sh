@@ -487,6 +487,8 @@ fi
 # The busy light, above Exit, opens a task manager.
 fp=`x xdotool search --classname FrontPanel 2>/dev/null | while read w; do
     x xprop -id $w _NET_WM_WINDOW_TYPE | grep -q DOCK && echo $w; done | head -1`
+# under plain dtwm the panel isn't a DOCK window: take the shell itself
+[ -z "$fp" ] && fp=`x xdotool search --classname FrontPanel 2>/dev/null | head -1`
 set -- `x xwininfo -id ${fp:-0} 2>/dev/null | awk '/Absolute upper-left [XY]/ {print $4}'`
 if [ -n "$2" ]; then
     x xdotool mousemove $(($1 + 649)) $(($2 + 15)) click 1; sleep 6
