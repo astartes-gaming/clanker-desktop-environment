@@ -12,7 +12,7 @@ endif
 bin_SCRIPTS = dtsession_res
 
 # Laptop keys and lock-before-sleep (see Xsession.d/0070.dtmodern)
-dist_bin_SCRIPTS = dthwkeys dtscreenshot dtsleeplock dtcompositor dtpower dtaltwm dtwayland \
+dist_bin_SCRIPTS = dthwkeys dtmixer dtscreenshot dtsleeplock dtcompositor dtpower dtaltwm dtwayland \
 		   dtxfwmtheme dttaskmgr dtkeyboard dtmodernapp dtxsettings
 
 # xfwm4 defaults for CDE sessions (Xsession.d/0070.dtmodern)
