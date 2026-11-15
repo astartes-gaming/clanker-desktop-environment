@@ -24,10 +24,14 @@ see the [README](../README.md).
   ends the session.
 - **Workspaces**: four desktops (One to Four), switched with the
   buttons in the middle of the Front Panel.
-- **Finding an application**: Workspace menu > **Applications...**, or
-  the Applications drawer's **Find Application**. Type part of a name
-  (or what it does: "browser", "music"), use Up and Down, and press
-  Enter.
+- **Finding an application**: Workspace menu > **Applications...**,
+  **Alt+F2**, or the Applications drawer's **Find Application**. Type
+  part of a name (or what it does: "browser", "music"), use Up and
+  Down, and press Enter. Text that matches no application runs as a
+  command.
+- **Screenshots**: **Print** saves the whole screen, **Alt+Print** the
+  active window, as a PNG in your Pictures folder (with scrot, maim,
+  ImageMagick or xwd, whichever is installed).
 - **Workspace menu**: right-click the desktop for applications, Lock
   Screen, Suspend, Restart and Shut Down.
 - **Settings**: everything you can change (it was called Style Manager in
