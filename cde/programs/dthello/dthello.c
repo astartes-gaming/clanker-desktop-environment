@@ -82,6 +82,7 @@
 
 #include <Dt/EnvControlP.h>
 #include "dthello.h"
+#include "hello_modern.h"
 
 #ifndef NO_MESSAGE_CATALOG
 # define GETMESSAGE(set, number, string)    GetMessage(set, number, string)
@@ -153,6 +154,8 @@ int            sizeFontArg;
 char          *stringArg;           /* string argument */
 int            sizeStringArg;
 char          *bgArg;               /* background argument */
+static Boolean bgArgGiven, fgArgGiven; /* colors chosen by the caller */
+int            greetingLines;       /* lines of the default greeting */
 int            sizeBgArg;
 char          *fgArg;               /* foreground argument */
 int            sizeFgArg;
@@ -423,6 +426,8 @@ main (int argc, char **argv)
     /*
      * Set default colors if not specified on command line.
      */
+    bgArgGiven = (bgArg != NULL);
+    fgArgGiven = (fgArg != NULL);
     if ((XDefaultDepth(dpy, XDefaultScreen(dpy)) <= 4) ||
 	(pdv->class == StaticGray) ||
 	(pdv->class == GrayScale))
@@ -504,6 +509,8 @@ main (int argc, char **argv)
      * and place into message buffer.
      */
     SeparateTextLines ((unsigned char *)stringArg);
+    /* the default greeting: the true-color splash says it in its panel */
+    greetingLines = (stringArg == default_string) ? numLines : 0;
 
 #ifdef BLOCK_CENTER_FILES
     centerLines = numLines;
@@ -591,8 +598,18 @@ main (int argc, char **argv)
      * message.
      */
 
+    /*
+     * True color: the Motif-look splash (hello_modern.c), unless colors
+     * were given on the command line.
+     */
+    if (!bgArgGiven && !fgArgGiven)
+	(void) ModernSplashInit (appcontext,
+	    (char *) GETMESSAGE (4, 20, "Clanker Desktop Environment"),
+	    (char *) GETMESSAGE (4, 21, "Starting the desktop..."));
+
     welcome = XCreateSimpleWindow (dpy, DefaultRootWindow (dpy), 0, 0,
-	displayWidth, displayHeight, 0, bg, bg);
+	displayWidth, displayHeight, 0, bg,
+	ModernSplashOn() ? ModernSplashBackground() : bg);
 
     mask = CWOverrideRedirect | CWEventMask | CWCursor;
 
@@ -639,8 +656,16 @@ main (int argc, char **argv)
 	    gcv.background = bg;
 	    gc = XCreateGC(dpy, welcome, (GCForeground | GCBackground), &gcv);
 	    XClearWindow(dpy, welcome);
-	    DrawBox();
-	    PaintText();
+	    if (ModernSplashOn())
+	    {
+		ModernSplashPaint();
+		ModernSplashStart();
+	    }
+	    else
+	    {
+		DrawBox();
+		PaintText();
+	    }
 	    XFlush(dpy);
 	    Done = False;
 	}
@@ -672,6 +697,11 @@ main (int argc, char **argv)
 	     */
 	    alarm(0);
 	    break;
+	}
+	else if (event.type == Expose && event.xexpose.window == welcome &&
+		 event.xexpose.count == 0 && ModernSplashOn())
+	{
+	    ModernSplashPaint();
 	}
 	else
 	{

@@ -12,7 +12,7 @@ if LINUX
 dthello_LDADD += $(TIRPCLIB)
 endif
 
-dthello_SOURCES = dthello.c
+dthello_SOURCES = dthello.c hello_modern.c
 
 CPP_TARGETS = Dthello
 BUILT_SOURCES = $(CPP_TARGETS)
