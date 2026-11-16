@@ -277,5 +277,11 @@ Deleting one of these returns that part of the desktop to its defaults
   `systemctl enable --now /usr/dt/config/systemd/dtcmsd.service`.
   It only answers this computer; add `-n` to its `ExecStart` line to
   share calendars over the network.
+- **Two Wi-Fi icons, one floating; "an authentication agent already
+  exists"**: older versions saved tray applets and agents in the
+  session and started them a second time at login. Now programs that
+  start at login anyway (autostart entries, the window manager) are
+  neither saved nor restored, so this clears up by itself at the next
+  login.
 - **Return to plain CDE**: put `DT_WINDOW_MANAGER=dtwm` and the
   `DT_NO_...` variables you want in `~/.dtprofile`.
