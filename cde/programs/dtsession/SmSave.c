@@ -1004,6 +1004,14 @@ PrintStartupInfo(
   if (xsmpClient)
      return;
 
+  /*
+   * Programs that start at login anyway (the window manager, XDG
+   * autostart applets and agents, helpers other programs start) are
+   * not saved: restoring them too started them twice.
+   */
+  if (ProxyStartsElsewhere (wargv))
+     return;
+
 #ifdef _SUN_OS /* pull out quotes from OpenWindow tools commands */
   if (wargc == 1) {
      ptr = wargv[0];
