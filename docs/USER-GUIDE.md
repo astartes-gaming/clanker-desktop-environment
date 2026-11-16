@@ -40,6 +40,14 @@ see the [README](../README.md).
   **Mail**, **Help**: CDE's own applications, or Xfce's if you choose
   (see [Using Xfce applications](#using-xfce-applications)).
 
+## Starting up
+
+While the desktop starts, a splash screen shows the CDE logo, the
+desktop's name and a moving bar on a night-sky background, with the
+copyright notice below; it disappears when the window manager takes
+over. Displays with 256 colors or fewer, and `DT_HELLO_CLASSIC=1` in
+`~/.dtprofile`, keep the classic blue screen.
+
 ## The Front Panel
 
 | Part | What it does |

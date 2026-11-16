@@ -79,6 +79,10 @@ $                     (2) it is not available on this server
 9 %1$s: can't set foreground to %2$s, using %3$s.\n
 10 %s: Insufficient memory (SeparateTextLines)\n
 
+$ The startup splash (true-color displays)
+20 Clanker Desktop Environment
+21 Starting the desktop...
+
 $set 99
 $    DO NOT TRANSLATE THESE MESSAGES
 $    DO NOT CHANGE THESE MESSAGES
