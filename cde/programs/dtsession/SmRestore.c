@@ -70,6 +70,8 @@
 #include <netdb.h>
 #include <errno.h>
 #include <ctype.h>
+#include <dirent.h>
+#include <strings.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/Xutil.h>
@@ -264,6 +266,7 @@ static Boolean  localWmLaunched = False;
 static Boolean  otherWm = False;
 static Boolean  otherWmReady;
 static XtIntervalId otherWmPoll;
+static Boolean  ProxyStartsElsewhere (char **command);
 
 /* 
  *     ^^^^^  ^^^^^  ^^^^^  ^^^^^  ^^^^^  ^^^^^  
@@ -4497,7 +4500,8 @@ StartXSMPSession (
 			continue;
 		}
 
-		(void) StartProxyClient (pProxyRec);
+		if (!ProxyStartsElsewhere (pProxyRec->command))
+			(void) StartProxyClient (pProxyRec);
 
 		FreeProxyClientDBRec (pProxyRec);
 	}
@@ -4507,6 +4511,184 @@ StartXSMPSession (
 	return (True);
 }
 
+
+
+/*
+ * Saved sessions can list programs that start at login anyway: the
+ * window manager, and the applications of the XDG autostart entries
+ * that Xsession.d/0070.dtmodern runs (tray applets, polkit agents,
+ * input methods).  Restoring them too started them twice: a second
+ * Wi-Fi icon that found the tray taken and floated on the desktop,
+ * and "an authentication agent already exists" from polkit.
+ */
+static const char *
+ProgName (const char *cmd)
+{
+	const char *b = strrchr (cmd, '/');
+
+	return b ? b + 1 : cmd;
+}
+
+/* The first word of a .desktop Exec= value, as a program name;
+ * "env VAR=x prog" and "sh -c 'prog ...'" are looked through. */
+static Boolean
+ExecMatches (char *exec, const char *prog)
+{
+	char *words[8];
+	int   n = 0, i = 0;
+	char *t;
+
+	for (t = strtok (exec, " \t'\""); t && n < 8; t = strtok (NULL, " \t'\""))
+		words[n++] = t;
+	if (n > 0 && strcmp (ProgName (words[0]), "env") == 0) {
+		for (i = 1; i < n && (strchr (words[i], '=') || words[i][0] == '-'); i++)
+			;
+	} else if (n > 2 && (strcmp (ProgName (words[0]), "sh") == 0 ||
+			     strcmp (ProgName (words[0]), "bash") == 0) &&
+		   strcmp (words[1], "-c") == 0) {
+		i = 2;
+	}
+	return i < n && strcmp (ProgName (words[i]), prog) == 0;
+}
+
+/* Is a desktop list ("A;B;") naming CDE? */
+static Boolean
+ListHasCDE (const char *list)
+{
+	const char *p = list;
+
+	while ((p = strstr (p, "CDE")) != NULL) {
+		if ((p == list || p[-1] == ';') && (p[3] == ';' || p[3] == '\0' ||
+		    p[3] == '\n' || p[3] == '\r'))
+			return True;
+		p += 3;
+	}
+	return False;
+}
+
+/* Does an autostart entry that runs in CDE start prog? */
+static Boolean
+AutostartRuns (const char *dir, const char *prog, char *seen, size_t seenLen)
+{
+	char  path[MAXPATHSM + 64];
+	char  line[1024];
+	char  exec[1024];
+	char  name[300];
+	FILE *f;
+	DIR  *d;
+	struct dirent *e;
+	Boolean found = False;
+
+	if ((d = opendir (dir)) == NULL)
+		return False;
+	while (!found && (e = readdir (d)) != NULL) {
+		size_t l = strlen (e->d_name);
+		Boolean hidden = False, shown = True, inGroup = False;
+
+		if (l < 9 || strcmp (e->d_name + l - 8, ".desktop") != 0 ||
+		    l > sizeof name - 3)
+			continue;
+		/* a user entry overrides the system one of the same name */
+		snprintf (name, sizeof name, " %s ", e->d_name);
+		if (strstr (seen, name))
+			continue;
+		if (strlen (seen) + strlen (name) < seenLen)
+			strcat (seen, name + 1), strcat (seen, " ");
+		if (snprintf (path, sizeof path, "%s/%s", dir, e->d_name) >=
+		    (int) sizeof path || (f = fopen (path, "r")) == NULL)
+			continue;
+		exec[0] = '\0';
+		while (fgets (line, sizeof line, f)) {
+			if (line[0] == '[') {
+				inGroup = strncmp (line, "[Desktop Entry]", 15) == 0;
+				continue;
+			}
+			if (!inGroup)
+				continue;
+			if (strncmp (line, "Exec=", 5) == 0 && !exec[0])
+				snprintf (exec, sizeof exec, "%s", line + 5);
+			else if (strncasecmp (line, "Hidden=true", 11) == 0)
+				hidden = True;
+			else if (strncmp (line, "OnlyShowIn=", 11) == 0)
+				shown = shown && ListHasCDE (line + 11);
+			else if (strncmp (line, "NotShowIn=", 10) == 0 &&
+				 ListHasCDE (line + 10))
+				shown = False;
+		}
+		fclose (f);
+		exec[strcspn (exec, "\r\n")] = '\0';
+		if (!hidden && shown && exec[0] && ExecMatches (exec, prog))
+			found = True;
+	}
+	closedir (d);
+	return found;
+}
+
+static Boolean
+ProxyStartsElsewhere (char **command)
+{
+	const char *prog;
+	const char *v;
+	char        dir[MAXPATHSM + 1];
+	char        wm[MAXPATHSM + 64];
+	char        seen[8192];
+	char       *t;
+
+	if (command == NULL || command[0] == NULL || command[0][0] == '\0')
+		return False;
+	prog = ProgName (command[0]);
+
+	/* helpers that another program starts (the input method daemon,
+	 * D-Bus activation, blueman-applet) */
+	{
+		static const char *helpers[] = {
+			"ibus-", "fcitx", "xdg-desktop-portal", "blueman-tray",
+			"at-spi", "gvfs", "dbus-", "gnome-keyring", NULL
+		};
+		int i;
+
+		for (i = 0; helpers[i]; i++)
+			if (strncmp (prog, helpers[i], strlen (helpers[i])) == 0)
+				return True;
+	}
+
+	/* the window manager (dtwm, or the one dtaltwm runs) */
+	if (strcmp (prog, "dtwm") == 0 || strcmp (prog, "dtaltwm") == 0)
+		return True;
+	snprintf (wm, sizeof wm, "%s %s",
+		  smGD.wmStartup ? smGD.wmStartup : "",
+		  getenv ("DT_WINDOW_MANAGER") ? getenv ("DT_WINDOW_MANAGER") : "");
+	for (t = strtok (wm, " \t"); t; t = strtok (NULL, " \t"))
+		if (t[0] != '-' && strcmp (ProgName (t), prog) == 0)
+			return True;
+
+	/* XDG autostart: the user's folder first, then the system ones */
+	seen[0] = ' ';
+	seen[1] = '\0';
+	if ((v = getenv ("XDG_CONFIG_HOME")) && *v)
+		snprintf (dir, sizeof dir, "%s/autostart", v);
+	else
+		snprintf (dir, sizeof dir, "%s/.config/autostart",
+			  getenv ("HOME") ? getenv ("HOME") : "");
+	if (AutostartRuns (dir, prog, seen, sizeof seen))
+		return True;
+	v = getenv ("XDG_CONFIG_DIRS");
+	if (!v || !*v)
+		v = "/etc/xdg";
+	while (*v) {
+		size_t l = strcspn (v, ":");
+
+		if (l > 0 && l < sizeof dir - 16) {
+			snprintf (dir, sizeof dir, "%.*s/autostart", (int) l, v);
+			if (AutostartRuns (dir, prog, seen, sizeof seen))
+				return True;
+		}
+		v += l;
+		if (*v == ':')
+			v++;
+	}
+	return False;
+}
 
 Boolean 
 StartXSMPClient (

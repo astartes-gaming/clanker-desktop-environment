@@ -891,7 +891,7 @@ NotifyProxyClients (void)
       /*
        * Free space malloc'd by GetTopLevelWindowInfo
        */
-      if(topListLength > 0)
+      if(topList != NULL)
       {
 	  SM_FREE((char *) topList);
       }
