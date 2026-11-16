@@ -219,14 +219,16 @@ ModernSplashInit(XtAppContext appContext, const char *titleText,
         status = statusText;
     mgc = XCreateGC(dpy, RootWindowOfScreen(scr), 0, NULL);
 
+    /* Helvetica first: CDE's "interface system" aliases are a small
+     * fixed-width face on many systems. */
     titleFont = LoadFont(
-        "-dt-interface system-bold-r-normal-xxl*-*-*-*-*-*-*-*-*,"
         "-*-helvetica-bold-r-normal--*-240-*-*-*-*-*-*,"
+        "-dt-interface system-bold-r-normal-xxl*-*-*-*-*-*-*-*-*,"
         "-*-*-bold-r-normal--*-240-*-*-*-*-*-*,"
         "-*-*-medium-r-normal--*-240-*-*-*-*-*-*,fixed");
     smallFont = LoadFont(
-        "-dt-interface system-medium-r-normal-s*-*-*-*-*-*-*-*-*,"
         "-*-helvetica-medium-r-normal--*-120-*-*-*-*-*-*,"
+        "-dt-interface system-medium-r-normal-s*-*-*-*-*-*-*-*-*,"
         "-*-*-medium-r-normal--*-120-*-*-*-*-*-*,fixed");
     if (!titleFont)
         titleFont = fontset;
@@ -383,6 +385,14 @@ ModernSplashStart(void)
 {
     if (on && barW > 2 * BEVEL + 40)
         XtAppAddTimeOut(app, TICK_MS, Tick, NULL);
+}
+
+/* The window's own background: the top of the sky, so nothing else
+ * flashes before the first paint. */
+unsigned long
+ModernSplashBackground(void)
+{
+    return Pix(SKY_TOP);
 }
 
 Boolean

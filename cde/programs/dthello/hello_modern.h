@@ -13,5 +13,6 @@ Boolean ModernSplashInit(XtAppContext app, const char *title,
 void    ModernSplashPaint(void);	/* draw everything (on Expose) */
 void    ModernSplashStart(void);	/* start the busy bar */
 Boolean ModernSplashOn(void);
+unsigned long ModernSplashBackground(void);	/* pixel for the window */
 
 #endif

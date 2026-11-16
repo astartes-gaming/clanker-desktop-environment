@@ -608,7 +608,8 @@ main (int argc, char **argv)
 	    (char *) GETMESSAGE (4, 21, "Starting the desktop..."));
 
     welcome = XCreateSimpleWindow (dpy, DefaultRootWindow (dpy), 0, 0,
-	displayWidth, displayHeight, 0, bg, bg);
+	displayWidth, displayHeight, 0, bg,
+	ModernSplashOn() ? ModernSplashBackground() : bg);
 
     mask = CWOverrideRedirect | CWEventMask | CWCursor;
 
