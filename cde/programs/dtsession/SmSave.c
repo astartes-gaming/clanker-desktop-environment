@@ -891,7 +891,7 @@ NotifyProxyClients (void)
       /*
        * Free space malloc'd by GetTopLevelWindowInfo
        */
-      if(topList != NULL)
+      if(topListLength > 0)
       {
 	  SM_FREE((char *) topList);
       }
@@ -1002,6 +1002,14 @@ PrintStartupInfo(
    * If the client is an XSMP client, don't save it as a Proxy client.
    */
   if (xsmpClient)
+     return;
+
+  /*
+   * Programs that start at login anyway (the window manager, XDG
+   * autostart applets and agents, helpers other programs start) are
+   * not saved: restoring them too started them twice.
+   */
+  if (ProxyStartsElsewhere (wargv))
      return;
 
 #ifdef _SUN_OS /* pull out quotes from OpenWindow tools commands */

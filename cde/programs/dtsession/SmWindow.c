@@ -393,7 +393,6 @@ GetTopLevelWindows(
     Window *childList, *embeddedList, *tmpList;
     WindowInfo topLevelWindowInfo;
     int i;
-    unsigned int n = 0;
     unsigned long numEmbedded;
 
     /*
@@ -415,52 +414,35 @@ GetTopLevelWindows(
 	numEmbedded = 0;
     }
     
-    *topList = NULL;
-    if (*topListLength + numEmbedded) 
+    if (*topListLength) 
 	*topList=(WindowInfo *) SM_MALLOC(sizeof(WindowInfo)*
 				       (*topListLength + numEmbedded));
-    if (*topList == NULL)
-    {
-	if (*topListLength)
-	    SM_FREE((char *) childList);
-	if (numEmbedded > 0)
-	    SM_FREE((char *) embeddedList);
-	*topListLength = *containedListLength = 0;
-	return(0);
-    }
 
     tmpChild = childList;
     /* scan list */
-    for (i=0, n=0 ; i<*topListLength; ++i, tmpChild++) 
+    for (i=0 ; i<*topListLength; ++i, tmpChild++) 
     {
         topLevelWindowInfo = GetTopLevelWindowInfo(*tmpChild);
         if (!topLevelWindowInfo.wid)
 	{
-	    /*
-	     * No WM_STATE: the window manager never managed it, so it is
-	     * no application window the user has open but a helper
-	     * (a toolkit's hidden leader window, a tray icon, the window
-	     * manager's own windows).  Saving those restarted tray applets
-	     * and agents that start at login anyway, twice.  Without any
-	     * window manager (no WM_STATE atom at all) keep the old way:
-	     * a "don't care" state.
-	     */
-	    if (XaWmState != None)
-		continue;
 	    topLevelWindowInfo.wid = (*tmpChild);
+	    /*
+	     * Assume if you can't find a state that it is "don't care"
+	     * this could be a faulty assumption CHECK IT OUT
+	     */
 	    topLevelWindowInfo.termState = 0;
 	}
-        (*topList)[n++] = topLevelWindowInfo;
+        (*topList)[i] = topLevelWindowInfo;
     }
 
     /*
      * Now add in the extra window id's to check
      */
     tmpList = embeddedList;
-    for(i = 0;i < numEmbedded;i++)
+    for(i = *topListLength;i < (*topListLength + numEmbedded);i++)
     {
-	(*topList)[n + i].wid = *tmpList;tmpList++;
-	(*topList)[n + i].termState = NormalState;
+	(*topList)[i].wid = *tmpList;tmpList++;
+	(*topList)[i].termState = NormalState;
     }
 
     if(numEmbedded > 0)
@@ -472,8 +454,7 @@ GetTopLevelWindows(
     {
 	SM_FREE((char *) childList);
     }
-    *topListLength = n;
-
+   
    *containedListLength = numEmbedded;
     
     return(0);

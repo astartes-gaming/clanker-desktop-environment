@@ -266,7 +266,6 @@ static Boolean  localWmLaunched = False;
 static Boolean  otherWm = False;
 static Boolean  otherWmReady;
 static XtIntervalId otherWmPoll;
-static Boolean  ProxyStartsElsewhere (char **command);
 
 /* 
  *     ^^^^^  ^^^^^  ^^^^^  ^^^^^  ^^^^^  ^^^^^  
@@ -4624,7 +4623,7 @@ AutostartRuns (const char *dir, const char *prog, char *seen, size_t seenLen)
 	return found;
 }
 
-static Boolean
+Boolean
 ProxyStartsElsewhere (char **command)
 {
 	const char *prog;

@@ -102,6 +102,8 @@ extern Boolean StartXSMPClient (
 	XSMPClientDBRecPtr 	pDbRec,
 	char			* databaseName);
 
+/* Started at login anyway (window manager, XDG autostart, helpers). */
+extern Boolean ProxyStartsElsewhere (char **command);
 extern Boolean StartProxyClient (
 	ProxyClientDBRecPtr 	pDbRec);
 
