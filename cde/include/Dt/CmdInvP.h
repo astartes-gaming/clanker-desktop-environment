@@ -126,7 +126,7 @@ typedef struct {
  * Defaults for the Resources.
  */
 #define DtWAIT_TIME_DEFAULT		3	/* In seconds. */
-#define DtTERMINAL_DEFAULT		"dtterm"
+#define DtTERMINAL_DEFAULT		"dtterminal"	/* kitty, Ghostty or dtterm */
 
 #define DtCMD_INV_SUB_PROCESS		CDE_INSTALLATION_TOP "/bin/dtexec"
 

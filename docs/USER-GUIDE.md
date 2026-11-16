@@ -201,6 +201,30 @@ AccessX features) and are applied again at every login.
   them until the application is restarted. `DT_NO_LIVE_PALETTE=1` turns
   this off.
 
+## The terminal
+
+The Terminal button and every action that opens a terminal run
+`dtterminal`, which picks **kitty**, then **Ghostty**, then the
+classic **dtterm**, whichever is installed (dtterm on machines with
+less than 768 MB of memory, where the others are too heavy; choosing
+one in Settings still uses it). kitty and Ghostty get
+the current CDE palette: the text-area color as background, the
+active-window color for the cursor, selection and current tab, flat
+Motif-style tabs, and the window manager's Motif frame instead of
+their own title bar. The colors follow the palette each time a
+terminal opens (`~/.dt/terminal-theme/`); fonts, keys and other
+settings in your own `kitty.conf` or Ghostty config stay as they are.
+
+- **Choose the terminal:** Settings > Session > *Terminal* (Change
+  cycles through Automatic, kitty, Ghostty and dtterm), or write the
+  name to `~/.dt/terminal`.
+- **Their own colors instead:** `DT_TERMINAL_THEME=no` in
+  `~/.dtprofile`.
+- Old actions that use dtterm-only options (`-C`, `-xrm`, `-sb` …)
+  still open dtterm. If kitty or Ghostty cannot start (no OpenGL, as
+  on very old graphics), dtterm opens instead.
+- Install: `apt install kitty` (Ghostty comes from its own packages).
+
 ## Using Xfce applications
 
 Settings > Session > **Use Xfce applications when installed** makes the

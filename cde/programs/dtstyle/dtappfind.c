@@ -323,8 +323,12 @@ Launch(int pos)
         if (XtDisplay(top))
             close(ConnectionNumber(XtDisplay(top)));
         if (a->terminal)
+        {
+            execl("/usr/dt/bin/dtterminal", "dtterminal", "-e", "/bin/sh",
+                  "-c", a->exec, (char *) NULL);
             execl("/usr/dt/bin/dtterm", "dtterm", "-e", "/bin/sh", "-c",
                   a->exec, (char *) NULL);
+        }
         execl("/bin/sh", "sh", "-c", a->exec, (char *) NULL);
         _exit(127);
     }

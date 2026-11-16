@@ -1,0 +1,289 @@
+#!/bin/sh
+#####################################################################
+##  dtterminal - the desktop's terminal: kitty or Ghostty dressed in
+##  the CDE palette (Motif colors, the window manager's Motif frame,
+##  flat Motif-style tabs), or dtterm.
+##
+##  Usage: dtterminal [dtterm options] [-e command [args...]]
+##
+##  Which terminal: $DT_TERMINAL, else the first word of
+##  ~/.dt/terminal (Settings > Terminal writes it), else "auto":
+##  kitty, then ghostty, then dtterm, whichever is installed (dtterm
+##  on machines with less than 768 MB of memory).
+##  dtterm and xterm can be chosen too.
+##
+##  The dtterm options that kitty and Ghostty understand are passed
+##  on (-title/-T, -name, -e, -ls); -geometry, -map and the color
+##  and font options are dropped.  Any other dtterm option (-C, -xrm,
+##  -sb ...) runs dtterm as before, so old actions keep working.
+##
+##  The colors are written on each start to ~/.dt/terminal-theme/
+##  from the session's palette and loaded after the terminal's own
+##  configuration (colors only: fonts, keys and the rest stay
+##  yours).  DT_TERMINAL_THEME=no leaves the terminal's own look.
+##  If kitty or Ghostty cannot start (no OpenGL), dtterm runs instead.
+##
+##  Bourne shell only.  Part of the Clanker Desktop Environment
+##  (LGPL-2.0-or-later).
+#####################################################################
+have() { type "$1" >/dev/null 2>&1; }
+
+DTTERM=/usr/dt/bin/dtterm
+[ -x "$DTTERM" ] || DTTERM=dtterm
+
+# --- which terminal -------------------------------------------------
+choice=${DT_TERMINAL:-}
+if [ -z "$choice" ] && [ -r "$HOME/.dt/terminal" ]; then
+    choice=`sed -n '1s/[^A-Za-z0-9_-].*//p' "$HOME/.dt/terminal"`
+fi
+case "$choice" in
+    kitty|ghostty|dtterm|xterm) have "$choice" || [ "$choice" = dtterm ] ||
+                                choice=auto ;;
+    *) choice=auto ;;
+esac
+# kitty and Ghostty need OpenGL and some 150 MB each with software
+# rendering: on small machines (under 768 MB) "auto" keeps dtterm.
+memkb=`sed -n 's/^MemTotal: *\([0-9]*\).*/\1/p' /proc/meminfo 2>/dev/null`
+if [ "$choice" = auto ] && [ -n "$memkb" ] && [ "$memkb" -lt 786432 ]; then
+    choice=dtterm
+fi
+if [ "$choice" = auto ]; then
+    if have kitty; then choice=kitty
+    elif have ghostty; then choice=ghostty
+    else choice=dtterm; fi
+fi
+case "$choice" in
+    dtterm) exec "$DTTERM" "$@" ;;
+    xterm)  exec xterm "$@" ;;
+esac
+
+# --- dtterm options -> kitty / Ghostty ------------------------------
+title= name= login= cmdgiven=
+n=$#
+i=0
+while [ $i -lt $n ]; do
+    i=`expr $i + 1`
+    a=$1
+    shift
+    case "$a" in
+        -title|-T)  title=$1; set -- "$@" "$a" "$1"; shift; i=`expr $i + 1` ;;
+        -name)      name=$1;  set -- "$@" "$a" "$1"; shift; i=`expr $i + 1` ;;
+        -geometry|-fg|-bg|-fn|-fa|-fs|-display)
+                    set -- "$@" "$a" "$1"; shift; i=`expr $i + 1` ;;
+        -map|+map|-ls|+ls|-iconic|-rv|+rv)
+                    [ "$a" = -ls ] && login=yes
+                    set -- "$@" "$a" ;;
+        -e)         cmdgiven=yes; set -- "$@" "$a"
+                    # the rest is the command: keep it as it is
+                    while [ $i -lt $n ]; do
+                        i=`expr $i + 1`; set -- "$@" "$1"; shift
+                    done ;;
+        *)          # an option only dtterm knows: run dtterm
+                    set -- "$@" "$a"
+                    while [ $i -lt $n ]; do
+                        i=`expr $i + 1`; set -- "$@" "$1"; shift
+                    done
+                    exec "$DTTERM" "$@" ;;
+    esac
+done
+# "$@" is the original argument list again; the command follows -e.
+
+# --- the palette ----------------------------------------------------
+short() {
+    echo "$1" | sed -n -e 's/^#\(..\)..\(..\)..\(..\)..$/#\1\2\3/p' \
+                       -e 's/^#\(......\)$/#\1/p'
+}
+pal=
+if [ -n "$DISPLAY" ] && have xprop; then
+    pal=`xprop -root _DT_SM_PREFERENCES 2>/dev/null |
+         grep -o 'ColorPalette:\\t[^\\]*' | sed 's/.*\\t//' | head -1`
+fi
+file=
+for d in $HOME/.dt/palettes /etc/dt/palettes /usr/dt/palettes; do
+    if [ -n "$pal" ] && [ -r "$d/$pal" ]; then file=$d/$pal; break; fi
+done
+[ -z "$file" ] && [ -r /usr/dt/palettes/Default.dp ] &&
+    file=/usr/dt/palettes/Default.dp
+line() { [ -n "$file" ] && short "`sed -n ${1}p "$file"`"; }
+act=`line 1`; ina=`line 2`; text=`line 5`
+# A 4-color palette (low color): its 4th set holds the text areas.
+[ -z "$text" ] && text=`line 4`
+: ${act:=#EDA870} ${ina:=#999999} ${text:=#C6B2A8}
+
+# Black or white text by luminance; a lighter/darker shade (Motif
+# top/bottom shadows).
+fgfor() {
+    echo "$1" | awk '{
+        h = "0123456789abcdef"; s = tolower(substr($1, 2))
+        for (i = 0; i < 3; i++)
+            c[i] = (index(h, substr(s, 2*i+1, 1)) - 1) * 16 + index(h, substr(s, 2*i+2, 1)) - 1
+        print ((c[0]*299 + c[1]*587 + c[2]*114) / 1000 > 128) ? "#000000" : "#ffffff" }'
+}
+shade() {   # color factor
+    echo "$1 $2" | awk '{
+        h = "0123456789abcdef"; s = tolower(substr($1, 2))
+        for (i = 0; i < 3; i++) {
+            v = (index(h, substr(s, 2*i+1, 1)) - 1) * 16 + index(h, substr(s, 2*i+2, 1)) - 1
+            v = ($2 > 1) ? v + (255 - v) * ($2 - 1) : v * $2
+            if (v > 255) v = 255
+            c[i] = int(v) }
+        printf "#%02x%02x%02x\n", c[0], c[1], c[2] }'
+}
+textfg=`fgfor "$text"`; actfg=`fgfor "$act"`; inafg=`fgfor "$ina"`
+inats=`shade "$ina" 1.5`; inabs=`shade "$ina" 0.5`
+
+# The classic X terminal colors (dtterm/xterm), readable on the light
+# CDE backgrounds the way dtterm showed them.
+ansi="#000000 #cd0000 #00a000 #a07000 #0000ee #cd00cd #008b8b #e5e5e5
+#7f7f7f #ff0000 #00cd00 #cdcd00 #5c5cff #ff00ff #00cdcd #ffffff"
+if [ "$textfg" = "#ffffff" ]; then      # dark palette: brighter colors
+    ansi="#000000 #ff5555 #55ff55 #ffff55 #7b7bff #ff55ff #55ffff #e5e5e5
+#7f7f7f #ff7777 #77ff77 #ffff77 #9999ff #ff77ff #77ffff #ffffff"
+fi
+
+tdir=$HOME/.dt/terminal-theme
+theme=yes
+[ "${DT_TERMINAL_THEME:-}" = no ] && theme=
+[ -n "$theme" ] && { mkdir -p "$tdir" 2>/dev/null || theme=; }
+
+# --- kitty ----------------------------------------------------------
+if [ "$choice" = kitty ]; then
+    conf=
+    if [ -n "$theme" ]; then
+        conf=$tdir/kitty.conf
+        {
+            echo "# Generated by dtterminal from the CDE palette; changes are lost."
+            echo "background $text"
+            echo "foreground $textfg"
+            echo "cursor $act"
+            echo "cursor_text_color $actfg"
+            echo "selection_background $act"
+            echo "selection_foreground $actfg"
+            echo "url_color $act"
+            k=0
+            for c in $ansi; do echo "color$k $c"; k=`expr $k + 1`; done
+            # The window manager draws the Motif frame.
+            echo "hide_window_decorations no"
+            echo "linux_display_server x11"
+            # Tabs and splits: flat Motif colors, no rounded powerline.
+            echo "tab_bar_style separator"
+            echo "tab_separator \" | \""
+            echo "tab_bar_background $ina"
+            echo "tab_bar_margin_color $ina"
+            echo "active_tab_background $act"
+            echo "active_tab_foreground $actfg"
+            echo "active_tab_font_style bold"
+            echo "inactive_tab_background $ina"
+            echo "inactive_tab_foreground $inafg"
+            echo "inactive_tab_font_style normal"
+            echo "active_border_color $act"
+            echo "inactive_border_color $inabs"
+            echo "bell_border_color $act"
+            echo "window_padding_width 2"
+            echo "cursor_shape block"
+        } > "$conf.new" 2>/dev/null && mv -f "$conf.new" "$conf" || conf=
+    fi
+    set -- kitty "$@"
+    # kitty's own configuration first, then the CDE colors
+    user=${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf
+    opts=
+    if [ -n "$conf" ]; then
+        [ -r "$user" ] && opts="--config $user"
+        opts="$opts --config $conf"
+    fi
+else
+# --- Ghostty --------------------------------------------------------
+    conf=
+    if [ -n "$theme" ]; then
+        conf=$tdir/ghostty.conf
+        css=$tdir/ghostty.css
+        {
+            echo "# Generated by dtterminal from the CDE palette; changes are lost."
+            echo "background = $text"
+            echo "foreground = $textfg"
+            echo "cursor-color = $act"
+            echo "cursor-text = $actfg"
+            echo "selection-background = $act"
+            echo "selection-foreground = $actfg"
+            k=0
+            for c in $ansi; do echo "palette = $k=$c"; k=`expr $k + 1`; done
+            # The window manager's Motif frame instead of a GTK header bar.
+            echo "window-decoration = server"
+            echo "gtk-titlebar = false"
+            echo "window-theme = ghostty"
+            echo "gtk-wide-tabs = false"
+            echo "split-divider-color = $inabs"
+            echo "window-padding-x = 2"
+            echo "window-padding-y = 2"
+            echo "gtk-custom-css = $css"
+        } > "$conf.new" 2>/dev/null &&
+        {
+            echo "/* Generated by dtterminal from the CDE palette; changes are lost. */"
+            echo "/* Motif look: flat colors, square corners, bevelled edges. */"
+            echo "* { border-radius: 0; }"
+            echo "tabbar, tabbar .box, headerbar, popover > contents, popover.menu > contents,"
+            echo "  .context-menu, scrollbar {"
+            echo "  background: $ina; color: $inafg; box-shadow: none; }"
+            echo "tabbar tab { background: $ina; color: $inafg; border: 2px solid;"
+            echo "  border-color: $inats $inabs $inabs $inats; margin: 1px; }"
+            echo "tabbar tab:selected { background: $act; color: $actfg;"
+            echo "  border-color: $inabs $inats $inats $inabs; }"
+            echo "popover > contents { border: 2px solid; border-color: $inats $inabs $inabs $inats; padding: 2px; }"
+            echo "popover modelbutton:hover, popover modelbutton:focus { background: $ina;"
+            echo "  outline: 2px solid; outline-color: $inats; }"
+            echo "scrollbar slider { background: $ina; border: 2px solid; min-width: 10px;"
+            echo "  border-color: $inats $inabs $inabs $inats; }"
+            echo "scrollbar trough { background: $inabs; }"
+        } > "$css" 2>/dev/null && mv -f "$conf.new" "$conf" || conf=
+    fi
+    set -- ghostty "$@"
+    # X11, under the window manager's frame (not a Wayland compositor
+    # that may be around too)
+    [ -n "$DISPLAY" ] && GDK_BACKEND=x11 && export GDK_BACKEND
+    opts=
+    [ -n "$conf" ] && opts="--config-file=$conf"
+fi
+
+# Rebuild the command line: the terminal, its options, then the
+# translated dtterm options.
+term=$1; shift
+args=
+cmd=no
+quote() { printf "'%s'" "`printf '%s' "$1" | sed "s/'/'\\\\''/g"`"; }
+while [ $# -gt 0 ]; do
+    if [ $cmd = yes ]; then args="$args `quote "$1"`"; shift; continue; fi
+    case "$1" in
+        -title|-T)
+            if [ $term = kitty ]; then args="$args --title `quote "$2"`"
+            else args="$args `quote "--title=$2"`"; fi
+            shift 2 ;;
+        -name)
+            if [ $term = kitty ]; then args="$args --name `quote "$2"`"
+            else args="$args `quote "--x11-instance-name=$2"`"; fi
+            shift 2 ;;
+        -geometry|-fg|-bg|-fn|-fa|-fs|-display) shift 2 ;;
+        -e) cmd=yes
+            [ $term = ghostty ] && args="$args -e"
+            shift ;;
+        *)  shift ;;
+    esac
+done
+if [ $cmd = no ] && [ -n "$login" ]; then
+    sh=${SHELL:-/bin/sh}
+    if [ $term = kitty ]; then args="$args `quote "$sh"` --login"
+    else args="$args -e `quote "$sh"` --login"; fi
+fi
+
+if [ $cmd = yes ]; then
+    eval "exec $term $opts $args"
+fi
+# No command: if the terminal cannot start at all (no OpenGL, a broken
+# setup), fall back to dtterm rather than leaving the user without one.
+start=`date +%s`
+eval "$term $opts $args"
+status=$?
+if [ $status -ne 0 ] && [ `expr \`date +%s\` - $start` -lt 3 ]; then
+    echo "dtterminal: $term failed (status $status); starting dtterm" >&2
+    exec "$DTTERM"
+fi
+exit $status
