@@ -2970,6 +2970,23 @@ TermLabel(int choice)
     case 2: return "Ghostty";
     case 3: return "dtterm";
     }
+    {
+        /* dtterminal keeps dtterm under 768 MB of memory */
+        FILE *fp = fopen("/proc/meminfo", "r");
+        long  kb = 0;
+
+        if (fp)
+        {
+            if (fscanf(fp, "MemTotal: %ld", &kb) != 1)
+                kb = 0;
+            fclose(fp);
+        }
+        if (kb > 0 && kb < 786432)
+        {
+            snprintf(buf, sizeof(buf), "%s (dtterm)", MSG(123, "Automatic"));
+            return buf;
+        }
+    }
     snprintf(buf, sizeof(buf), "%s (%s)", MSG(123, "Automatic"),
              TermInstalled("kitty") ? "kitty" :
              TermInstalled("ghostty") ? "Ghostty" : "dtterm");

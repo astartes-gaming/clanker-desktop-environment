@@ -205,7 +205,9 @@ AccessX features) and are applied again at every login.
 
 The Terminal button and every action that opens a terminal run
 `dtterminal`, which picks **kitty**, then **Ghostty**, then the
-classic **dtterm**, whichever is installed. kitty and Ghostty get
+classic **dtterm**, whichever is installed (dtterm on machines with
+less than 768 MB of memory, where the others are too heavy; choosing
+one in Settings still uses it). kitty and Ghostty get
 the current CDE palette: the text-area color as background, the
 active-window color for the cursor, selection and current tab, flat
 Motif-style tabs, and the window manager's Motif frame instead of

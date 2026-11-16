@@ -8,7 +8,8 @@
 ##
 ##  Which terminal: $DT_TERMINAL, else the first word of
 ##  ~/.dt/terminal (Settings > Terminal writes it), else "auto":
-##  kitty, then ghostty, then dtterm, whichever is installed.
+##  kitty, then ghostty, then dtterm, whichever is installed (dtterm
+##  on machines with less than 768 MB of memory).
 ##  dtterm and xterm can be chosen too.
 ##
 ##  The dtterm options that kitty and Ghostty understand are passed
@@ -40,6 +41,12 @@ case "$choice" in
                                 choice=auto ;;
     *) choice=auto ;;
 esac
+# kitty and Ghostty need OpenGL and some 150 MB each with software
+# rendering: on small machines (under 768 MB) "auto" keeps dtterm.
+memkb=`sed -n 's/^MemTotal: *\([0-9]*\).*/\1/p' /proc/meminfo 2>/dev/null`
+if [ "$choice" = auto ] && [ -n "$memkb" ] && [ "$memkb" -lt 786432 ]; then
+    choice=dtterm
+fi
 if [ "$choice" = auto ]; then
     if have kitty; then choice=kitty
     elif have ghostty; then choice=ghostty
