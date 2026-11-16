@@ -19,7 +19,9 @@ done
 
 # No graphical one: a terminal running htop, or top.
 if have htop; then cmd=htop; else cmd=top; fi
-if have dtterm; then
+if have dtterminal; then
+    exec dtterminal -title "Task Manager" -name dttaskmgr -e $cmd
+elif have dtterm; then
     exec dtterm -title "Task Manager" -name dttaskmgr -e $cmd
 fi
 exec xterm -title "Task Manager" -e $cmd

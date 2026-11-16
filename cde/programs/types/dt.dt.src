@@ -496,7 +496,7 @@ ACTION Dtterm
         ICON            Dtterm
         TYPE            COMMAND
         WINDOW_TYPE     NO_STDIO
-        EXEC_STRING     CDE_INSTALLATION_TOP/bin/dtterm
+        EXEC_STRING     CDE_INSTALLATION_TOP/bin/dtterminal
         DESCRIPTION     %|nls-2031-#The#|
 }
 
@@ -580,7 +580,7 @@ ACTION DttermErrorlog
         EXEC_STRING     /bin/sh -c 'if [ ! -f $HOME/.dt/errorlog ] ; then \
                                       /bin/touch $HOME/.dt/errorlog; \
                                      fi; \
-                        CDE_INSTALLATION_TOP/bin/dtterm -map -title \
+                        CDE_INSTALLATION_TOP/bin/dtterminal -map -title \
 			     "%|nls-2039-#Watch#|" \
                              -e tail -f $HOME/.dt/errorlog'
         DESCRIPTION     %|nls-2040-#The#|

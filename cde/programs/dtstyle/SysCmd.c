@@ -235,7 +235,9 @@ SysCmdTerminal(const char *title, const char *cmd)
     full = XtMalloc(strlen(cmd) + strlen(tail) + 1);
     sprintf(full, "%s%s", cmd, tail);
 
-    if (access(CDE_INSTALLATION_TOP "/bin/dtterm", X_OK) == 0)
+    if (access(CDE_INSTALLATION_TOP "/bin/dtterminal", X_OK) == 0)
+        argv[0] = CDE_INSTALLATION_TOP "/bin/dtterminal";
+    else if (access(CDE_INSTALLATION_TOP "/bin/dtterm", X_OK) == 0)
         argv[0] = CDE_INSTALLATION_TOP "/bin/dtterm";
     else
         argv[0] = "xterm";

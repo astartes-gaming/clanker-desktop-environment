@@ -34,6 +34,7 @@
 #include <dirent.h>
 #include <stdint.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include <X11/XKBlib.h>
 #include <X11/keysym.h>
@@ -2646,6 +2647,7 @@ static const SesOption sesOptions[] = {
 #define SES_NOPTIONS ((int) (sizeof(sesOptions) / sizeof(sesOptions[0])))
 #define SES_WM SES_NOPTIONS	/* the window manager row */
 #define SES_MODERN (SES_NOPTIONS + 1)	/* the Xfce applications row */
+#define SES_TERM (SES_NOPTIONS + 2)	/* the terminal row (dtterminal) */
 
 static Panel *sesPanel = NULL;
 static char  *sesValue[SES_NOPTIONS + 1];	/* current value, or NULL */
@@ -2898,6 +2900,82 @@ ModernSet(Boolean on)
     return True;
 }
 
+/* The terminal dtterminal runs: the first word of ~/.dt/terminal
+ * ("auto" when missing): auto, kitty, ghostty or dtterm. */
+static const char *termChoices[] = { "auto", "kitty", "ghostty", "dtterm" };
+#define TERM_NCHOICES 4
+
+static Boolean
+TermInstalled(const char *prog)
+{
+    char  *path, *p, *dir;
+    char   full[1100];
+    Boolean found = False;
+
+    if ((path = getenv("PATH")) == NULL)
+        return False;
+    p = XtNewString(path);
+    for (dir = strtok(p, ":"); dir && !found; dir = strtok(NULL, ":"))
+    {
+        snprintf(full, sizeof(full), "%s/%s", dir, prog);
+        found = access(full, X_OK) == 0;
+    }
+    XtFree(p);
+    return found;
+}
+
+static int
+TermRead(void)
+{
+    char  path[1100], word[32];
+    FILE *fp;
+    int   i;
+
+    ModernPath(path, sizeof(path), "terminal");
+    if ((fp = fopen(path, "r")) == NULL)
+        return 0;
+    word[0] = '\0';
+    if (fscanf(fp, "%31s", word) != 1)
+        word[0] = '\0';
+    fclose(fp);
+    for (i = 1; i < TERM_NCHOICES; i++)
+        if (strcmp(word, termChoices[i]) == 0)
+            return i;
+    return 0;
+}
+
+static Boolean
+TermWrite(int choice)
+{
+    char  path[1100];
+    FILE *fp;
+
+    ModernPath(path, sizeof(path), "terminal");
+    if (choice == 0)
+        return unlink(path) == 0 || errno == ENOENT;
+    if ((fp = fopen(path, "w")) == NULL)
+        return False;
+    fprintf(fp, "%s\n", termChoices[choice]);
+    return fclose(fp) == 0;
+}
+
+static const char *
+TermLabel(int choice)
+{
+    static char buf[200];
+
+    switch (choice)
+    {
+    case 1: return "kitty";
+    case 2: return "Ghostty";
+    case 3: return "dtterm";
+    }
+    snprintf(buf, sizeof(buf), "%s (%s)", MSG(123, "Automatic"),
+             TermInstalled("kitty") ? "kitty" :
+             TermInstalled("ghostty") ? "Ghostty" : "dtterm");
+    return buf;
+}
+
 static void
 SesRefresh(Panel *p)
 {
@@ -2919,6 +2997,10 @@ SesRefresh(Panel *p)
              MSG(107, "Use Xfce applications when installed (Thunar, "
                       "Mousepad, Terminal; at once)"));
     PanelAddItem(p, label, "modern-apps", "");
+    snprintf(label, sizeof(label), "%s: %s",
+             MSG(124, "Terminal (kitty and Ghostty in the CDE colors)"),
+             TermLabel(TermRead()));
+    PanelAddItem(p, label, "terminal", "");
     PanelBusy(p, False);
     PanelSetStatus(p, MSG(85,
         "Session options in ~/.dtprofile (used at the next login):"));
@@ -2940,6 +3022,24 @@ SesToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
 
     if (row < 0)
         return;
+    if (row == SES_TERM)
+    {
+        /* automatic -> kitty -> ghostty -> dtterm, the installed ones */
+        int c = TermRead(), n;
+
+        for (n = 0; n < TERM_NCHOICES; n++)
+        {
+            c = (c + 1) % TERM_NCHOICES;
+            if (c == 0 || c == 3 || TermInstalled(termChoices[c]))
+                break;
+        }
+        if (!TermWrite(c))
+            ErrDialog(MSG(125, "The terminal could not be changed."),
+                      style.shell);
+        SesRefresh(p);
+        XmListSelectPos(p->list, row + 1, False);
+        return;
+    }
     if (row == SES_MODERN)
     {
         if (!ModernSet(!ModernOn()))
@@ -2979,7 +3079,7 @@ popup_sessionBB(Widget shell)
                                MSG(70, "Settings - Session"), NULL);
         sesPanel->refresh = SesRefresh;
         XtVaSetValues(sesPanel->list,
-                      XmNvisibleItemCount, SES_NOPTIONS + 2, NULL);
+                      XmNvisibleItemCount, SES_NOPTIONS + 3, NULL);
         PanelButton(sesPanel, MSG(87, "Change"), SesToggleCB);
         XtAddCallback(sesPanel->list, XmNdefaultActionCallback, SesToggleCB,
                       (XtPointer) sesPanel);
