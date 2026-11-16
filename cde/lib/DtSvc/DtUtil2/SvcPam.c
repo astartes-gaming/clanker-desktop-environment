@@ -121,7 +121,13 @@ int _DtSvcPamAuthenticate(const char *service_name, const char *user,
      */
     (void) pam_set_item(pamh, PAM_AUTHTOK, NULL);
 
-    return pam_authenticate(pamh, PAM_DISALLOW_NULL_AUTHTOK);
+    /*
+     * Whether an account without a password may log in is the PAM
+     * configuration's choice (pam_unix "nullok"), as with other login
+     * screens: CDE's own /etc/pam.d/dtlogin and dtsession leave it out,
+     * so blank passwords stay refused unless an administrator adds it.
+     */
+    return pam_authenticate(pamh, 0);
 }
 
 /**
