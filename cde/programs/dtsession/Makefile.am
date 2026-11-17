@@ -9,6 +9,13 @@ dttouch_SOURCES = dttouch.c
 dttouch_LDADD = -lXi -lXtst $(XTOOLLIB)
 endif
 
+# The Windows key alone opens the application menu (XInput 2)
+if HAVE_XI2
+bin_PROGRAMS += dtsuperkey
+dtsuperkey_SOURCES = dtsuperkey.c
+dtsuperkey_LDADD = -lXi $(XTOOLLIB)
+endif
+
 bin_SCRIPTS = dtsession_res
 
 # Laptop keys and lock-before-sleep (see Xsession.d/0070.dtmodern)

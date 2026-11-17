@@ -3182,6 +3182,85 @@ InitializeSecondaryControlFields (ElementValue * element_values)
 
 
 
+/*
+ * A freedesktop.org .desktop file: its Name, and its Icon as a file
+ * the panel can show (an absolute path, or the icon theme's 48 or 32
+ * pixel picture, or /usr/share/pixmaps).  False if it is not one.
+ */
+static Boolean
+DesktopFileInfo (const char *file, char **name, char **icon)
+{
+   /* where to look: prefix ("~" is $HOME), the icon name, suffix */
+   static const char *dirs[][2] = {
+      { "/usr/share/pixmaps/", ".xpm" },
+      { "/usr/share/pixmaps/", "_48x48.xpm" },
+      { "/usr/share/pixmaps/", "_32x32.xpm" },
+      { "~/.local/share/icons/hicolor/48x48/apps/", ".png" },
+      { "/usr/share/icons/hicolor/48x48/apps/", ".png" },
+      { "/usr/share/icons/hicolor/32x32/apps/", ".png" },
+      { "/usr/share/pixmaps/", ".png" },
+      { NULL, NULL }
+   };
+   size_t len = strlen (file);
+   FILE  *fp;
+   char   line[1024], iconName[512], path[1600], *v;
+   Boolean in = False;
+   int    i;
+
+   *name = *icon = NULL;
+   if (len < 9 || strcmp (file + len - 8, ".desktop") != 0 ||
+       (fp = fopen (file, "r")) == NULL)
+      return False;
+   iconName[0] = '\0';
+   while (fgets (line, sizeof (line), fp))
+   {
+      line[strcspn (line, "\r\n")] = '\0';
+      if (line[0] == '[')
+      {
+         in = (strcmp (line, "[Desktop Entry]") == 0);
+         continue;
+      }
+      if (!in || (v = strchr (line, '=')) == NULL)
+         continue;
+      *v++ = '\0';
+      if (strcmp (line, "Name") == 0 && *name == NULL && *v)
+         *name = XtNewString (v);
+      else if (strcmp (line, "Icon") == 0)
+         snprintf (iconName, sizeof (iconName), "%s", v);
+   }
+   fclose (fp);
+
+   if (iconName[0] == '/')
+   {
+      if (access (iconName, R_OK) == 0)
+         *icon = XtNewString (iconName);
+   }
+   else if (iconName[0] && strchr (iconName, '/') == NULL)
+   {
+      const char *home = getenv ("HOME");
+
+      for (i = 0; dirs[i][0] && *icon == NULL; i++)
+      {
+         const char *d = dirs[i][0];
+
+         if (d[0] == '~')
+         {
+            if (!home)
+               continue;
+            snprintf (path, sizeof (path), "%s%s%s%s", home, d + 1,
+                      iconName, dirs[i][1]);
+         }
+         else
+            snprintf (path, sizeof (path), "%s%s%s", d, iconName,
+                      dirs[i][1]);
+         if (access (path, R_OK) == 0)
+            *icon = XtNewString (path);
+      }
+   }
+   return True;
+}
+
+
 /************************************************************************
  *
  *  InitializeFileControlFields
@@ -3294,6 +3373,26 @@ InitializeFileControlFields (ElementValue * element_values,
             else
                 file_str++;
             label = XtNewString(file_str);
+         }
+
+         /* An application's .desktop file: its own name and icon. */
+         if (valid_file && file_name != NULL)
+         {
+            char *dname = NULL, *dicon = NULL;
+
+            if (DesktopFileInfo (file_name, &dname, &dicon))
+            {
+               if (dname != NULL)
+               {
+                  XtFree (label);
+                  label = dname;
+               }
+               if (dicon != NULL)
+               {
+                  XtFree (element_values[CONTROL_NORMAL_ICON].string_value);
+                  element_values[CONTROL_NORMAL_ICON].string_value = dicon;
+               }
+            }
          }
 
          if (label != NULL)

@@ -733,6 +733,8 @@ Is this what you want to do?
 
 18 The folder %s is empty.
 19 The folder %s contains no subdirectories.
+$ The Application Manager search box (FileMgr.c)
+20 Search:
 
 
 $set 13

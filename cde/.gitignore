@@ -2340,3 +2340,4 @@ contrib/xinetd/ttdbserver
 /lib/tt/lib/dummy.cxx
 /programs/dthelp/dthelpgen/dthelpgen.dtsh
 /programs/dthelp/dthelpprint/dthelpprint.sh
+programs/dtsession/dtsuperkey

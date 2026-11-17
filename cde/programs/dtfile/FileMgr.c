@@ -202,6 +202,9 @@ int     G_dropx, G_dropy;
 
 static XmFontListEntry FontListDefaultEntry(
                         XmFontList font_list) ;
+static void SearchChangedCB(Widget w, XtPointer client_data,
+                            XtPointer call_data);
+static void SetSearchShown(FileMgrRec *file_mgr_rec, Boolean shown);
 static void Create(
                         Display *display,
                         Widget parent,
@@ -930,6 +933,47 @@ Create(
    status_form = XmCreateForm (mainWidget, "status_form", args, n);
    XtManageChild (status_form);
 
+   /* The Application Manager's search box, above the status line
+    * (managed only in Application Manager windows, see below). */
+   {
+      Widget   lbl;
+      XmString xs;
+
+      n = 0;
+      XtSetArg (args[n], XmNtopAttachment, XmATTACH_FORM);      n++;
+      XtSetArg (args[n], XmNleftAttachment, XmATTACH_FORM);     n++;
+      XtSetArg (args[n], XmNrightAttachment, XmATTACH_FORM);    n++;
+      file_mgr_rec->search_form =
+            XmCreateForm (status_form, "search_form", args, n);
+
+      xs = XmStringCreateLocalized (GETMESSAGE (12, 20, "Search:"));
+      n = 0;
+      XtSetArg (args[n], XmNlabelString, xs);                   n++;
+      XtSetArg (args[n], XmNleftAttachment, XmATTACH_FORM);     n++;
+      XtSetArg (args[n], XmNtopAttachment, XmATTACH_FORM);      n++;
+      XtSetArg (args[n], XmNbottomAttachment, XmATTACH_FORM);   n++;
+      lbl = XmCreateLabelGadget (file_mgr_rec->search_form, "search_label",
+                                 args, n);
+      XtManageChild (lbl);
+      XmStringFree (xs);
+
+      n = 0;
+      XtSetArg (args[n], XmNleftAttachment, XmATTACH_WIDGET);   n++;
+      XtSetArg (args[n], XmNleftWidget, lbl);                   n++;
+      XtSetArg (args[n], XmNleftOffset, 4);                     n++;
+      XtSetArg (args[n], XmNrightAttachment, XmATTACH_FORM);    n++;
+      XtSetArg (args[n], XmNtopAttachment, XmATTACH_FORM);      n++;
+      XtSetArg (args[n], XmNtopOffset, 2);                      n++;
+      XtSetArg (args[n], XmNbottomOffset, 2);                   n++;
+      XtSetArg (args[n], XmNbottomAttachment, XmATTACH_FORM);   n++;
+      file_mgr_rec->search_text =
+            XmCreateTextField (file_mgr_rec->search_form, "search_text",
+                               args, n);
+      XtManageChild (file_mgr_rec->search_text);
+      XtAddCallback (file_mgr_rec->search_text, XmNvalueChangedCallback,
+                     SearchChangedCB, (XtPointer) file_mgr_rec);
+   }
+
    n = 0;
    XtSetArg (args[n], XmNalignment, XmALIGNMENT_BEGINNING);     n++;
    XtSetArg (args[n], XmNtopAttachment, XmATTACH_FORM);         n++;
@@ -1216,6 +1260,7 @@ GetDefaultValues( void )
    file_mgr_data->branch_list = NULL;
 
    file_mgr_data->toolbox = False;
+   file_mgr_data->search = NULL;
    file_mgr_data->dropSite = False;
 
    file_mgr_data->newSize = True;
@@ -1349,6 +1394,7 @@ GetResourceValues(
    file_mgr_data->helpVol = NULL;
    file_mgr_data->restricted_directory = NULL;
    file_mgr_data->toolbox = False;
+   file_mgr_data->search = NULL;
    file_mgr_data->dropSite = False;
    file_mgr_data->tree_preread_level = 1;  /* @@@ make these resources? */
    file_mgr_data->tree_show_level = 1;
@@ -1718,6 +1764,7 @@ SetValues(
 
    XtManageChild(file_mgr_rec->header_frame);
    XtManageChild(file_mgr_rec->directoryBarBtn);
+   SetSearchShown(file_mgr_rec, file_mgr_data->toolbox);
 
 
    if(showFilesystem && !TrashView)
@@ -6399,4 +6446,50 @@ FMInput(
     }
 
     return ;
+}
+
+
+/*
+ * The Application Manager's search box: typing narrows the view to the
+ * applications (and groups holding them) whose names contain the text.
+ */
+static void
+SearchChangedCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+   FileMgrRec  *file_mgr_rec = (FileMgrRec *) client_data;
+   DialogData  *dialog_data;
+   FileMgrData *file_mgr_data;
+   char        *text;
+
+   dialog_data = _DtGetInstanceData ((XtPointer) file_mgr_rec);
+   if (dialog_data == NULL)
+      return;
+   file_mgr_data = (FileMgrData *) dialog_data->data;
+   text = XmTextFieldGetString (w);
+   XtFree (file_mgr_data->search);
+   file_mgr_data->search = (text && *text) ? XtNewString (text) : NULL;
+   XtFree (text);
+   FileMgrRedisplayFiles (file_mgr_rec, file_mgr_data, False);
+}
+
+static void
+SetSearchShown(FileMgrRec *file_mgr_rec, Boolean shown)
+{
+   Arg args[2];
+
+   if (file_mgr_rec->search_form == NULL)
+      return;
+   if (shown)
+   {
+      XtManageChild (file_mgr_rec->search_form);
+      XtSetArg (args[0], XmNtopAttachment, XmATTACH_WIDGET);
+      XtSetArg (args[1], XmNtopWidget, file_mgr_rec->search_form);
+      XtSetValues (file_mgr_rec->status_line, args, 2);
+   }
+   else
+   {
+      XtSetArg (args[0], XmNtopAttachment, XmATTACH_FORM);
+      XtSetValues (file_mgr_rec->status_line, args, 1);
+      XtUnmanageChild (file_mgr_rec->search_form);
+   }
 }

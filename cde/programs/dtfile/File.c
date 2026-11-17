@@ -150,6 +150,8 @@
 #include <locale.h>
 #include <ctype.h>
 #include <fnmatch.h>
+#include <dirent.h>
+#include <strings.h>
 
 #include <Xm/XmP.h>
 #include <Xm/Xm.h>
@@ -878,6 +880,54 @@ OrderFiles(
 
 
 
+/* Does "text" contain "want" (any case)?  For the search box. */
+static Boolean
+SearchMatches(const char *want, const char *text)
+{
+   size_t n = strlen(want);
+
+   if (!text)
+      return False;
+   for (; *text; text++)
+      if (strncasecmp(text, want, n) == 0)
+         return True;
+   return False;
+}
+
+
+/* An Application Manager group (folder) holding an application whose
+ * name or label contains "want". */
+static Boolean
+GroupHasMatch(const char *dir, const char *group, const char *want)
+{
+   char           path[MAXPATHLEN];
+   DIR           *d;
+   struct dirent *e;
+   Boolean        found = False;
+
+   if (!dir || snprintf(path, sizeof(path), "%s/%s", dir, group) >=
+       (int) sizeof(path) || (d = opendir(path)) == NULL)
+      return False;
+   while (!found && (e = readdir(d)) != NULL)
+   {
+      char *label;
+
+      if (e->d_name[0] == '.')
+         continue;
+      if (SearchMatches(want, e->d_name))
+         found = True;
+      else if (DtActionExists(e->d_name) &&
+               (label = DtActionLabel(e->d_name)) != NULL)
+      {
+         found = SearchMatches(want, label);
+         XtFree(label);
+      }
+   }
+   closedir(d);
+   return found;
+}
+
+
 /************************************************************************
  *
  *  FilterFiles
@@ -888,6 +938,8 @@ OrderFiles(
  *      be displayed, or instead, filtered out.
  *
  ************************************************************************/
+
+
 
 void
 FilterFiles(
@@ -1012,6 +1064,26 @@ FilterFiles(
       /* don't show .trashinfo in the trash directory */
       if(trashFileMgrData == file_mgr_data &&
         (strcmp(file_view_data[i]->file_data->file_name, ".trashinfo") == 0))
+      {
+         filterCount++;
+         file_view_data[i]->filtered = True;
+         continue;
+      }
+
+      /* The search box (Application Manager): only names or labels that
+       * contain the text, in any case; ".." stays to go back up. */
+      if (file_mgr_data->search && file_mgr_data->search[0] &&
+          strcmp(file_view_data[i]->file_data->file_name, "..") != 0 &&
+          strcmp(file_view_data[i]->file_data->file_name, ".") != 0 &&
+          !SearchMatches(file_mgr_data->search,
+                         file_view_data[i]->file_data->file_name) &&
+          !SearchMatches(file_mgr_data->search, file_view_data[i]->label) &&
+          !SearchMatches(file_mgr_data->search,
+                         file_view_data[i]->file_data->action_name) &&
+          !(file_mgr_data->toolbox && file_view_data[i]->file_data->is_subdir &&
+            GroupHasMatch(file_mgr_data->current_directory,
+                          file_view_data[i]->file_data->file_name,
+                          file_mgr_data->search)))
       {
          filterCount++;
          file_view_data[i]->filtered = True;

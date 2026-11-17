@@ -6,8 +6,19 @@
  * name, generic name ("Web Browser") or keywords; Up and Down move in
  * it; Enter or a double-click starts the selected application (the
  * first one if none is selected) and closes the window; Escape closes
- * it.  Text that matches no application runs as a command (Alt+F2).  Started from the Workspace menu (Applications...) and the Front
- * Panel's Applications drawer.
+ * it.  Text that matches no application runs as a command (Alt+F2).
+ * Started from the Workspace menu (Applications...), the Front Panel's
+ * Applications drawer, and the Windows key (dtsuperkey).
+ *
+ * CDE's own applications (the Application Manager's groups) are listed
+ * too, by their action labels.  Any row can be dragged onto a Front
+ * Panel drawer's "Install Icon" to add it there.
+ *
+ *   dtappfind -menu         the Windows-key menu: just above the Front
+ *                           Panel, closed by clicking elsewhere or by
+ *                           the Windows key again
+ *   dtappfind -launch FILE  start the application of a .desktop file
+ *                           (what a drawer icon made from one runs)
  *
  * Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
  */
@@ -32,11 +43,19 @@
 #include <Xm/RowColumn.h>
 #include <Xm/PushB.h>
 #include <Xm/Protocols.h>
+#include <Xm/AtomMgr.h>
+#include <X11/Xatom.h>
+#include <Dt/Dt.h>
+#include <Dt/Action.h>
+#include <Dt/Dnd.h>
 
 #define MAX_APPS 2000
+#define CDE_INSTALLATION_TOP_BIN "/usr/dt/bin"
 
 typedef struct {
     char *name, *generic, *keywords, *exec;
+    char *path;			/* the .desktop file, or the App Manager file */
+    char *action;		/* a CDE action (exec unused), or NULL */
     Boolean terminal;
     unsigned cats;		/* bit i: in categories[i] */
 } App;
@@ -211,8 +230,98 @@ ReadDir(const char *dir)
         apps[nApps].keywords = XtNewString(keywords);
         apps[nApps].cats = CategoryBits(cats);
         apps[nApps].exec = ExecToCommand(exec);
+        apps[nApps].path = XtNewString(path);
+        apps[nApps].action = NULL;
         apps[nApps].terminal = term;
         nApps++;
+    }
+    closedir(d);
+}
+
+/* CDE's applications: the Application Manager's groups (folders of
+ * files named after actions), listed by the actions' labels. */
+static unsigned
+GroupBits(const char *g)
+{
+    if (strstr(g, "Admin") || strstr(g, "System"))
+        return 1u << 10;
+    if (strstr(g, "Media"))
+        return 1u << 7;
+    if (strstr(g, "Game"))
+        return 1u << 4;
+    if (strstr(g, "Tool") || strstr(g, "Desktop_Apps"))
+        return 1u << 1;
+    return 0;
+}
+
+static void
+ReadGroup(const char *gdir, const char *group)
+{
+    DIR    *d = opendir(gdir);
+    struct dirent *e;
+    char    path[4600], generic[256], *label;
+    int     i;
+
+    if (!d)
+        return;
+    while ((e = readdir(d)) != NULL && nApps < MAX_APPS)
+    {
+        if (e->d_name[0] == '.' || !DtActionExists(e->d_name))
+            continue;
+        label = DtActionLabel(e->d_name);
+        if (!label || !*label)
+        {
+            XtFree(label);
+            label = XtNewString(e->d_name);
+        }
+        for (i = 0; label[i]; i++)	/* "Acrobat_Reader" */
+            if (label[i] == '_')
+                label[i] = ' ';
+        for (i = 0; i < nApps; i++)	/* an XDG entry of the name wins */
+            if (strcasecmp(apps[i].name, label) == 0)
+                break;
+        if (i < nApps)
+        {
+            XtFree(label);
+            continue;
+        }
+        snprintf(path, sizeof(path), "%s/%s", gdir, e->d_name);
+        snprintf(generic, sizeof(generic), "%s", group);
+        for (i = 0; generic[i]; i++)
+            if (generic[i] == '_')
+                generic[i] = ' ';
+        apps[nApps].name = label;
+        apps[nApps].generic = XtNewString(generic);
+        apps[nApps].keywords = XtNewString(e->d_name);
+        apps[nApps].exec = XtNewString("");
+        apps[nApps].path = XtNewString(path);
+        apps[nApps].action = XtNewString(e->d_name);
+        apps[nApps].terminal = False;
+        apps[nApps].cats = GroupBits(group);
+        nApps++;
+    }
+    closedir(d);
+}
+
+static void
+ReadAppManager(void)
+{
+    char   dir[4200], gdir[4400];
+    const char *s = getenv("DTUSERSESSION");
+    DIR   *d;
+    struct dirent *e;
+
+    if (!s || !*s || strchr(s, '/'))
+        return;
+    snprintf(dir, sizeof(dir), CDE_LOGFILES_TOP "/appconfig/appmanager/%s", s);
+    if ((d = opendir(dir)) == NULL)
+        return;
+    while ((e = readdir(d)) != NULL)
+    {
+        if (e->d_name[0] == '.')
+            continue;
+        snprintf(gdir, sizeof(gdir), "%s/%s", dir, e->d_name);
+        ReadGroup(gdir, e->d_name);
     }
     closedir(d);
 }
@@ -244,6 +353,7 @@ ReadApps(void)
         ReadDir(dir);
     }
     XtFree(dirs);
+    ReadAppManager();
     qsort(apps, nApps, sizeof(App), NameCmp);
     shown = (int *) XtMalloc((nApps ? nApps : 1) * sizeof(int));
 }
@@ -322,6 +432,13 @@ Launch(int pos)
         setsid();
         if (XtDisplay(top))
             close(ConnectionNumber(XtDisplay(top)));
+        if (a->action)
+        {
+            execl(CDE_INSTALLATION_TOP_BIN "/dtaction", "dtaction", a->action,
+                  (char *) NULL);
+            execlp("dtaction", "dtaction", a->action, (char *) NULL);
+            _exit(127);
+        }
         if (a->terminal)
         {
             execl("/usr/dt/bin/dtterminal", "dtterminal", "-e", "/bin/sh",
@@ -447,6 +564,166 @@ CloseCB(Widget w, XtPointer client, XtPointer call)
     exit(0);
 }
 
+/* -launch FILE: start the application of a .desktop file. */
+static int
+LaunchFile(const char *file)
+{
+    FILE   *fp = fopen(file, "r");
+    char    line[4096], exec[4096], *v, *cmd;
+    Boolean in = False, term = False;
+
+    if (!fp)
+        return 1;
+    exec[0] = '\0';
+    while (fgets(line, sizeof(line), fp))
+    {
+        line[strcspn(line, "\r\n")] = '\0';
+        if (line[0] == '[')
+        {
+            in = (strcmp(line, "[Desktop Entry]") == 0);
+            continue;
+        }
+        if (!in || !(v = strchr(line, '=')))
+            continue;
+        *v++ = '\0';
+        if (strcmp(line, "Exec") == 0)
+            snprintf(exec, sizeof(exec), "%s", v);
+        else if (strcmp(line, "Terminal") == 0)
+            term = (strcmp(v, "true") == 0);
+    }
+    fclose(fp);
+    if (!exec[0])
+        return 1;
+    cmd = ExecToCommand(exec);
+    signal(SIGCHLD, SIG_IGN);
+    if (fork() == 0)
+    {
+        setsid();
+        if (term)
+        {
+            execl(CDE_INSTALLATION_TOP_BIN "/dtterminal", "dtterminal", "-e",
+                  "/bin/sh", "-c", cmd, (char *) NULL);
+            execl(CDE_INSTALLATION_TOP_BIN "/dtterm", "dtterm", "-e",
+                  "/bin/sh", "-c", cmd, (char *) NULL);
+        }
+        execl("/bin/sh", "sh", "-c", cmd, (char *) NULL);
+        _exit(127);
+    }
+    return 0;
+}
+
+/* --- one window: the Windows key opens it, and closes it again --- */
+
+static Atom selAtom, cmdAtom;
+
+static void
+CommandEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
+{
+    Atom           type;
+    int            fmt;
+    unsigned long  n, after;
+    unsigned char *data = NULL;
+
+    if (ev->type != PropertyNotify || ev->xproperty.atom != cmdAtom ||
+        ev->xproperty.state != PropertyNewValue)
+        return;
+    if (XGetWindowProperty(XtDisplay(w), XtWindow(w), cmdAtom, 0, 16, True,
+                           XA_STRING, &type, &fmt, &n, &after, &data)
+        == Success && data)
+    {
+        if (strcmp((char *) data, "close") == 0)
+            exit(0);
+        /* "raise": come to the front, search field ready */
+        XMapRaised(XtDisplay(w), XtWindow(w));
+        XmProcessTraversal(field, XmTRAVERSE_CURRENT);
+        XFree(data);
+    }
+}
+
+/* Another one runs: ask it to close (the menu) or come forward. */
+static Boolean
+HandOff(Display *dpy, Boolean menu)
+{
+    Window other = XGetSelectionOwner(dpy, selAtom);
+    const char *what = menu ? "close" : "raise";
+
+    if (other == None)
+        return False;
+    XChangeProperty(dpy, other, cmdAtom, XA_STRING, 8, PropModeReplace,
+                    (unsigned char *) what, strlen(what) + 1);
+    XFlush(dpy);
+    return True;
+}
+
+/* The menu closes when another window gets the focus (not while its
+ * own category menu is pulled down: that is a grab). */
+static void
+FocusEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
+{
+    if (ev->type == FocusOut && ev->xfocus.mode == NotifyNormal &&
+        ev->xfocus.detail != NotifyInferior &&
+        ev->xfocus.detail != NotifyPointer)
+        exit(0);
+}
+
+/* --- dragging a row onto a Front Panel drawer --- */
+
+static int     dragRow;			/* 1-based row being dragged */
+static int     pressX, pressY;
+static Boolean pressed;
+
+static void
+ConvertCB(Widget w, XtPointer client, XtPointer call)
+{
+    DtDndConvertCallbackStruct *c = (DtDndConvertCallbackStruct *) call;
+
+    if (c->reason == DtCR_DND_CONVERT_DATA && dragRow >= 1 &&
+        dragRow <= nShown)
+    {
+        c->dragData->data.files[0] =
+            XtNewString(apps[shown[dragRow - 1]].path);
+        c->status = DtDND_SUCCESS;
+    }
+    else if (c->reason == DtCR_DND_CONVERT_DATA)
+        c->status = DtDND_FAILURE;
+}
+
+static void
+DragFinishCB(Widget w, XtPointer client, XtPointer call)
+{
+    DtDndDragFinishCallbackStruct *f = (DtDndDragFinishCallbackStruct *) call;
+
+    if (f->dragData && f->dragData->numItems > 0 && f->dragData->data.files)
+        XtFree(f->dragData->data.files[0]);
+}
+
+static void
+DragEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
+{
+    static XtCallbackRec convertRec[] = { { ConvertCB, NULL }, { NULL, NULL } };
+    static XtCallbackRec finishRec[] = { { DragFinishCB, NULL }, { NULL, NULL } };
+
+    if (ev->type == ButtonPress && ev->xbutton.button == Button1)
+    {
+        pressed = True;
+        pressX = ev->xbutton.x;
+        pressY = ev->xbutton.y;
+    }
+    else if (ev->type == ButtonRelease)
+        pressed = False;
+    else if (ev->type == MotionNotify && pressed &&
+             (abs(ev->xmotion.x - pressX) > 8 ||
+              abs(ev->xmotion.y - pressY) > 8))
+    {
+        pressed = False;
+        dragRow = XmListYToPos(list, pressY);
+        if (dragRow < 1 || dragRow > nShown)
+            return;
+        (void) DtDndVaDragStart(list, ev, DtDND_FILENAME_TRANSFER, 1,
+                                XmDROP_COPY, convertRec, finishRec, NULL);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -457,10 +734,32 @@ main(int argc, char **argv)
     Atom    del;
     XmString s;
 
+    Boolean menu = False;
+
+    if (argc == 3 && strcmp(argv[1], "-launch") == 0)
+        return LaunchFile(argv[2]);
+    if (argc == 2 && strcmp(argv[1], "-menu") == 0)
+    {
+        menu = True;
+        argc = 1;
+    }
+
     XtSetLanguageProc(NULL, NULL, NULL);
     top = XtVaAppInitialize(&app, "Dtappfind", NULL, 0, &argc, argv, NULL,
                             XmNtitle, "Applications",
                             XmNiconName, "Applications", NULL);
+    {
+        char name[64];
+
+        snprintf(name, sizeof(name), "_CLANKER_APPFIND_S%d",
+                 DefaultScreen(XtDisplay(top)));
+        selAtom = XInternAtom(XtDisplay(top), name, False);
+        cmdAtom = XInternAtom(XtDisplay(top), "_CLANKER_APPFIND_CMD", False);
+        if (HandOff(XtDisplay(top), menu))
+            return 0;
+    }
+    if (DtInitialize(XtDisplay(top), top, "dtappfind", "Dtappfind"))
+        DtDbLoad();
     ReadApps();
 
     form = XtVaCreateManagedWidget("form", xmFormWidgetClass, top,
@@ -523,11 +822,35 @@ main(int argc, char **argv)
     XtAddCallback(list, XmNdefaultActionCallback, DefaultActionCB, NULL);
     XtAddEventHandler(field, KeyPressMask, False, KeyEH, NULL);
     XtAddEventHandler(list, KeyPressMask, False, KeyEH, NULL);
+    XtAddEventHandler(list, ButtonPressMask | ButtonReleaseMask |
+                      Button1MotionMask, False, DragEH, NULL);
 
     Filter("");
+    if (menu)
+        XtSetMappedWhenManaged(top, False);
     XtRealizeWidget(top);
+    XSetSelectionOwner(XtDisplay(top), selAtom, XtWindow(top), CurrentTime);
+    XtAddEventHandler(top, PropertyChangeMask, False, CommandEH, NULL);
     del = XmInternAtom(XtDisplay(top), "WM_DELETE_WINDOW", False);
     XmAddWMProtocolCallback(top, del, CloseCB, NULL);
+    if (menu)
+    {
+        /* Just above the Front Panel, centered: where a start menu is. */
+        Dimension w, h;
+        Display  *dpy = XtDisplay(top);
+        int       sw = DisplayWidth(dpy, DefaultScreen(dpy));
+        int       sh = DisplayHeight(dpy, DefaultScreen(dpy));
+        int       x, y;
+
+        XtVaGetValues(top, XmNwidth, &w, XmNheight, &h, NULL);
+        x = (sw - (int) w) / 2;
+        y = sh - (int) h - 110;
+        if (y < 0)
+            y = 0;
+        XtVaSetValues(top, XmNx, x, XmNy, y, NULL);
+        XtMapWidget(top);
+        XtAddEventHandler(top, FocusChangeMask, False, FocusEH, NULL);
+    }
     XmProcessTraversal(field, XmTRAVERSE_CURRENT);
     XtAppMainLoop(app);
     return 0;

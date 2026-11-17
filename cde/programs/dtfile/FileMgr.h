@@ -252,6 +252,7 @@ typedef struct
    char * title;
    char * helpVol;
    Boolean toolbox;
+   char * search;                /* search box text (App Manager) */
    Boolean dropSite;
    Boolean IsTrashCan;
 
@@ -333,6 +334,8 @@ typedef struct
    Widget current_directory;
    Widget current_directory_text;
    Widget status_line;
+   Widget search_form;           /* "Search:" box (App Manager) */
+   Widget search_text;
    Widget scroll_window;
    Widget horizontal_scroll_bar;
    Widget vertical_scroll_bar;
