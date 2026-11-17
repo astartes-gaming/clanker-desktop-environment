@@ -177,6 +177,12 @@ $ *
     Mod4<Key>Right		window			f.tile_right\n\
     Mod4<Key>Up		window			f.maximize\n\
     Mod4<Key>Down		window			f.untile\n\
+    Mod4<Key>e			root|icon|window	f.exec "dtaction DtfileHome"\n\
+    Mod4<Key>r			root|icon|window	f.exec "dtappfind"\n\
+    Mod4<Key>t			root|icon|window	f.exec "dtterminal"\n\
+    Mod4<Key>a			root|icon|window	f.exec "dtaction Dtappmgr"\n\
+    Mod4<Key>i			root|icon|window	f.exec "dtstyle"\n\
+    Mod4<Key>l			root|icon|window	f.exec "dtaction LockDisplay"\n\
     <Key>XF86MonBrightnessUp	ifkey|root|icon|window	f.exec "dthwkeys brightness-up"\n\
     <Key>XF86MonBrightnessDown	ifkey|root|icon|window	f.exec "dthwkeys brightness-down"\n\
     <Key>XF86AudioRaiseVolume	ifkey|root|icon|window	f.exec "dthwkeys volume-up"\n\
@@ -234,6 +240,12 @@ $ *
     Mod4<Key>Right		window			f.tile_right\n\
     Mod4<Key>Up		window			f.maximize\n\
     Mod4<Key>Down		window			f.untile\n\
+    Mod4<Key>e			root|icon|window	f.exec "dtaction DtfileHome"\n\
+    Mod4<Key>r			root|icon|window	f.exec "dtappfind"\n\
+    Mod4<Key>t			root|icon|window	f.exec "dtterminal"\n\
+    Mod4<Key>a			root|icon|window	f.exec "dtaction Dtappmgr"\n\
+    Mod4<Key>i			root|icon|window	f.exec "dtstyle"\n\
+    Mod4<Key>l			root|icon|window	f.exec "dtaction LockDisplay"\n\
     <Key>XF86MonBrightnessUp	ifkey|root|icon|window	f.exec "dthwkeys brightness-up"\n\
     <Key>XF86MonBrightnessDown	ifkey|root|icon|window	f.exec "dthwkeys brightness-down"\n\
     <Key>XF86AudioRaiseVolume	ifkey|root|icon|window	f.exec "dthwkeys volume-up"\n\

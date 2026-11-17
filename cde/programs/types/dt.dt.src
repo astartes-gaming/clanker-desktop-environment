@@ -271,6 +271,36 @@ ACTION Dtappfind
                         of its name, and start it.
 }
 
+XCOMM
+XCOMM  Applications described by freedesktop.org .desktop files (what
+XCOMM  other desktops list): Open starts them, so one dragged from the
+XCOMM  application menu onto a Front Panel drawer works there (dtwm
+XCOMM  takes its name and icon from the file).
+XCOMM
+DATA_ATTRIBUTES DESKTOP_APP
+{
+	ACTIONS		Open
+	ICON		Dtactn
+	MIME_TYPE	application/x-desktop
+	DESCRIPTION	An application.  Open (double-click) starts it.
+}
+
+DATA_CRITERIA DESKTOP_APP1
+{
+	DATA_ATTRIBUTES_NAME	DESKTOP_APP
+	NAME_PATTERN		*.desktop
+	MODE			f
+}
+
+ACTION Open
+{
+	LABEL		Open
+	ARG_TYPE	DESKTOP_APP
+	TYPE		COMMAND
+	WINDOW_TYPE	NO_STDIO
+	EXEC_STRING	CDE_INSTALLATION_TOP/bin/dtappfind -launch "%Arg_1%"
+}
+
 XCOMM ######
 
 ACTION OpenDtIntro

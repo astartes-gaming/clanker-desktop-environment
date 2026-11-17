@@ -24,11 +24,24 @@ see the [README](../README.md).
   ends the session.
 - **Workspaces**: four desktops (One to Four), switched with the
   buttons in the middle of the Front Panel.
-- **Finding an application**: Workspace menu > **Applications...**,
-  **Alt+F2**, or the Applications drawer's **Find Application**. Type
-  part of a name (or what it does: "browser", "music"), use Up and
-  Down, and press Enter. Text that matches no application runs as a
-  command.
+- **Finding an application**: press and release the **Windows key**
+  (the application menu opens above the Front Panel; the key again,
+  Escape or a click elsewhere closes it), or Workspace menu >
+  **Applications...**, **Alt+F2**, or the Applications drawer's **Find
+  Application**. Type part of a name (or what it does: "browser",
+  "music"), use Up and Down, and press Enter. CDE's own applications
+  are listed too. Text that matches no application runs as a command.
+- **Windows key shortcuts**: **Windows+E** Home folder, **Windows+R**
+  Run, **Windows+T** Terminal, **Windows+A** Application Manager,
+  **Windows+I** Settings, **Windows+L** Lock, **Windows+arrows** tile
+  windows (dtwm). `DT_NO_SUPERKEY=1` in `~/.dtprofile` stops the key
+  on its own from opening the menu.
+- **Application Manager**: type in its **Search** box at the bottom to
+  show only the applications (and the groups holding them) whose
+  names contain the text.
+- **Adding an application to a drawer**: drag it from the application
+  menu or the Application Manager onto **Install Icon** at the top of
+  an open drawer.
 - **Screenshots**: **Print** saves the whole screen, **Alt+Print** the
   active window, as a PNG in your Pictures folder (with scrot, maim,
   ImageMagick or xwd, whichever is installed).

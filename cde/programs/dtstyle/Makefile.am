@@ -31,7 +31,8 @@ dtaccess_LDADD = $(XTOOLLIB)
 
 # Find and start an application by typing (Workspace menu, Front Panel)
 dtappfind_SOURCES = dtappfind.c
-dtappfind_LDADD = $(XTOOLLIB)
+dtappfind_CPPFLAGS = -DCDE_LOGFILES_TOP=\"$(CDE_LOGFILES_TOP)\" $(DT_INCDIR)
+dtappfind_LDADD = $(DTCLIENTLIBS) $(XTOOLLIB)
 
 if SOLARIS
 dtstyle_SOURCES += OWsync.c

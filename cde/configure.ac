@@ -635,6 +635,14 @@ AC_CHECK_LIB([Xi], [XIGrabTouchBegin],
             [#include <X11/Xlib.h>])], [], $X_LIBS)], [], $X_LIBS)
 AM_CONDITIONAL([HAVE_XI_TOUCH], [test "$have_xi_touch" = yes])
 
+dnl dtsuperkey: the Windows key alone opens the application menu; it
+dnl watches XInput 2 raw key events.  Optional.
+have_xi2=no
+AC_CHECK_LIB([Xi], [XISelectEvents],
+    [AC_CHECK_HEADER([X11/extensions/XInput2.h], [have_xi2=yes], [],
+        [#include <X11/Xlib.h>])], [], $X_LIBS)
+AM_CONDITIONAL([HAVE_XI2], [test "$have_xi2" = yes])
+
 dnl Backdrop pictures: Motif 2.3's PNG reader gets the colours of RGB,
 dnl palette and greyscale PNGs wrong, so CDE reads PNG itself when
 dnl libpng is available (lib/DtWidget/Picture.c).  Optional.
