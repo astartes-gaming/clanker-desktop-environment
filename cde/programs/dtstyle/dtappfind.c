@@ -31,6 +31,8 @@
 #include <dirent.h>
 #include <signal.h>
 #include <stdint.h>
+#include <limits.h>
+#include <sys/stat.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
@@ -43,6 +45,7 @@
 #include <Xm/RowColumn.h>
 #include <Xm/PushB.h>
 #include <Xm/Protocols.h>
+#include <Xm/MessageB.h>
 #include <Xm/AtomMgr.h>
 #include <X11/Xatom.h>
 #include <Dt/Dt.h>
@@ -142,7 +145,7 @@ ExecToCommand(const char *exec)
 static Boolean
 HaveProgram(const char *prog)
 {
-    char  *path, *dir, *copy, buf[4096];
+    char  *path, *dir, *copy, *save = NULL, buf[4096];
     Boolean ok = False;
 
     if (strchr(prog, '/'))
@@ -150,7 +153,9 @@ HaveProgram(const char *prog)
     if ((path = getenv("PATH")) == NULL)
         path = "/usr/bin:/bin";
     copy = XtNewString(path);
-    for (dir = strtok(copy, ":"); dir && !ok; dir = strtok(NULL, ":"))
+    /* strtok_r: callers walk their own lists with strtok */
+    for (dir = strtok_r(copy, ":", &save); dir && !ok;
+         dir = strtok_r(NULL, ":", &save))
     {
         snprintf(buf, sizeof(buf), "%s/%s", dir, prog);
         ok = (access(buf, X_OK) == 0);
@@ -238,6 +243,151 @@ ReadDir(const char *dir)
     closedir(d);
 }
 
+/*
+ * CDE ships actions for applications that may not be installed (Amarok,
+ * Caja...).  Read the action definitions (the DTDATABASESEARCHPATH
+ * folders) for each COMMAND action's program, so those whose program is
+ * missing are left out of the menu.  Actions without one (messages,
+ * maps) always show.
+ */
+#define MAX_ACTS 4000
+static struct { char *name; Boolean found, installed; } acts[MAX_ACTS];
+static int nActs;
+
+static void
+NoteAction(const char *name, const char *exec)
+{
+    char        prog[1024];
+    int         i;
+    Boolean     ok;
+
+    while (*exec == ' ' || *exec == '\t' || *exec == '"' || *exec == '\'')
+        exec++;
+    snprintf(prog, sizeof(prog), "%s", exec);
+    prog[strcspn(prog, " \t\"'")] = '\0';
+    /* a program we can check: a plain word or a path, no %Args% */
+    if (!prog[0] || strchr(prog, '%') || strchr(prog, '$'))
+        ok = True;
+    else
+        ok = HaveProgram(prog);
+    for (i = 0; i < nActs; i++)
+        if (strcmp(acts[i].name, name) == 0)
+        {
+            acts[i].installed = acts[i].installed || ok;
+            return;
+        }
+    if (nActs < MAX_ACTS)
+    {
+        acts[nActs].name = XtNewString(name);
+        acts[nActs].found = True;
+        acts[nActs].installed = ok;
+        nActs++;
+    }
+}
+
+static void
+ReadTypesDir(const char *dir)
+{
+    DIR    *d = opendir(dir);
+    struct dirent *e;
+    char    path[4200], line[2048], name[256], exec[2048], *p;
+    FILE   *fp;
+    size_t  len;
+    Boolean inAction, command, more;
+
+    if (!d)
+        return;
+    while ((e = readdir(d)) != NULL)
+    {
+        len = strlen(e->d_name);
+        if (len < 4 || strcmp(e->d_name + len - 3, ".dt") != 0)
+            continue;
+        snprintf(path, sizeof(path), "%s/%s", dir, e->d_name);
+        if ((fp = fopen(path, "r")) == NULL)
+            continue;
+        inAction = command = more = False;
+        name[0] = exec[0] = '\0';
+        while (fgets(line, sizeof(line), fp))
+        {
+            line[strcspn(line, "\r\n")] = '\0';
+            for (p = line; *p == ' ' || *p == '\t'; p++)
+                ;
+            if (more)			/* EXEC_STRING continued */
+            {
+                more = (len = strlen(p)) > 0 && p[len - 1] == '\\';
+                continue;
+            }
+            if (strncmp(p, "ACTION", 6) == 0 && (p[6] == ' ' || p[6] == '\t'))
+            {
+                for (p += 6; *p == ' ' || *p == '\t'; p++)
+                    ;
+                snprintf(name, sizeof(name), "%s", p);
+                name[strcspn(name, " \t")] = '\0';
+                inAction = True;
+                command = True;		/* the default type */
+                exec[0] = '\0';
+            }
+            else if (inAction && *p == '}')
+            {
+                if (command && exec[0])
+                    NoteAction(name, exec);
+                inAction = False;
+            }
+            else if (inAction && strncmp(p, "TYPE", 4) == 0 &&
+                     (p[4] == ' ' || p[4] == '\t'))
+                command = (strstr(p + 4, "COMMAND") != NULL);
+            else if (inAction && strncmp(p, "EXEC_STRING", 11) == 0)
+            {
+                snprintf(exec, sizeof(exec), "%s", p + 11);
+                more = (len = strlen(p)) > 0 && p[len - 1] == '\\';
+            }
+        }
+        fclose(fp);
+    }
+    closedir(d);
+}
+
+static void
+ReadActionPrograms(void)
+{
+    const char *v = getenv("DTDATABASESEARCHPATH");
+    char       *paths, *t, *save = NULL, dir[4200], *pc;
+
+    paths = XtNewString((v && *v) ? v :
+        "~/.dt/types,/etc/dt/appconfig/types/%L,/usr/dt/appconfig/types/%L");
+    /* strtok_r: HaveProgram (below) uses strtok */
+    for (t = strtok_r(paths, ",", &save); t; t = strtok_r(NULL, ",", &save))
+    {
+        /* "~", and %L as C (the definitions are not translated) */
+        if (t[0] == '~')
+            snprintf(dir, sizeof(dir), "%s%s",
+                     getenv("HOME") ? getenv("HOME") : "", t + 1);
+        else
+            snprintf(dir, sizeof(dir), "%s", t);
+        if ((pc = strstr(dir, "%L")) != NULL)
+        {
+            char rest[4200];
+
+            snprintf(rest, sizeof(rest), "%s", pc + 2);
+            snprintf(pc, sizeof(dir) - (pc - dir), "C%s", rest);
+        }
+        ReadTypesDir(dir);
+    }
+    XtFree(paths);
+}
+
+/* False only for a COMMAND action whose program is not installed. */
+static Boolean
+ActionInstalled(const char *name)
+{
+    int i;
+
+    for (i = 0; i < nActs; i++)
+        if (strcmp(acts[i].name, name) == 0)
+            return acts[i].installed;
+    return True;
+}
+
 /* CDE's applications: the Application Manager's groups (folders of
  * files named after actions), listed by the actions' labels. */
 static unsigned
@@ -266,7 +416,8 @@ ReadGroup(const char *gdir, const char *group)
         return;
     while ((e = readdir(d)) != NULL && nApps < MAX_APPS)
     {
-        if (e->d_name[0] == '.' || !DtActionExists(e->d_name))
+        if (e->d_name[0] == '.' || !DtActionExists(e->d_name) ||
+            !ActionInstalled(e->d_name))
             continue;
         label = DtActionLabel(e->d_name);
         if (!label || !*label)
@@ -316,6 +467,7 @@ ReadAppManager(void)
     snprintf(dir, sizeof(dir), CDE_LOGFILES_TOP "/appconfig/appmanager/%s", s);
     if ((d = opendir(dir)) == NULL)
         return;
+    ReadActionPrograms();
     while ((e = readdir(d)) != NULL)
     {
         if (e->d_name[0] == '.')
@@ -564,6 +716,99 @@ CloseCB(Widget w, XtPointer client, XtPointer call)
     exit(0);
 }
 
+/*
+ * A .desktop file can run any command, so like other desktops only
+ * trusted ones start: installed applications (under an XDG
+ * "applications" folder) or files their owner (you, or root) marked
+ * executable.  A downloaded one does not run by a double-click.
+ */
+static Boolean
+UnderDir(const char *real, const char *dir)
+{
+    char   rdir[PATH_MAX];
+    size_t n;
+
+    if (!dir || !*dir || !realpath(dir, rdir))
+        return False;
+    n = strlen(rdir);
+    return strncmp(real, rdir, n) == 0 && real[n] == '/';
+}
+
+static Boolean
+Trusted(const char *file)
+{
+    char        real[PATH_MAX], dir[PATH_MAX];
+    const char *v;
+    struct stat st;
+
+    if (!realpath(file, real) || stat(real, &st) != 0 || !S_ISREG(st.st_mode))
+        return False;
+    /* marked executable by its owner, who is you or root */
+    if ((st.st_mode & S_IXUSR) && (st.st_uid == getuid() || st.st_uid == 0) &&
+        !(st.st_mode & S_IWOTH))
+        return True;
+    v = getenv("XDG_DATA_HOME");
+    if (v && *v)
+        snprintf(dir, sizeof(dir), "%s/applications", v);
+    else
+        snprintf(dir, sizeof(dir), "%s/.local/share/applications",
+                 getenv("HOME") ? getenv("HOME") : "/nonexistent");
+    if (UnderDir(real, dir))
+        return True;
+    v = getenv("XDG_DATA_DIRS");
+    {
+        char *dirs = XtNewString((v && *v) ? v : "/usr/local/share:/usr/share");
+        char *t;
+        Boolean ok = False;
+
+        for (t = strtok(dirs, ":"); t && !ok; t = strtok(NULL, ":"))
+        {
+            snprintf(dir, sizeof(dir), "%s/applications", t);
+            ok = UnderDir(real, dir);
+        }
+        XtFree(dirs);
+        return ok;
+    }
+}
+
+static void
+ErrorOK(Widget w, XtPointer client, XtPointer call)
+{
+    exit(1);
+}
+
+/* Say why an untrusted file did not start. */
+static int
+Refuse(int argc, char **argv, const char *file)
+{
+    XtAppContext app;
+    Widget       shell, box;
+    XmString     msg;
+    char         text[PATH_MAX + 400];
+
+    snprintf(text, sizeof(text),
+             "%s\n\nis not an installed application, so it was not started:\n"
+             "a file like this can run any command.\n\n"
+             "If you trust it, make it executable (File Manager: Properties,\n"
+             "Execute permission for the owner) and open it again.",
+             strrchr(file, '/') ? strrchr(file, '/') + 1 : file);
+    shell = XtVaAppInitialize(&app, "Dtappfind", NULL, 0, &argc, argv, NULL,
+                              XmNmappedWhenManaged, False, NULL);
+    XtRealizeWidget(shell);
+    msg = XmStringCreateLocalized(text);
+    box = XmCreateErrorDialog(shell, "notTrusted", NULL, 0);
+    XtVaSetValues(box, XmNmessageString, msg,
+                  XtVaTypedArg, XmNdialogTitle, XmRString,
+                  "Application not started", 24, NULL);
+    XmStringFree(msg);
+    XtUnmanageChild(XmMessageBoxGetChild(box, XmDIALOG_CANCEL_BUTTON));
+    XtUnmanageChild(XmMessageBoxGetChild(box, XmDIALOG_HELP_BUTTON));
+    XtAddCallback(box, XmNokCallback, ErrorOK, NULL);
+    XtManageChild(box);
+    XtAppMainLoop(app);
+    return 1;
+}
+
 /* -launch FILE: start the application of a .desktop file. */
 static int
 LaunchFile(const char *file)
@@ -737,7 +982,16 @@ main(int argc, char **argv)
     Boolean menu = False;
 
     if (argc == 3 && strcmp(argv[1], "-launch") == 0)
+    {
+        if (!Trusted(argv[2]))
+        {
+            char *file = argv[2];
+
+            argc = 1;
+            return Refuse(argc, argv, file);
+        }
         return LaunchFile(argv[2]);
+    }
     if (argc == 2 && strcmp(argv[1], "-menu") == 0)
     {
         menu = True;

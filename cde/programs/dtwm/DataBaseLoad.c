@@ -3192,12 +3192,14 @@ DesktopFileInfo (const char *file, char **name, char **icon)
 {
    /* where to look: prefix ("~" is $HOME), the icon name, suffix */
    static const char *dirs[][2] = {
+      /* drawer icons are 32 pixels: that size first */
+      { "/usr/share/pixmaps/", "_32x32.xpm" },
       { "/usr/share/pixmaps/", ".xpm" },
       { "/usr/share/pixmaps/", "_48x48.xpm" },
-      { "/usr/share/pixmaps/", "_32x32.xpm" },
+      { "~/.local/share/icons/hicolor/32x32/apps/", ".png" },
+      { "/usr/share/icons/hicolor/32x32/apps/", ".png" },
       { "~/.local/share/icons/hicolor/48x48/apps/", ".png" },
       { "/usr/share/icons/hicolor/48x48/apps/", ".png" },
-      { "/usr/share/icons/hicolor/32x32/apps/", ".png" },
       { "/usr/share/pixmaps/", ".png" },
       { NULL, NULL }
    };
