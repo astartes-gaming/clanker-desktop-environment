@@ -1019,7 +1019,7 @@ main(int argc, char **argv)
     form = XtVaCreateManagedWidget("form", xmFormWidgetClass, top,
                                    XmNmarginWidth, 8, XmNmarginHeight, 8,
                                    NULL);
-    s = XmStringCreateLocalized("Type to find an application, or a command to run:");
+    s = XmStringCreateLocalized("Search, or type a command to run:");
     label = XtVaCreateManagedWidget("label", xmLabelWidgetClass, form,
                                     XmNlabelString, s,
                                     XmNtopAttachment, XmATTACH_FORM,
