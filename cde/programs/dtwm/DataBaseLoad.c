@@ -3190,14 +3190,16 @@ InitializeSecondaryControlFields (ElementValue * element_values)
 static Boolean
 DesktopFileInfo (const char *file, char **name, char **icon)
 {
-   /* "~" is $HOME; the icon name follows each */
-   static const char *dirs[] = {
-      "~/.local/share/icons/hicolor/48x48/apps/",
-      "/usr/share/pixmaps/",			/* .xpm first: see below */
-      "/usr/share/icons/hicolor/48x48/apps/",
-      "/usr/share/icons/hicolor/32x32/apps/",
-      "/usr/share/pixmaps/",
-      NULL
+   /* where to look: prefix ("~" is $HOME), the icon name, suffix */
+   static const char *dirs[][2] = {
+      { "/usr/share/pixmaps/", ".xpm" },
+      { "/usr/share/pixmaps/", "_48x48.xpm" },
+      { "/usr/share/pixmaps/", "_32x32.xpm" },
+      { "~/.local/share/icons/hicolor/48x48/apps/", ".png" },
+      { "/usr/share/icons/hicolor/48x48/apps/", ".png" },
+      { "/usr/share/icons/hicolor/32x32/apps/", ".png" },
+      { "/usr/share/pixmaps/", ".png" },
+      { NULL, NULL }
    };
    size_t len = strlen (file);
    FILE  *fp;
@@ -3237,20 +3239,20 @@ DesktopFileInfo (const char *file, char **name, char **icon)
    {
       const char *home = getenv ("HOME");
 
-      for (i = 0; dirs[i] && *icon == NULL; i++)
+      for (i = 0; dirs[i][0] && *icon == NULL; i++)
       {
-         const char *d = dirs[i];
+         const char *d = dirs[i][0];
 
          if (d[0] == '~')
          {
             if (!home)
                continue;
-            snprintf (path, sizeof (path), "%s%s%s.png", home, d + 1,
-                      iconName);
+            snprintf (path, sizeof (path), "%s%s%s%s", home, d + 1,
+                      iconName, dirs[i][1]);
          }
          else
-            snprintf (path, sizeof (path), "%s%s.%s", d, iconName,
-                      i == 1 ? "xpm" : "png");
+            snprintf (path, sizeof (path), "%s%s%s", d, iconName,
+                      dirs[i][1]);
          if (access (path, R_OK) == 0)
             *icon = XtNewString (path);
       }

@@ -274,6 +274,9 @@ ReadGroup(const char *gdir, const char *group)
             XtFree(label);
             label = XtNewString(e->d_name);
         }
+        for (i = 0; label[i]; i++)	/* "Acrobat_Reader" */
+            if (label[i] == '_')
+                label[i] = ' ';
         for (i = 0; i < nApps; i++)	/* an XDG entry of the name wins */
             if (strcasecmp(apps[i].name, label) == 0)
                 break;
