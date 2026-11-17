@@ -546,6 +546,36 @@ else
 fi
 
 #####################################################################
+section "Application menu and the Windows key"
+menu_up() { x xdotool search --onlyvisible --name '^Applications$' >/dev/null; }
+if pgrep -u $U -x dtsuperkey >/dev/null; then
+    ok "dtsuperkey runs in the session"
+    x xdotool key super; sleep 4
+    check "a tap of the Windows key opens the application menu" menu_up
+    x xdotool key super; sleep 3
+    check "tapping it again closes the menu" eval '! menu_up'
+    x xdotool key super+e; sleep 4
+    check "Windows+E does not open the menu" eval '! menu_up'
+else
+    skp "Windows key (dtsuperkey not running: no XInput 2?)"
+fi
+# .desktop files start only when installed or marked executable
+rm -f /tmp/st-launch-ok /tmp/st-launch-bad
+apps=/home/$U/.local/share/applications
+x mkdir -p $apps
+printf '[Desktop Entry]\nType=Application\nName=Selftest\nExec=touch /tmp/st-launch-ok\n' |
+    x sh -c "cat > $apps/clanker-selftest.desktop"
+printf '[Desktop Entry]\nType=Application\nName=Selftest\nExec=touch /tmp/st-launch-bad\n' |
+    x sh -c 'cat > /tmp/st-untrusted.desktop; chmod 644 /tmp/st-untrusted.desktop'
+x /usr/dt/bin/dtappfind -launch $apps/clanker-selftest.desktop; sleep 2
+check "an installed .desktop application starts" test -f /tmp/st-launch-ok
+xbg /usr/dt/bin/dtappfind -launch /tmp/st-untrusted.desktop; sleep 3
+check "a downloaded .desktop file does not run" test ! -f /tmp/st-launch-bad
+check "it says why instead" x xdotool search --onlyvisible --name 'Application not started'
+pkill -u $U -f 'dtappfind -launch /tmp/st-untrusted' 2>/dev/null
+rm -f $apps/clanker-selftest.desktop /tmp/st-untrusted.desktop /tmp/st-launch-ok
+
+#####################################################################
 section "Resources"
 free -m | awk 'NR==2 {printf "      memory: %s MB used of %s MB\n", $3, $2}'
 df -h / | awk 'NR==2 {printf "      disk:   %s used of %s\n", $3, $2}'
