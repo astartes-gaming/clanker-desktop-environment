@@ -574,13 +574,15 @@ CatText(int row)
 static const char *
 CatIcon(int row)
 {
+    /* the theme icon, then a CDE icon for systems without themes */
     static const char *icons[] = {
-        "applications-other", "applications-accessories",
-        "applications-development", "applications-science",
-        "applications-games", "applications-graphics",
-        "applications-internet", "applications-multimedia",
-        "applications-office", "preferences-desktop",
-        "applications-system", "applications-other"
+        "applications-other|Fpapps", "applications-accessories|Dtcalc",
+        "applications-development|DtBldr", "applications-science|Dtinfo",
+        "applications-games|DtGamesCards", "applications-graphics|Dtpaint",
+        "applications-internet|DtMail",
+        "applications-multimedia|Dtapplications-multimedia",
+        "applications-office|Dtpenpd", "preferences-desktop|Fpstyle",
+        "applications-system|DtSystem", "applications-other|Fpapps"
     };
 
     return (row >= 0 && row < (int) (sizeof(icons) / sizeof(icons[0]))) ?
@@ -957,7 +959,24 @@ main(int argc, char **argv)
     XtSetArg(a[n], XmNtopOffset, 6); n++;
     XtSetArg(a[n], XmNleftAttachment, XmATTACH_FORM); n++;
     XtSetArg(a[n], XmNbottomAttachment, XmATTACH_FORM); n++;
-    XtSetArg(a[n], XmNwidth, 190); n++;
+    {
+        /* wide enough for the longest category name */
+        XmRenderTable rt = NULL;
+        Dimension     widest = 0;
+        int           i;
+
+        XtVaGetValues(field, XmNrenderTable, &rt, NULL);
+        for (i = 0; rt && i < NCATS; i++)
+        {
+            XmString  xs = XmStringCreateLocalized((char *) categories[i].label);
+            Dimension w = XmStringWidth(rt, xs);
+
+            XmStringFree(xs);
+            if (w > widest)
+                widest = w;
+        }
+        XtSetArg(a[n], XmNwidth, widest + APPLIST_ICON + 24); n++;
+    }
     XtSetArg(a[n], XmNheight, NCATS * 26 + 8); n++;
     catList = AppListCreate(form, "categories", a, n, field, CatText,
                             CatIcon, CategoryCB, NULL, NULL);

@@ -481,9 +481,31 @@ XpmToPixmap(Widget wid, const char *path, Pixel fg, Pixel bg)
     return pm;
 }
 
-/* The pixmaps of icon "name" on bg (0) and on fg (1), or None. */
+static void IconFor1(AppList *l, const char *name, Pixmap pm[2]);
+
+/* The pixmaps of icon "name" on bg (0) and on fg (1), or None; "name"
+ * may list alternatives, "a|b": the first found. */
 static void
 IconFor(AppList *l, const char *name, Pixmap pm[2])
+{
+    char        one[512];
+    const char *p = name;
+
+    pm[0] = pm[1] = None;
+    while (p && *p && pm[0] == None)
+    {
+        size_t n = strcspn(p, "|");
+
+        snprintf(one, sizeof(one), "%.*s", (int) n, p);
+        IconFor1(l, one, pm);
+        p += n;
+        if (*p == '|')
+            p++;
+    }
+}
+
+static void
+IconFor1(AppList *l, const char *name, Pixmap pm[2])
 {
     char path[2048];
     int  i, type;
