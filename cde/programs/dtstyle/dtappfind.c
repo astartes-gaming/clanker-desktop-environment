@@ -51,6 +51,7 @@
 #include <Dt/Dt.h>
 #include <Dt/Action.h>
 #include <Dt/Dnd.h>
+#include <Dt/DtXinerama.h>
 
 #define MAX_APPS 2000
 #define CDE_INSTALLATION_TOP_BIN "/usr/dt/bin"
@@ -1089,18 +1090,38 @@ main(int argc, char **argv)
     XmAddWMProtocolCallback(top, del, CloseCB, NULL);
     if (menu)
     {
-        /* Just above the Front Panel, centered: where a start menu is. */
+        /* Just above the Front Panel, centered: where a start menu is;
+         * on the monitor with the pointer when there are several. */
         Dimension w, h;
         Display  *dpy = XtDisplay(top);
+        int       mx = 0, my = 0;
         int       sw = DisplayWidth(dpy, DefaultScreen(dpy));
         int       sh = DisplayHeight(dpy, DefaultScreen(dpy));
         int       x, y;
+        DtXineramaInfo_t *xin = _DtXineramaInit(dpy);
 
+        if (xin && xin->numscreens > 1)
+        {
+            Window       r, c;
+            int          px, py, wx, wy, i;
+            unsigned int mask, ww, hh, ox, oy;
+
+            if (XQueryPointer(dpy, DefaultRootWindow(dpy), &r, &c, &px, &py,
+                              &wx, &wy, &mask))
+                for (i = 0; i < xin->numscreens; i++)
+                    if (_DtXineramaGetScreen(xin, i, &ww, &hh, &ox, &oy) &&
+                        px >= (int) ox && px < (int) (ox + ww) &&
+                        py >= (int) oy && py < (int) (oy + hh))
+                    {
+                        mx = ox; my = oy; sw = ww; sh = hh;
+                        break;
+                    }
+        }
         XtVaGetValues(top, XmNwidth, &w, XmNheight, &h, NULL);
-        x = (sw - (int) w) / 2;
-        y = sh - (int) h - 110;
-        if (y < 0)
-            y = 0;
+        x = mx + (sw - (int) w) / 2;
+        y = my + sh - (int) h - 110;
+        if (y < my)
+            y = my;
         XtVaSetValues(top, XmNx, x, XmNy, y, NULL);
         XtMapWidget(top);
         XtAddEventHandler(top, FocusChangeMask, False, FocusEH, NULL);
