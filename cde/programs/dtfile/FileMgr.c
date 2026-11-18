@@ -205,6 +205,8 @@ static XmFontListEntry FontListDefaultEntry(
 static void SearchChangedCB(Widget w, XtPointer client_data,
                             XtPointer call_data);
 static void SetSearchShown(FileMgrRec *file_mgr_rec, Boolean shown);
+static void SearchKeyEH(Widget w, XtPointer client_data, XEvent *event,
+                        Boolean *cont);
 static void Create(
                         Display *display,
                         Widget parent,
@@ -972,6 +974,8 @@ Create(
       XtManageChild (file_mgr_rec->search_text);
       XtAddCallback (file_mgr_rec->search_text, XmNvalueChangedCallback,
                      SearchChangedCB, (XtPointer) file_mgr_rec);
+      XtAddEventHandler (file_mgr_rec->search_text, KeyPressMask, False,
+                         SearchKeyEH, NULL);
    }
 
    n = 0;
@@ -6488,8 +6492,27 @@ SetSearchShown(FileMgrRec *file_mgr_rec, Boolean shown)
    }
    else
    {
+      /* a window reused for a folder view: no leftover search */
+      XmTextFieldSetString (file_mgr_rec->search_text, "");
       XtSetArg (args[0], XmNtopAttachment, XmATTACH_FORM);
       XtSetValues (file_mgr_rec->status_line, args, 1);
       XtUnmanageChild (file_mgr_rec->search_form);
    }
+}
+
+/* Escape in the search box clears it (everything shows again). */
+static void
+SearchKeyEH(Widget w, XtPointer client_data, XEvent *event, Boolean *cont)
+{
+   char *text;
+
+   if (XLookupKeysym (&event->xkey, 0) != XK_Escape)
+      return;
+   text = XmTextFieldGetString (w);
+   if (text && *text)
+   {
+      XmTextFieldSetString (w, "");
+      *cont = False;
+   }
+   XtFree (text);
 }

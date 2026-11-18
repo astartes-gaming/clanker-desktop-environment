@@ -111,6 +111,14 @@ main(int argc, char **argv)
         XNextEvent(dpy, &e);
         if (e.type == SelectionClear)
             return 0;			/* a newer one took over */
+        if (e.type == MappingNotify)	/* setxkbmap, xmodmap: new keycodes */
+        {
+            XRefreshKeyboardMapping(&e.xmapping);
+            superL = XKeysymToKeycode(dpy, XK_Super_L);
+            superR = XKeysymToKeycode(dpy, XK_Super_R);
+            down = False;
+            continue;
+        }
         if (c->type != GenericEvent || c->extension != opcode ||
             !XGetEventData(dpy, c))
             continue;
