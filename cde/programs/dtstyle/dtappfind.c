@@ -10,15 +10,21 @@
  * Started from the Workspace menu (Applications...), the Front Panel's
  * Applications drawer, and the Windows key (dtsuperkey).
  *
- * CDE's own applications (the Application Manager's groups) are listed
- * too, by their action labels.  Any row can be dragged onto a Front
- * Panel drawer's "Install Icon" to add it there.
+ * The entries and categories are those of other desktops' menus: the
+ * .desktop files of $XDG_DATA_HOME and $XDG_DATA_DIRS (CDE's own
+ * applications have theirs in /usr/dt/share/applications), honoring
+ * NoDisplay, Hidden, TryExec and OnlyShowIn/NotShowIn for
+ * $XDG_CURRENT_DESKTOP, in the freedesktop.org main categories, listed
+ * beside the applications.  Typing searches all of them.  Any row can be
+ * dragged onto a Front Panel drawer's "Install Icon" to add it there.
  *
  *   dtappfind -menu         the Windows-key menu: just above the Front
  *                           Panel, closed by clicking elsewhere or by
  *                           the Windows key again
  *   dtappfind -launch FILE  start the application of a .desktop file
  *                           (what a drawer icon made from one runs)
+ *   dtappfind -pick         choose an application; its .desktop file is
+ *                           printed (a drawer's Install Icon adds it)
  *
  * Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
  */
@@ -52,25 +58,31 @@
 #include <Dt/Action.h>
 #include <Dt/Dnd.h>
 #include <Dt/DtXinerama.h>
+#include "applist.h"
 
 #define MAX_APPS 2000
 #define CDE_INSTALLATION_TOP_BIN "/usr/dt/bin"
 
 typedef struct {
     char *name, *generic, *keywords, *exec;
-    char *path;			/* the .desktop file, or the App Manager file */
-    char *action;		/* a CDE action (exec unused), or NULL */
+    char *label;		/* what the list shows (name, or "name (prog)") */
+    char *icon;			/* Icon= (theme name or path), or "" */
+    char *path;			/* the .desktop file */
+    char *id;			/* its desktop file ID (file name) */
+    char *action;		/* unused (NULL) */
     Boolean terminal;
     unsigned cats;		/* bit i: in categories[i] */
 } App;
 
-/* The menu's categories, from the freedesktop.org main categories (an
- * application lists them in Categories=). */
+/* The menu's categories: those of other desktops' application menus
+ * (the freedesktop.org main categories, as the default applications.menu
+ * of GNOME, Xfce, MATE and LXDE files them).  An application is in every
+ * category its Categories= names; one naming none of these is in Other. */
 static const struct {
     const char *label, *xdg;	/* xdg: ";"-separated */
 } categories[] = {
-    { "All",          "" },
-    { "Accessories",  "Utility;" },
+    { "All Applications", "" },
+    { "Accessories",  "Utility;Accessibility;" },
     { "Development",  "Development;" },
     { "Education",    "Education;Science;" },
     { "Games",        "Game;" },
@@ -79,9 +91,11 @@ static const struct {
     { "Multimedia",   "AudioVideo;Audio;Video;" },
     { "Office",       "Office;" },
     { "Settings",     "Settings;" },
-    { "System",       "System;" },
+    { "System",       "System;Emulator;" },
+    { "Other",        "" },
 };
 #define NCATS ((int) (sizeof(categories) / sizeof(categories[0])))
+#define CAT_OTHER (NCATS - 1)
 static int curCat = 0;			/* 0: all */
 
 static unsigned
@@ -100,13 +114,15 @@ CategoryBits(const char *list)
         if (e - p > 0 && e - p < (int) sizeof(want) - 1)
         {
             snprintf(want, sizeof(want), "%.*s;", (int) (e - p), p);
-            for (i = 1; i < NCATS; i++)
+            for (i = 1; i < CAT_OTHER; i++)
                 if (strstr(categories[i].xdg, want) &&
                     (categories[i].xdg == strstr(categories[i].xdg, want) ||
                      strstr(categories[i].xdg, want)[-1] == ';'))
                     bits |= 1u << i;
         }
     }
+    if (bits == 0)
+        bits = 1u << CAT_OTHER;
     return bits;
 }
 
@@ -114,7 +130,8 @@ static App     apps[MAX_APPS];
 static int     nApps;
 static int    *shown;		/* indexes into apps[] of the listed rows */
 static int     nShown;
-static Widget  top, field, list;
+static Widget  top, field;
+static AppList *appList, *catList;
 
 /* "Exec" without its field codes (%f, %U...); "%%" is a literal "%". */
 static char *
@@ -165,6 +182,59 @@ HaveProgram(const char *prog)
     return ok;
 }
 
+/* Desktop file IDs already seen (earlier folders win). */
+static char *ids[MAX_APPS * 2];
+static int   nIds;
+
+/* OnlyShowIn / NotShowIn against $XDG_CURRENT_DESKTOP ("CDE"; a
+ * ":"-separated list). */
+static Boolean
+InList(const char *list, const char *desktops)
+{
+    char  copy[512], *d, *save = NULL, want[80];
+
+    snprintf(copy, sizeof(copy), "%s", desktops);
+    for (d = strtok_r(copy, ":", &save); d; d = strtok_r(NULL, ":", &save))
+    {
+        size_t n;
+
+        snprintf(want, sizeof(want), "%s;", d);
+        n = strlen(want);
+        if (strncmp(list, want, n) == 0)
+            return True;
+        {
+            const char *p = list;
+
+            while ((p = strstr(p, want)) != NULL)
+            {
+                if (p > list && p[-1] == ';')
+                    return True;
+                p++;
+            }
+        }
+        /* a last item without the ending ";" */
+        n--;
+        if (strlen(list) >= n && strcmp(list + strlen(list) - n, d) == 0 &&
+            (strlen(list) == n || list[strlen(list) - n - 1] == ';'))
+            return True;
+    }
+    return False;
+}
+
+static Boolean
+ShownHere(const char *only, const char *notin)
+{
+    const char *cur = getenv("XDG_CURRENT_DESKTOP");
+
+    if (!cur || !*cur)
+        cur = "CDE";
+    if (only[0] && !InList(only, cur))
+        return False;
+    if (notin[0] && InList(notin, cur))
+        return False;
+    return True;
+}
+
 static void
 ReadDir(const char *dir)
 {
@@ -172,7 +242,7 @@ ReadDir(const char *dir)
     struct dirent *e;
     char   path[4200], line[2048], *v;
     char   name[256], generic[256], keywords[512], exec[2048], tryexec[512];
-    char   cats[512];
+    char   cats[512], only[512], notin[512], icon[512];
     FILE  *fp;
     size_t len;
     int    i;
@@ -189,7 +259,7 @@ ReadDir(const char *dir)
         if ((fp = fopen(path, "r")) == NULL)
             continue;
         name[0] = generic[0] = keywords[0] = exec[0] = tryexec[0] = '\0';
-        cats[0] = '\0';
+        cats[0] = only[0] = notin[0] = icon[0] = '\0';
         in = hide = app = term = False;
         while (fgets(line, sizeof(line), fp))
         {
@@ -214,6 +284,12 @@ ReadDir(const char *dir)
                 snprintf(exec, sizeof(exec), "%s", v);
             else if (strcmp(line, "TryExec") == 0)
                 snprintf(tryexec, sizeof(tryexec), "%s", v);
+            else if (strcmp(line, "Icon") == 0)
+                snprintf(icon, sizeof(icon), "%s", v);
+            else if (strcmp(line, "OnlyShowIn") == 0)
+                snprintf(only, sizeof(only), "%s", v);
+            else if (strcmp(line, "NotShowIn") == 0)
+                snprintf(notin, sizeof(notin), "%s", v);
             else if (strcmp(line, "Type") == 0)
                 app = (strcmp(v, "Application") == 0);
             else if (strcmp(line, "Terminal") == 0)
@@ -223,13 +299,19 @@ ReadDir(const char *dir)
                 hide = True;
         }
         fclose(fp);
-        if (!app || hide || !name[0] || !exec[0] ||
-            (tryexec[0] && !HaveProgram(tryexec)))
-            continue;
-        for (i = 0; i < nApps; i++)	/* the first of a name wins */
-            if (strcmp(apps[i].name, name) == 0)
+        /* As the freedesktop.org specs say: an ID (file name) listed
+         * by an earlier folder hides this one, even when that one is
+         * hidden; then the entry's own rules. */
+        for (i = 0; i < nIds; i++)
+            if (strcmp(ids[i], e->d_name) == 0)
                 break;
-        if (i < nApps)
+        if (i < nIds)
+            continue;
+        if (nIds < MAX_APPS * 2)
+            ids[nIds++] = XtNewString(e->d_name);
+        if (!app || hide || !name[0] || !exec[0] ||
+            !ShownHere(only, notin) ||
+            (tryexec[0] && !HaveProgram(tryexec)))
             continue;
         apps[nApps].name = XtNewString(name);
         apps[nApps].generic = XtNewString(generic);
@@ -237,244 +319,11 @@ ReadDir(const char *dir)
         apps[nApps].cats = CategoryBits(cats);
         apps[nApps].exec = ExecToCommand(exec);
         apps[nApps].path = XtNewString(path);
+        apps[nApps].icon = XtNewString(icon);
+        apps[nApps].id = ids[nIds - 1];
         apps[nApps].action = NULL;
         apps[nApps].terminal = term;
         nApps++;
-    }
-    closedir(d);
-}
-
-/*
- * CDE ships actions for applications that may not be installed (Amarok,
- * Caja...).  Read the action definitions (the DTDATABASESEARCHPATH
- * folders) for each COMMAND action's program, so those whose program is
- * missing are left out of the menu.  Actions without one (messages,
- * maps) always show.
- */
-#define MAX_ACTS 4000
-static struct { char *name; Boolean found, installed; } acts[MAX_ACTS];
-static int nActs;
-
-static void
-NoteAction(const char *name, const char *exec)
-{
-    char        prog[1024];
-    int         i;
-    Boolean     ok;
-
-    while (*exec == ' ' || *exec == '\t' || *exec == '"' || *exec == '\'')
-        exec++;
-    snprintf(prog, sizeof(prog), "%s", exec);
-    prog[strcspn(prog, " \t\"'")] = '\0';
-    /* a program we can check: a plain word or a path, no %Args% */
-    if (!prog[0] || strchr(prog, '%') || strchr(prog, '$'))
-        ok = True;
-    else
-        ok = HaveProgram(prog);
-    for (i = 0; i < nActs; i++)
-        if (strcmp(acts[i].name, name) == 0)
-        {
-            acts[i].installed = acts[i].installed || ok;
-            return;
-        }
-    if (nActs < MAX_ACTS)
-    {
-        acts[nActs].name = XtNewString(name);
-        acts[nActs].found = True;
-        acts[nActs].installed = ok;
-        nActs++;
-    }
-}
-
-static void
-ReadTypesDir(const char *dir)
-{
-    DIR    *d = opendir(dir);
-    struct dirent *e;
-    char    path[4200], line[2048], name[256], exec[2048], *p;
-    FILE   *fp;
-    size_t  len;
-    Boolean inAction, command, more;
-
-    if (!d)
-        return;
-    while ((e = readdir(d)) != NULL)
-    {
-        len = strlen(e->d_name);
-        if (len < 4 || strcmp(e->d_name + len - 3, ".dt") != 0)
-            continue;
-        snprintf(path, sizeof(path), "%s/%s", dir, e->d_name);
-        if ((fp = fopen(path, "r")) == NULL)
-            continue;
-        inAction = command = more = False;
-        name[0] = exec[0] = '\0';
-        while (fgets(line, sizeof(line), fp))
-        {
-            line[strcspn(line, "\r\n")] = '\0';
-            for (p = line; *p == ' ' || *p == '\t'; p++)
-                ;
-            if (more)			/* EXEC_STRING continued */
-            {
-                more = (len = strlen(p)) > 0 && p[len - 1] == '\\';
-                continue;
-            }
-            if (strncmp(p, "ACTION", 6) == 0 && (p[6] == ' ' || p[6] == '\t'))
-            {
-                for (p += 6; *p == ' ' || *p == '\t'; p++)
-                    ;
-                snprintf(name, sizeof(name), "%s", p);
-                name[strcspn(name, " \t")] = '\0';
-                inAction = True;
-                command = True;		/* the default type */
-                exec[0] = '\0';
-            }
-            else if (inAction && *p == '}')
-            {
-                if (command && exec[0])
-                    NoteAction(name, exec);
-                inAction = False;
-            }
-            else if (inAction && strncmp(p, "TYPE", 4) == 0 &&
-                     (p[4] == ' ' || p[4] == '\t'))
-                command = (strstr(p + 4, "COMMAND") != NULL);
-            else if (inAction && strncmp(p, "EXEC_STRING", 11) == 0)
-            {
-                snprintf(exec, sizeof(exec), "%s", p + 11);
-                more = (len = strlen(p)) > 0 && p[len - 1] == '\\';
-            }
-        }
-        fclose(fp);
-    }
-    closedir(d);
-}
-
-static void
-ReadActionPrograms(void)
-{
-    const char *v = getenv("DTDATABASESEARCHPATH");
-    char       *paths, *t, *save = NULL, dir[4200], *pc;
-
-    paths = XtNewString((v && *v) ? v :
-        "~/.dt/types,/etc/dt/appconfig/types/%L,/usr/dt/appconfig/types/%L");
-    /* strtok_r: HaveProgram (below) uses strtok */
-    for (t = strtok_r(paths, ",", &save); t; t = strtok_r(NULL, ",", &save))
-    {
-        /* "~", and %L as C (the definitions are not translated) */
-        if (t[0] == '~')
-            snprintf(dir, sizeof(dir), "%s%s",
-                     getenv("HOME") ? getenv("HOME") : "", t + 1);
-        else
-            snprintf(dir, sizeof(dir), "%s", t);
-        if ((pc = strstr(dir, "%L")) != NULL)
-        {
-            char rest[4200];
-
-            snprintf(rest, sizeof(rest), "%s", pc + 2);
-            snprintf(pc, sizeof(dir) - (pc - dir), "C%s", rest);
-        }
-        ReadTypesDir(dir);
-    }
-    XtFree(paths);
-}
-
-/* False only for a COMMAND action whose program is not installed. */
-static Boolean
-ActionInstalled(const char *name)
-{
-    int i;
-
-    for (i = 0; i < nActs; i++)
-        if (strcmp(acts[i].name, name) == 0)
-            return acts[i].installed;
-    return True;
-}
-
-/* CDE's applications: the Application Manager's groups (folders of
- * files named after actions), listed by the actions' labels. */
-static unsigned
-GroupBits(const char *g)
-{
-    if (strstr(g, "Admin") || strstr(g, "System"))
-        return 1u << 10;
-    if (strstr(g, "Media"))
-        return 1u << 7;
-    if (strstr(g, "Game"))
-        return 1u << 4;
-    if (strstr(g, "Tool") || strstr(g, "Desktop_Apps"))
-        return 1u << 1;
-    return 0;
-}
-
-static void
-ReadGroup(const char *gdir, const char *group)
-{
-    DIR    *d = opendir(gdir);
-    struct dirent *e;
-    char    path[4600], generic[256], *label;
-    int     i;
-
-    if (!d)
-        return;
-    while ((e = readdir(d)) != NULL && nApps < MAX_APPS)
-    {
-        if (e->d_name[0] == '.' || !DtActionExists(e->d_name) ||
-            !ActionInstalled(e->d_name))
-            continue;
-        label = DtActionLabel(e->d_name);
-        if (!label || !*label)
-        {
-            XtFree(label);
-            label = XtNewString(e->d_name);
-        }
-        for (i = 0; label[i]; i++)	/* "Acrobat_Reader" */
-            if (label[i] == '_')
-                label[i] = ' ';
-        for (i = 0; i < nApps; i++)	/* an XDG entry of the name wins */
-            if (strcasecmp(apps[i].name, label) == 0)
-                break;
-        if (i < nApps)
-        {
-            XtFree(label);
-            continue;
-        }
-        snprintf(path, sizeof(path), "%s/%s", gdir, e->d_name);
-        snprintf(generic, sizeof(generic), "%s", group);
-        for (i = 0; generic[i]; i++)
-            if (generic[i] == '_')
-                generic[i] = ' ';
-        apps[nApps].name = label;
-        apps[nApps].generic = XtNewString(generic);
-        apps[nApps].keywords = XtNewString(e->d_name);
-        apps[nApps].exec = XtNewString("");
-        apps[nApps].path = XtNewString(path);
-        apps[nApps].action = XtNewString(e->d_name);
-        apps[nApps].terminal = False;
-        apps[nApps].cats = GroupBits(group);
-        nApps++;
-    }
-    closedir(d);
-}
-
-static void
-ReadAppManager(void)
-{
-    char   dir[4200], gdir[4400];
-    const char *s = getenv("DTUSERSESSION");
-    DIR   *d;
-    struct dirent *e;
-
-    if (!s || !*s || strchr(s, '/'))
-        return;
-    snprintf(dir, sizeof(dir), CDE_LOGFILES_TOP "/appconfig/appmanager/%s", s);
-    if ((d = opendir(dir)) == NULL)
-        return;
-    ReadActionPrograms();
-    while ((e = readdir(d)) != NULL)
-    {
-        if (e->d_name[0] == '.')
-            continue;
-        snprintf(gdir, sizeof(gdir), "%s/%s", dir, e->d_name);
-        ReadGroup(gdir, e->d_name);
     }
     closedir(d);
 }
@@ -506,8 +355,32 @@ ReadApps(void)
         ReadDir(dir);
     }
     XtFree(dirs);
-    ReadAppManager();
     qsort(apps, nApps, sizeof(App), NameCmp);
+    /* Two applications of one name (CDE's and another desktop's
+     * Calculator): show their programs too. */
+    {
+        int i;
+
+        for (i = 0; i < nApps; i++)
+        {
+            Boolean twin = (i > 0 && strcasecmp(apps[i].name,
+                                                apps[i - 1].name) == 0) ||
+                           (i + 1 < nApps && strcasecmp(apps[i].name,
+                                                        apps[i + 1].name) == 0);
+            char    prog[256], *b;
+
+            apps[i].label = apps[i].name;
+            if (!twin)
+                continue;
+            snprintf(prog, sizeof(prog), "%s", apps[i].exec);
+            prog[strcspn(prog, " \t")] = '\0';
+            b = strrchr(prog, '/') ? strrchr(prog, '/') + 1 : prog;
+            if (!*b)
+                continue;
+            apps[i].label = XtMalloc(strlen(apps[i].name) + strlen(b) + 4);
+            sprintf(apps[i].label, "%s (%s)", apps[i].name, b);
+        }
+    }
     shown = (int *) XtMalloc((nApps ? nApps : 1) * sizeof(int));
 }
 
@@ -523,7 +396,6 @@ Contains(const char *hay, const char *want, size_t n)
 static void
 Filter(const char *want)
 {
-    XmString *items;
     size_t    n;
     int       i, k = 0;
 
@@ -533,7 +405,6 @@ Filter(const char *want)
         want++;
     n = strlen(want);
 
-    items = (XmString *) XtMalloc((nApps ? nApps : 1) * sizeof(XmString));
     /* best matches first: names that start with the text, then names
      * that contain it, then generic names and keywords */
     for (pass = 0; pass < 3; pass++)
@@ -543,7 +414,8 @@ Filter(const char *want)
             Boolean inName = Contains(apps[i].name, want, n);
             Boolean hit;
 
-            if (curCat > 0 && !(apps[i].cats & (1u << curCat)))
+            /* typing searches every category, as other menus do */
+            if (curCat > 0 && n == 0 && !(apps[i].cats & (1u << curCat)))
                 continue;
             if (pass == 0)
                 hit = (n == 0 || starts);
@@ -554,20 +426,15 @@ Filter(const char *want)
                        (Contains(apps[i].generic, want, n) ||
                         Contains(apps[i].keywords, want, n)));
             if (hit)
-            {
-                shown[k] = i;
-                items[k++] = XmStringCreateLocalized(apps[i].name);
-            }
+                shown[k++] = i;
         }
     nShown = k;
-    XmListDeleteAllItems(list);
-    XmListAddItemsUnselected(list, items, k, 1);
-    for (i = 0; i < k; i++)
-        XmStringFree(items[i]);
-    XtFree((char *) items);
-    if (k > 0)
-        XmListSelectPos(list, 1, False);
+    AppListSetCount(appList, k);
 }
+
+/* -pick: choosing an application prints its .desktop file instead of
+ * starting it (a Front Panel drawer's Install Icon adds it). */
+static Boolean pick = False;
 
 /* Start row "pos" (1-based) and quit. */
 static void
@@ -579,6 +446,12 @@ Launch(int pos)
     if (pos < 1 || pos > nShown)
         return;
     a = &apps[shown[pos - 1]];
+    if (pick)
+    {
+        printf("%s\n", a->path);
+        fflush(stdout);
+        exit(0);
+    }
     signal(SIGCHLD, SIG_IGN);		/* nobody waits for it */
     if ((pid = fork()) == 0)
     {
@@ -608,25 +481,19 @@ Launch(int pos)
 static int
 Selected(void)
 {
-    int *pos, n, p = 1;
-
-    if (XmListGetSelectedPos(list, &pos, &n))
-    {
-        p = pos[0];
-        XtFree((char *) pos);
-    }
-    return p;
+    return AppListSelected(appList) + 1;	/* 1-based; 0: none */
 }
 
 static void
-CategoryCB(Widget w, XtPointer client, XtPointer call)
+CategoryCB(int row)
 {
     char *t;
 
-    curCat = (int) (intptr_t) client;
+    curCat = row;
     t = XmTextFieldGetString(field);
     Filter(t);
     XtFree(t);
+    /* typing keeps going to the search field */
     XmProcessTraversal(field, XmTRAVERSE_CURRENT);
 }
 
@@ -668,7 +535,8 @@ ActivateCB(Widget w, XtPointer client, XtPointer call)
     {
         char *t = XmTextFieldGetString(w);
 
-        RunCommand(t);
+        if (!pick)			/* picking runs no commands */
+            RunCommand(t);
         XtFree(t);
         return;
     }
@@ -676,9 +544,49 @@ ActivateCB(Widget w, XtPointer client, XtPointer call)
 }
 
 static void
-DefaultActionCB(Widget w, XtPointer client, XtPointer call)
+ActivateRow(int row)
 {
-    Launch(((XmListCallbackStruct *) call)->item_position);
+    Launch(row + 1);
+}
+
+/* What the two lists show. */
+static const char *
+AppText(int row)
+{
+    return (row >= 0 && row < nShown) ? apps[shown[row]].label : "";
+}
+
+static const char *
+AppIcon(int row)
+{
+    const char *i = (row >= 0 && row < nShown) ? apps[shown[row]].icon : "";
+
+    return (i && *i) ? i : "application-x-executable";
+}
+
+static const char *
+CatText(int row)
+{
+    return categories[row].label;
+}
+
+/* The icon names other desktops use for these menu categories. */
+static const char *
+CatIcon(int row)
+{
+    /* the theme icon, then a CDE icon for systems without themes */
+    static const char *icons[] = {
+        "applications-other|Fpapps", "applications-accessories|Dtcalc",
+        "applications-development|DtBldr", "applications-science|Dtinfo",
+        "applications-games|DtGamesCards", "applications-graphics|Dtpaint",
+        "applications-internet|DtMail",
+        "applications-multimedia|Dtapplications-multimedia",
+        "applications-office|Dtpenpd", "preferences-desktop|Fpstyle",
+        "applications-system|DtSystem", "applications-other|Fpapps"
+    };
+
+    return (row >= 0 && row < (int) (sizeof(icons) / sizeof(icons[0]))) ?
+        icons[row] : NULL;
 }
 
 /* Up, Down, Page keys in the field move the selection in the list;
@@ -687,16 +595,37 @@ static void
 KeyEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
 {
     KeySym ks = XLookupKeysym(&ev->xkey, 0);
-    int    p, top_item, visible;
+    int    p, visible;
 
     if (ks == XK_Escape)
         exit(0);
+    /* Left and Right in an empty search field: the previous or next
+     * category (the field has nothing to move through then) */
+    if ((ks == XK_Left || ks == XK_Right) && w == field)
+    {
+        char *t = XmTextFieldGetString(field);
+        Boolean empty = !t || !*t;
+
+        XtFree(t);
+        if (empty)
+        {
+            int c = curCat + (ks == XK_Right ? 1 : -1);
+
+            if (c >= 0 && c < NCATS)
+            {
+                curCat = c;
+                AppListSelect(catList, c);
+                Filter("");
+            }
+            *cont = False;
+            return;
+        }
+    }
     if (nShown == 0 || (ks != XK_Up && ks != XK_Down &&
                         ks != XK_Page_Up && ks != XK_Page_Down))
         return;
     *cont = False;
-    XtVaGetValues(list, XmNtopItemPosition, &top_item,
-                  XmNvisibleItemCount, &visible, NULL);
+    visible = AppListVisibleRows(appList);
     p = Selected();
     if (ks == XK_Up) p--;
     else if (ks == XK_Down) p++;
@@ -704,11 +633,7 @@ KeyEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
     else p += visible;
     if (p < 1) p = 1;
     if (p > nShown) p = nShown;
-    XmListSelectPos(list, p, False);
-    if (p < top_item)
-        XmListSetPos(list, p);
-    else if (p >= top_item + visible)
-        XmListSetBottomPos(list, p);
+    AppListSelect(appList, p - 1);
 }
 
 static void
@@ -915,8 +840,6 @@ FocusEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
 /* --- dragging a row onto a Front Panel drawer --- */
 
 static int     dragRow;			/* 1-based row being dragged */
-static int     pressX, pressY;
-static Boolean pressed;
 
 static void
 ConvertCB(Widget w, XtPointer client, XtPointer call)
@@ -944,30 +867,17 @@ DragFinishCB(Widget w, XtPointer client, XtPointer call)
 }
 
 static void
-DragEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
+DragRow(int row, XEvent *ev)
 {
     static XtCallbackRec convertRec[] = { { ConvertCB, NULL }, { NULL, NULL } };
     static XtCallbackRec finishRec[] = { { DragFinishCB, NULL }, { NULL, NULL } };
 
-    if (ev->type == ButtonPress && ev->xbutton.button == Button1)
-    {
-        pressed = True;
-        pressX = ev->xbutton.x;
-        pressY = ev->xbutton.y;
-    }
-    else if (ev->type == ButtonRelease)
-        pressed = False;
-    else if (ev->type == MotionNotify && pressed &&
-             (abs(ev->xmotion.x - pressX) > 8 ||
-              abs(ev->xmotion.y - pressY) > 8))
-    {
-        pressed = False;
-        dragRow = XmListYToPos(list, pressY);
-        if (dragRow < 1 || dragRow > nShown)
-            return;
-        (void) DtDndVaDragStart(list, ev, DtDND_FILENAME_TRANSFER, 1,
-                                XmDROP_COPY, convertRec, finishRec, NULL);
-    }
+    dragRow = row + 1;
+    if (dragRow < 1 || dragRow > nShown)
+        return;
+    (void) DtDndVaDragStart(AppListWidget(appList), ev,
+                            DtDND_FILENAME_TRANSFER, 1, XmDROP_COPY,
+                            convertRec, finishRec, NULL);
 }
 
 int
@@ -998,11 +908,17 @@ main(int argc, char **argv)
         menu = True;
         argc = 1;
     }
+    if (argc == 2 && strcmp(argv[1], "-pick") == 0)
+    {
+        pick = True;
+        argc = 1;
+    }
 
     XtSetLanguageProc(NULL, NULL, NULL);
     top = XtVaAppInitialize(&app, "Dtappfind", NULL, 0, &argc, argv, NULL,
-                            XmNtitle, "Applications",
-                            XmNiconName, "Applications", NULL);
+                            XmNtitle, pick ? "Add to Drawer" : "Applications",
+                            XmNiconName, pick ? "Add to Drawer" : "Applications",
+                            NULL);
     {
         char name[64];
 
@@ -1010,81 +926,85 @@ main(int argc, char **argv)
                  DefaultScreen(XtDisplay(top)));
         selAtom = XInternAtom(XtDisplay(top), name, False);
         cmdAtom = XInternAtom(XtDisplay(top), "_CLANKER_APPFIND_CMD", False);
-        if (HandOff(XtDisplay(top), menu))
+        /* a pick window is its own: no hand-off to an open menu */
+        if (!pick && HandOff(XtDisplay(top), menu))
             return 0;
     }
-    if (DtInitialize(XtDisplay(top), top, "dtappfind", "Dtappfind"))
-        DtDbLoad();
+    /* for dragging rows (DtDnd); the action database is not needed */
+    (void) DtInitialize(XtDisplay(top), top, "dtappfind", "Dtappfind");
     ReadApps();
 
     form = XtVaCreateManagedWidget("form", xmFormWidgetClass, top,
                                    XmNmarginWidth, 8, XmNmarginHeight, 8,
                                    NULL);
-    s = XmStringCreateLocalized("Search, or type a command to run:");
+    s = XmStringCreateLocalized(pick ?
+        "Choose the application to add to the drawer (Enter or double-click):" :
+        "Search, or type a command to run:");
     label = XtVaCreateManagedWidget("label", xmLabelWidgetClass, form,
                                     XmNlabelString, s,
                                     XmNtopAttachment, XmATTACH_FORM,
                                     XmNleftAttachment, XmATTACH_FORM, NULL);
     XmStringFree(s);
-    {
-        Widget pull, opt, b;
-        int    i;
-
-        pull = XmCreatePulldownMenu(form, "categoryMenu", NULL, 0);
-        for (i = 0; i < NCATS; i++)
-        {
-            s = XmStringCreateLocalized((char *) categories[i].label);
-            b = XtVaCreateManagedWidget("category", xmPushButtonWidgetClass,
-                                        pull, XmNlabelString, s, NULL);
-            XmStringFree(s);
-            XtAddCallback(b, XmNactivateCallback, CategoryCB,
-                          (XtPointer) (intptr_t) i);
-        }
-        s = XmStringCreateLocalized("Category:");
-        n = 0;
-        XtSetArg(a[n], XmNsubMenuId, pull); n++;
-        XtSetArg(a[n], XmNlabelString, s); n++;
-        XtSetArg(a[n], XmNtopAttachment, XmATTACH_FORM); n++;
-        XtSetArg(a[n], XmNleftAttachment, XmATTACH_FORM); n++;
-        opt = XmCreateOptionMenu(form, "category", a, n);
-        XmStringFree(s);
-        XtManageChild(opt);
-        /* the category row on top, then the label, then the field */
-        XtVaSetValues(label, XmNtopAttachment, XmATTACH_WIDGET,
-                      XmNtopWidget, opt, XmNtopOffset, 6, NULL);
-    }
     field = XtVaCreateManagedWidget("search", xmTextFieldWidgetClass, form,
-                                    XmNcolumns, 34,
+                                    XmNcolumns, 46,
                                     XmNtopAttachment, XmATTACH_WIDGET,
                                     XmNtopWidget, label, XmNtopOffset, 4,
                                     XmNleftAttachment, XmATTACH_FORM,
                                     XmNrightAttachment, XmATTACH_FORM, NULL);
+    /* the categories on the left, as other desktops' menus show them,
+     * and the applications, each with its icon */
     n = 0;
-    XtSetArg(a[n], XmNvisibleItemCount, 14); n++;
-    XtSetArg(a[n], XmNselectionPolicy, XmBROWSE_SELECT); n++;
-    XtSetArg(a[n], XmNscrollBarDisplayPolicy, XmSTATIC); n++;
     XtSetArg(a[n], XmNtopAttachment, XmATTACH_WIDGET); n++;
     XtSetArg(a[n], XmNtopWidget, field); n++;
     XtSetArg(a[n], XmNtopOffset, 6); n++;
     XtSetArg(a[n], XmNleftAttachment, XmATTACH_FORM); n++;
+    XtSetArg(a[n], XmNbottomAttachment, XmATTACH_FORM); n++;
+    {
+        /* wide enough for the longest category name */
+        XmRenderTable rt = NULL;
+        Dimension     widest = 0;
+        int           i;
+
+        XtVaGetValues(field, XmNrenderTable, &rt, NULL);
+        for (i = 0; rt && i < NCATS; i++)
+        {
+            XmString  xs = XmStringCreateLocalized((char *) categories[i].label);
+            Dimension w = XmStringWidth(rt, xs);
+
+            XmStringFree(xs);
+            if (w > widest)
+                widest = w;
+        }
+        XtSetArg(a[n], XmNwidth, widest + APPLIST_ICON + 40); n++;  /* icon gap, shadows */
+    }
+    XtSetArg(a[n], XmNheight, NCATS * 26 + 8); n++;
+    catList = AppListCreate(form, "categories", a, n, field, CatText,
+                            CatIcon, CategoryCB, NULL, NULL);
+    n = 0;
+    XtSetArg(a[n], XmNtopAttachment, XmATTACH_WIDGET); n++;
+    XtSetArg(a[n], XmNtopWidget, field); n++;
+    XtSetArg(a[n], XmNtopOffset, 6); n++;
+    XtSetArg(a[n], XmNleftAttachment, XmATTACH_WIDGET); n++;
+    XtSetArg(a[n], XmNleftWidget, AppListWidget(catList)); n++;
+    XtSetArg(a[n], XmNleftOffset, 6); n++;
     XtSetArg(a[n], XmNrightAttachment, XmATTACH_FORM); n++;
     XtSetArg(a[n], XmNbottomAttachment, XmATTACH_FORM); n++;
-    list = XmCreateScrolledList(form, "apps", a, n);
-    XtManageChild(list);
+    XtSetArg(a[n], XmNwidth, 330); n++;
+    appList = AppListCreate(form, "apps", a, n, field, AppText, AppIcon,
+                            NULL, ActivateRow, DragRow);
 
     XtAddCallback(field, XmNvalueChangedCallback, ChangedCB, NULL);
     XtAddCallback(field, XmNactivateCallback, ActivateCB, NULL);
-    XtAddCallback(list, XmNdefaultActionCallback, DefaultActionCB, NULL);
     XtAddEventHandler(field, KeyPressMask, False, KeyEH, NULL);
-    XtAddEventHandler(list, KeyPressMask, False, KeyEH, NULL);
-    XtAddEventHandler(list, ButtonPressMask | ButtonReleaseMask |
-                      Button1MotionMask, False, DragEH, NULL);
 
+    AppListSetCount(catList, NCATS);
+    AppListAutoHideScrollBar(catList);
     Filter("");
     if (menu)
         XtSetMappedWhenManaged(top, False);
     XtRealizeWidget(top);
-    XSetSelectionOwner(XtDisplay(top), selAtom, XtWindow(top), CurrentTime);
+    if (!pick)
+        XSetSelectionOwner(XtDisplay(top), selAtom, XtWindow(top), CurrentTime);
     XtAddEventHandler(top, PropertyChangeMask, False, CommandEH, NULL);
     del = XmInternAtom(XtDisplay(top), "WM_DELETE_WINDOW", False);
     XmAddWMProtocolCallback(top, del, CloseCB, NULL);

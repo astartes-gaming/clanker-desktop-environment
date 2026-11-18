@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Mail
+Comment=Read and send e-mail
+Exec=dtmail
+TryExec=dtmail
+Icon=DtMail
+Terminal=false
+Categories=Office;Network;Email;
+Keywords=email;mail;inbox;
+OnlyShowIn=CDE;

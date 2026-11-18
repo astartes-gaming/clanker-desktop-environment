@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Calculator
+Comment=Scientific and financial calculator
+Exec=dtcalc
+TryExec=dtcalc
+Icon=Dtcalc
+Terminal=false
+Categories=Utility;Calculator;
+Keywords=calculator;math;
+OnlyShowIn=CDE;

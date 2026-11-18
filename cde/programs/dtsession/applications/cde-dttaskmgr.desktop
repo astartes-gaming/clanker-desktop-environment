@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Task Manager
+Comment=See and stop running programs
+Exec=dttaskmgr
+TryExec=dttaskmgr
+Icon=DtSystem
+Terminal=false
+Categories=System;Monitor;
+Keywords=processes;tasks;top;cpu;
+OnlyShowIn=CDE;

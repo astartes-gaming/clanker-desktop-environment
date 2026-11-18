@@ -2275,6 +2275,103 @@ GetValuesFromDataType (char *	       data_type,
 
 /************************************************************************
  *
+ *  InstallClickCB
+ *	A click on a drawer's Install Icon: choose an application in
+ *	"dtappfind -pick" and add it as if it had been dropped there.
+ *	The chooser runs on its own; its answer (a .desktop file) comes
+ *	back through a pipe, so the panel never waits for it.
+ *
+ ************************************************************************/
+
+typedef struct {
+   Widget       dropzone;
+   int          fd;
+   XtInputId    id;
+   char         buf[4096];
+   int          len;
+} InstallPick;
+
+static void
+InstallPickInput (XtPointer client_data, int *fd, XtInputId *id)
+{
+   InstallPick *p = (InstallPick *) client_data;
+   ssize_t      n = 0;
+
+   if (p->len < (int) sizeof (p->buf) - 1)
+      n = read (*fd, p->buf + p->len, sizeof (p->buf) - 1 - p->len);
+   if (n > 0)
+   {
+      p->len += n;
+      return;
+   }
+
+   /* end of the answer (or a full buffer): add it */
+   XtRemoveInput (p->id);
+   close (p->fd);
+   p->buf[p->len] = '\0';
+   p->buf[strcspn (p->buf, "\r\n")] = '\0';
+   if (p->buf[0] == '/' && access (p->buf, R_OK) == 0)
+   {
+      DtDndContext                   context;
+      DtDndDropAnimateCallbackStruct animate;
+      String                         files[1];
+
+      files[0] = p->buf;
+      memset (&context, 0, sizeof (context));
+      context.protocol = DtDND_FILENAME_TRANSFER;
+      context.numItems = 1;
+      context.data.files = files;
+      memset (&animate, 0, sizeof (animate));
+      animate.dropData = &context;
+      CustomizeDropCB (p->dropzone, NULL, (XtPointer) &animate);
+   }
+   XtFree ((char *) p);
+}
+
+void
+InstallClickCB (Widget    w,
+                XtPointer client_data,
+                XtPointer call_data)
+{
+   DtControlCallbackStruct *cb = (DtControlCallbackStruct *) call_data;
+   InstallPick *p;
+   int          fds[2];
+   pid_t        pid;
+
+   if (cb != NULL && cb->reason != XmCR_ACTIVATE)
+      return;
+   if (pipe (fds) != 0)
+      return;
+   if ((pid = fork ()) < 0)
+   {
+      close (fds[0]);
+      close (fds[1]);
+      return;
+   }
+   if (pid == 0)
+   {
+      dup2 (fds[1], 1);
+      close (fds[0]);
+      close (fds[1]);
+      execl (CDE_INSTALLATION_TOP "/bin/dtappfind", "dtappfind", "-pick",
+             (char *) NULL);
+      execlp ("dtappfind", "dtappfind", "-pick", (char *) NULL);
+      _exit (127);
+   }
+   close (fds[1]);
+   (void) fcntl (fds[0], F_SETFD, FD_CLOEXEC);
+
+   p = (InstallPick *) XtCalloc (1, sizeof (InstallPick));
+   p->dropzone = w;
+   p->fd = fds[0];
+   p->id = XtAppAddInput (XtWidgetToApplicationContext (w), fds[0],
+                          (XtPointer) XtInputReadMask, InstallPickInput,
+                          (XtPointer) p);
+}
+
+
+/************************************************************************
+ *
  *  CustomizeDropCB
  *	Process the callback for the drop on the subpanel drop zone for
  *      dynamic customization

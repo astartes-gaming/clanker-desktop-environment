@@ -3201,6 +3201,9 @@ DesktopFileInfo (const char *file, char **name, char **icon)
       { "~/.local/share/icons/hicolor/48x48/apps/", ".png" },
       { "/usr/share/icons/hicolor/48x48/apps/", ".png" },
       { "/usr/share/pixmaps/", ".png" },
+      /* CDE's own applications name CDE icons (Dtcalc, Fphome) */
+      { CDE_INSTALLATION_TOP "/appconfig/icons/C/", ".m.pm" },
+      { CDE_INSTALLATION_TOP "/appconfig/icons/C/", ".l.pm" },
       { NULL, NULL }
    };
    size_t len = strlen (file);

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Application Manager
+Comment=CDE's application groups
+Exec=dtaction Dtappmgr
+TryExec=dtaction
+Icon=Fpapps
+Terminal=false
+Categories=System;
+Keywords=applications;tools;
+OnlyShowIn=CDE;

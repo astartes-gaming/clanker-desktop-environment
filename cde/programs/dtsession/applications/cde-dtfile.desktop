@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=File Manager
+Comment=Browse and manage files
+Exec=dtfile
+TryExec=dtfile
+Icon=Fphome
+Terminal=false
+Categories=Utility;System;FileTools;FileManager;
+Keywords=files;folders;browser;explorer;
+OnlyShowIn=CDE;

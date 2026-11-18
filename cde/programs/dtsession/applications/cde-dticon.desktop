@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Icon Editor
+Comment=Draw and edit icons
+Exec=dticon
+TryExec=dticon
+Icon=Dtpaint
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;
+Keywords=icon;paint;draw;pixmap;
+OnlyShowIn=CDE;

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Calendar
+Comment=Appointments and to-do lists
+Exec=dtcm
+TryExec=dtcm
+Icon=DtCM
+Terminal=false
+Categories=Office;Calendar;
+Keywords=calendar;appointments;agenda;todo;
+OnlyShowIn=CDE;

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Settings
+Comment=Colors, fonts, keyboard, mouse and more
+Exec=dtstyle
+TryExec=dtstyle
+Icon=Fpstyle
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=preferences;style;appearance;control panel;
+OnlyShowIn=CDE;
