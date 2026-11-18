@@ -975,7 +975,7 @@ main(int argc, char **argv)
             if (w > widest)
                 widest = w;
         }
-        XtSetArg(a[n], XmNwidth, widest + APPLIST_ICON + 24); n++;
+        XtSetArg(a[n], XmNwidth, widest + APPLIST_ICON + 40); n++;  /* icon gap, shadows */
     }
     XtSetArg(a[n], XmNheight, NCATS * 26 + 8); n++;
     catList = AppListCreate(form, "categories", a, n, field, CatText,
