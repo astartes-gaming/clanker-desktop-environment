@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Application Builder
+Comment=Design Motif user interfaces
+Exec=dtbuilder
+TryExec=dtbuilder
+Icon=DtBldr
+Terminal=false
+Categories=Development;GUIDesigner;
+Keywords=motif;gui;builder;
+OnlyShowIn=CDE;

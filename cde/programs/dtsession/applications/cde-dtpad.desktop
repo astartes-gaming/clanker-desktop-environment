@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Text Editor
+Comment=Edit plain text files
+Exec=dtpad
+TryExec=dtpad
+Icon=Dtpenpd
+Terminal=false
+Categories=Utility;TextEditor;
+Keywords=text;editor;notepad;
+MimeType=text/plain;
+OnlyShowIn=CDE;

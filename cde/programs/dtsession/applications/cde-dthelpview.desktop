@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Help Viewer
+Comment=Read the desktop's help
+Exec=dthelpview -helpVolume Intromgr
+TryExec=dthelpview
+Icon=Fphelp
+Terminal=false
+Categories=Utility;Documentation;
+Keywords=help;manual;documentation;
+OnlyShowIn=CDE;

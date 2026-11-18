@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Print Jobs
+Comment=Printers and print queues
+Exec=dtprintinfo
+TryExec=dtprintinfo
+Icon=Fpprnt
+Terminal=false
+Categories=Settings;HardwareSettings;Printing;
+Keywords=printer;print queue;
+OnlyShowIn=CDE;

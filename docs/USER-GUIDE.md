@@ -29,8 +29,13 @@ see the [README](../README.md).
   Escape or a click elsewhere closes it), or Workspace menu >
   **Applications...**, **Alt+F2**, or the Applications drawer's **Find
   Application**. Type part of a name (or what it does: "browser",
-  "music"), use Up and Down, and press Enter. CDE's own applications
-  are listed too. Text that matches no application runs as a command.
+  "music"), use Up and Down, and press Enter. Text that matches no
+  application runs as a command. The menu has the same entries and
+  categories as other desktops' menus (Accessories, Development,
+  Education, Games, Graphics, Internet, Multimedia, Office, Settings,
+  System, Other), listed on its left: click one, or press Left and
+  Right while the search box is empty. CDE's own applications are
+  filed there too.
 - **Windows key shortcuts**: **Windows+E** Home folder, **Windows+R**
   Run, **Windows+T** Terminal, **Windows+A** Application Manager,
   **Windows+I** Settings, **Windows+L** Lock, **Windows+arrows** tile

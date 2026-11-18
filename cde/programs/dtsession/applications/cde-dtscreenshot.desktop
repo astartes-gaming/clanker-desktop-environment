@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Screenshot
+Comment=Save a picture of the screen
+Exec=dtscreenshot
+TryExec=dtscreenshot
+Icon=Dtpaint
+Terminal=false
+Categories=Graphics;Utility;
+Keywords=screenshot;screen capture;print screen;
+OnlyShowIn=CDE;

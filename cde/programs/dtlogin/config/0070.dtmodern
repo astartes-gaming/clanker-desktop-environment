@@ -43,6 +43,17 @@ _dtm_have() { type "$1" >/dev/null 2>&1; }
 : ${XDG_SESSION_TYPE:=x11}
 export XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP DESKTOP_SESSION XDG_SESSION_TYPE
 
+# CDE's own applications' .desktop entries (share/applications next to
+# the CDE bin folder), for the application menu.
+_dtm_share=`dirname "${DT_BINPATH:-/usr/dt/bin}"`/share
+if [ -d "$_dtm_share/applications" ]; then
+  case ":${XDG_DATA_DIRS:=/usr/local/share:/usr/share}:" in
+    *":$_dtm_share:"*) ;;
+    *) XDG_DATA_DIRS=$XDG_DATA_DIRS:$_dtm_share ;;
+  esac
+  export XDG_DATA_DIRS
+fi
+
 #
 # 1b. Window manager.  xfwm4 when installed (it manages the windows;
 #     dtwm still draws the Front Panel, backdrops and Workspace menu),

@@ -22,6 +22,26 @@ bin_SCRIPTS = dtsession_res
 dist_bin_SCRIPTS = dthwkeys dtmixer dtscreenshot dtsleeplock dtcompositor dtpower dtaltwm dtwayland \
 		   dtxfwmtheme dttaskmgr dtkeyboard dtmodernapp dtxsettings dtterminal
 
+# freedesktop.org entries for CDE's own applications, so the
+# application menu (dtappfind) files them in the usual categories.
+# Xsession.d/0070.dtmodern adds this share folder to XDG_DATA_DIRS in
+# CDE sessions only (OnlyShowIn=CDE as well).
+cdeappsdir = $(CDE_INSTALLATION_TOP)/share/applications
+dist_cdeapps_DATA = applications/cde-dtappmgr.desktop \
+	applications/cde-dtbuilder.desktop \
+	applications/cde-dtcalc.desktop \
+	applications/cde-dtcm.desktop \
+	applications/cde-dtfile.desktop \
+	applications/cde-dthelpview.desktop \
+	applications/cde-dticon.desktop \
+	applications/cde-dtmail.desktop \
+	applications/cde-dtpad.desktop \
+	applications/cde-dtprintinfo.desktop \
+	applications/cde-dtscreenshot.desktop \
+	applications/cde-dtstyle.desktop \
+	applications/cde-dttaskmgr.desktop \
+	applications/cde-dtterminal.desktop
+
 # xfwm4 defaults for CDE sessions (Xsession.d/0070.dtmodern)
 xfconfdir = $(CDE_INSTALLATION_TOP)/config/xdg/xfce4/xfconf/xfce-perchannel-xml
 dist_xfconf_DATA = xfwm4.xml
