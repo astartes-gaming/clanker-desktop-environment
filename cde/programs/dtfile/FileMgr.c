@@ -204,7 +204,8 @@ static XmFontListEntry FontListDefaultEntry(
                         XmFontList font_list) ;
 static void SearchChangedCB(Widget w, XtPointer client_data,
                             XtPointer call_data);
-static void SetSearchShown(FileMgrRec *file_mgr_rec, Boolean shown);
+static void SetSearchShown(FileMgrRec *file_mgr_rec, FileMgrData *file_mgr_data,
+                           Boolean shown);
 static void SearchKeyEH(Widget w, XtPointer client_data, XEvent *event,
                         Boolean *cont);
 static void Create(
@@ -1768,7 +1769,7 @@ SetValues(
 
    XtManageChild(file_mgr_rec->header_frame);
    XtManageChild(file_mgr_rec->directoryBarBtn);
-   SetSearchShown(file_mgr_rec, file_mgr_data->toolbox);
+   SetSearchShown(file_mgr_rec, file_mgr_data, file_mgr_data->toolbox);
 
 
    if(showFilesystem && !TrashView)
@@ -6477,12 +6478,36 @@ SearchChangedCB(Widget w, XtPointer client_data, XtPointer call_data)
 }
 
 static void
-SetSearchShown(FileMgrRec *file_mgr_rec, Boolean shown)
+SetSearchShown(FileMgrRec *file_mgr_rec, FileMgrData *file_mgr_data,
+               Boolean shown)
 {
-   Arg args[2];
+   Arg   args[2];
+   char *text;
 
    if (file_mgr_rec->search_form == NULL)
       return;
+
+   /* The box shows this window's search (none for a reused window).
+    * Set quietly: the change callback would redraw a window that is
+    * still being set up. */
+   if (!shown)
+   {
+      XtFree (file_mgr_data->search);
+      file_mgr_data->search = NULL;
+   }
+   text = XmTextFieldGetString (file_mgr_rec->search_text);
+   if (strcmp (text ? text : "",
+               file_mgr_data->search ? file_mgr_data->search : "") != 0)
+   {
+      XtRemoveCallback (file_mgr_rec->search_text, XmNvalueChangedCallback,
+                        SearchChangedCB, (XtPointer) file_mgr_rec);
+      XmTextFieldSetString (file_mgr_rec->search_text,
+                            file_mgr_data->search ? file_mgr_data->search : "");
+      XtAddCallback (file_mgr_rec->search_text, XmNvalueChangedCallback,
+                     SearchChangedCB, (XtPointer) file_mgr_rec);
+   }
+   XtFree (text);
+
    if (shown)
    {
       XtManageChild (file_mgr_rec->search_form);
@@ -6492,8 +6517,6 @@ SetSearchShown(FileMgrRec *file_mgr_rec, Boolean shown)
    }
    else
    {
-      /* a window reused for a folder view: no leftover search */
-      XmTextFieldSetString (file_mgr_rec->search_text, "");
       XtSetArg (args[0], XmNtopAttachment, XmATTACH_FORM);
       XtSetValues (file_mgr_rec->status_line, args, 1);
       XtUnmanageChild (file_mgr_rec->search_form);
