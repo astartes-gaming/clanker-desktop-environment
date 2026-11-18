@@ -23,6 +23,8 @@
  *                           the Windows key again
  *   dtappfind -launch FILE  start the application of a .desktop file
  *                           (what a drawer icon made from one runs)
+ *   dtappfind -pick         choose an application; its .desktop file is
+ *                           printed (a drawer's Install Icon adds it)
  *
  * Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
  */
@@ -56,6 +58,7 @@
 #include <Dt/Action.h>
 #include <Dt/Dnd.h>
 #include <Dt/DtXinerama.h>
+#include "applist.h"
 
 #define MAX_APPS 2000
 #define CDE_INSTALLATION_TOP_BIN "/usr/dt/bin"
@@ -63,6 +66,7 @@
 typedef struct {
     char *name, *generic, *keywords, *exec;
     char *label;		/* what the list shows (name, or "name (prog)") */
+    char *icon;			/* Icon= (theme name or path), or "" */
     char *path;			/* the .desktop file */
     char *id;			/* its desktop file ID (file name) */
     char *action;		/* unused (NULL) */
@@ -126,7 +130,8 @@ static App     apps[MAX_APPS];
 static int     nApps;
 static int    *shown;		/* indexes into apps[] of the listed rows */
 static int     nShown;
-static Widget  top, field, list, catList;
+static Widget  top, field;
+static AppList *appList, *catList;
 
 /* "Exec" without its field codes (%f, %U...); "%%" is a literal "%". */
 static char *
@@ -237,7 +242,7 @@ ReadDir(const char *dir)
     struct dirent *e;
     char   path[4200], line[2048], *v;
     char   name[256], generic[256], keywords[512], exec[2048], tryexec[512];
-    char   cats[512], only[512], notin[512];
+    char   cats[512], only[512], notin[512], icon[512];
     FILE  *fp;
     size_t len;
     int    i;
@@ -254,7 +259,7 @@ ReadDir(const char *dir)
         if ((fp = fopen(path, "r")) == NULL)
             continue;
         name[0] = generic[0] = keywords[0] = exec[0] = tryexec[0] = '\0';
-        cats[0] = only[0] = notin[0] = '\0';
+        cats[0] = only[0] = notin[0] = icon[0] = '\0';
         in = hide = app = term = False;
         while (fgets(line, sizeof(line), fp))
         {
@@ -279,6 +284,8 @@ ReadDir(const char *dir)
                 snprintf(exec, sizeof(exec), "%s", v);
             else if (strcmp(line, "TryExec") == 0)
                 snprintf(tryexec, sizeof(tryexec), "%s", v);
+            else if (strcmp(line, "Icon") == 0)
+                snprintf(icon, sizeof(icon), "%s", v);
             else if (strcmp(line, "OnlyShowIn") == 0)
                 snprintf(only, sizeof(only), "%s", v);
             else if (strcmp(line, "NotShowIn") == 0)
@@ -312,6 +319,7 @@ ReadDir(const char *dir)
         apps[nApps].cats = CategoryBits(cats);
         apps[nApps].exec = ExecToCommand(exec);
         apps[nApps].path = XtNewString(path);
+        apps[nApps].icon = XtNewString(icon);
         apps[nApps].id = ids[nIds - 1];
         apps[nApps].action = NULL;
         apps[nApps].terminal = term;
@@ -388,7 +396,6 @@ Contains(const char *hay, const char *want, size_t n)
 static void
 Filter(const char *want)
 {
-    XmString *items;
     size_t    n;
     int       i, k = 0;
 
@@ -398,7 +405,6 @@ Filter(const char *want)
         want++;
     n = strlen(want);
 
-    items = (XmString *) XtMalloc((nApps ? nApps : 1) * sizeof(XmString));
     /* best matches first: names that start with the text, then names
      * that contain it, then generic names and keywords */
     for (pass = 0; pass < 3; pass++)
@@ -420,20 +426,15 @@ Filter(const char *want)
                        (Contains(apps[i].generic, want, n) ||
                         Contains(apps[i].keywords, want, n)));
             if (hit)
-            {
-                shown[k] = i;
-                items[k++] = XmStringCreateLocalized(apps[i].label);
-            }
+                shown[k++] = i;
         }
     nShown = k;
-    XmListDeleteAllItems(list);
-    XmListAddItemsUnselected(list, items, k, 1);
-    for (i = 0; i < k; i++)
-        XmStringFree(items[i]);
-    XtFree((char *) items);
-    if (k > 0)
-        XmListSelectPos(list, 1, False);
+    AppListSetCount(appList, k);
 }
+
+/* -pick: choosing an application prints its .desktop file instead of
+ * starting it (a Front Panel drawer's Install Icon adds it). */
+static Boolean pick = False;
 
 /* Start row "pos" (1-based) and quit. */
 static void
@@ -445,6 +446,12 @@ Launch(int pos)
     if (pos < 1 || pos > nShown)
         return;
     a = &apps[shown[pos - 1]];
+    if (pick)
+    {
+        printf("%s\n", a->path);
+        fflush(stdout);
+        exit(0);
+    }
     signal(SIGCHLD, SIG_IGN);		/* nobody waits for it */
     if ((pid = fork()) == 0)
     {
@@ -474,23 +481,15 @@ Launch(int pos)
 static int
 Selected(void)
 {
-    int *pos, n, p = 1;
-
-    if (XmListGetSelectedPos(list, &pos, &n))
-    {
-        p = pos[0];
-        XtFree((char *) pos);
-    }
-    return p;
+    return AppListSelected(appList) + 1;	/* 1-based; 0: none */
 }
 
 static void
-CategoryCB(Widget w, XtPointer client, XtPointer call)
+CategoryCB(int row)
 {
-    XmListCallbackStruct *cb = (XmListCallbackStruct *) call;
     char *t;
 
-    curCat = cb->item_position - 1;
+    curCat = row;
     t = XmTextFieldGetString(field);
     Filter(t);
     XtFree(t);
@@ -536,7 +535,8 @@ ActivateCB(Widget w, XtPointer client, XtPointer call)
     {
         char *t = XmTextFieldGetString(w);
 
-        RunCommand(t);
+        if (!pick)			/* picking runs no commands */
+            RunCommand(t);
         XtFree(t);
         return;
     }
@@ -544,9 +544,47 @@ ActivateCB(Widget w, XtPointer client, XtPointer call)
 }
 
 static void
-DefaultActionCB(Widget w, XtPointer client, XtPointer call)
+ActivateRow(int row)
 {
-    Launch(((XmListCallbackStruct *) call)->item_position);
+    Launch(row + 1);
+}
+
+/* What the two lists show. */
+static const char *
+AppText(int row)
+{
+    return (row >= 0 && row < nShown) ? apps[shown[row]].label : "";
+}
+
+static const char *
+AppIcon(int row)
+{
+    const char *i = (row >= 0 && row < nShown) ? apps[shown[row]].icon : "";
+
+    return (i && *i) ? i : "application-x-executable";
+}
+
+static const char *
+CatText(int row)
+{
+    return categories[row].label;
+}
+
+/* The icon names other desktops use for these menu categories. */
+static const char *
+CatIcon(int row)
+{
+    static const char *icons[] = {
+        "applications-other", "applications-accessories",
+        "applications-development", "applications-science",
+        "applications-games", "applications-graphics",
+        "applications-internet", "applications-multimedia",
+        "applications-office", "preferences-desktop",
+        "applications-system", "applications-other"
+    };
+
+    return (row >= 0 && row < (int) (sizeof(icons) / sizeof(icons[0]))) ?
+        icons[row] : NULL;
 }
 
 /* Up, Down, Page keys in the field move the selection in the list;
@@ -555,7 +593,7 @@ static void
 KeyEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
 {
     KeySym ks = XLookupKeysym(&ev->xkey, 0);
-    int    p, top_item, visible;
+    int    p, visible;
 
     if (ks == XK_Escape)
         exit(0);
@@ -574,8 +612,7 @@ KeyEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
             if (c >= 0 && c < NCATS)
             {
                 curCat = c;
-                XmListSelectPos(catList, c + 1, False);
-                XmListSetKbdItemPos(catList, c + 1);
+                AppListSelect(catList, c);
                 Filter("");
             }
             *cont = False;
@@ -586,8 +623,7 @@ KeyEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
                         ks != XK_Page_Up && ks != XK_Page_Down))
         return;
     *cont = False;
-    XtVaGetValues(list, XmNtopItemPosition, &top_item,
-                  XmNvisibleItemCount, &visible, NULL);
+    visible = AppListVisibleRows(appList);
     p = Selected();
     if (ks == XK_Up) p--;
     else if (ks == XK_Down) p++;
@@ -595,11 +631,7 @@ KeyEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
     else p += visible;
     if (p < 1) p = 1;
     if (p > nShown) p = nShown;
-    XmListSelectPos(list, p, False);
-    if (p < top_item)
-        XmListSetPos(list, p);
-    else if (p >= top_item + visible)
-        XmListSetBottomPos(list, p);
+    AppListSelect(appList, p - 1);
 }
 
 static void
@@ -806,8 +838,6 @@ FocusEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
 /* --- dragging a row onto a Front Panel drawer --- */
 
 static int     dragRow;			/* 1-based row being dragged */
-static int     pressX, pressY;
-static Boolean pressed;
 
 static void
 ConvertCB(Widget w, XtPointer client, XtPointer call)
@@ -835,30 +865,17 @@ DragFinishCB(Widget w, XtPointer client, XtPointer call)
 }
 
 static void
-DragEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
+DragRow(int row, XEvent *ev)
 {
     static XtCallbackRec convertRec[] = { { ConvertCB, NULL }, { NULL, NULL } };
     static XtCallbackRec finishRec[] = { { DragFinishCB, NULL }, { NULL, NULL } };
 
-    if (ev->type == ButtonPress && ev->xbutton.button == Button1)
-    {
-        pressed = True;
-        pressX = ev->xbutton.x;
-        pressY = ev->xbutton.y;
-    }
-    else if (ev->type == ButtonRelease)
-        pressed = False;
-    else if (ev->type == MotionNotify && pressed &&
-             (abs(ev->xmotion.x - pressX) > 8 ||
-              abs(ev->xmotion.y - pressY) > 8))
-    {
-        pressed = False;
-        dragRow = XmListYToPos(list, pressY);
-        if (dragRow < 1 || dragRow > nShown)
-            return;
-        (void) DtDndVaDragStart(list, ev, DtDND_FILENAME_TRANSFER, 1,
-                                XmDROP_COPY, convertRec, finishRec, NULL);
-    }
+    dragRow = row + 1;
+    if (dragRow < 1 || dragRow > nShown)
+        return;
+    (void) DtDndVaDragStart(AppListWidget(appList), ev,
+                            DtDND_FILENAME_TRANSFER, 1, XmDROP_COPY,
+                            convertRec, finishRec, NULL);
 }
 
 int
@@ -889,11 +906,17 @@ main(int argc, char **argv)
         menu = True;
         argc = 1;
     }
+    if (argc == 2 && strcmp(argv[1], "-pick") == 0)
+    {
+        pick = True;
+        argc = 1;
+    }
 
     XtSetLanguageProc(NULL, NULL, NULL);
     top = XtVaAppInitialize(&app, "Dtappfind", NULL, 0, &argc, argv, NULL,
-                            XmNtitle, "Applications",
-                            XmNiconName, "Applications", NULL);
+                            XmNtitle, pick ? "Add to Drawer" : "Applications",
+                            XmNiconName, pick ? "Add to Drawer" : "Applications",
+                            NULL);
     {
         char name[64];
 
@@ -901,7 +924,8 @@ main(int argc, char **argv)
                  DefaultScreen(XtDisplay(top)));
         selAtom = XInternAtom(XtDisplay(top), name, False);
         cmdAtom = XInternAtom(XtDisplay(top), "_CLANKER_APPFIND_CMD", False);
-        if (HandOff(XtDisplay(top), menu))
+        /* a pick window is its own: no hand-off to an open menu */
+        if (!pick && HandOff(XtDisplay(top), menu))
             return 0;
     }
     /* for dragging rows (DtDnd); the action database is not needed */
@@ -911,7 +935,9 @@ main(int argc, char **argv)
     form = XtVaCreateManagedWidget("form", xmFormWidgetClass, top,
                                    XmNmarginWidth, 8, XmNmarginHeight, 8,
                                    NULL);
-    s = XmStringCreateLocalized("Search, or type a command to run:");
+    s = XmStringCreateLocalized(pick ?
+        "Choose the application to add to the drawer (Enter or double-click):" :
+        "Search, or type a command to run:");
     label = XtVaCreateManagedWidget("label", xmLabelWidgetClass, form,
                                     XmNlabelString, s,
                                     XmNtopAttachment, XmATTACH_FORM,
@@ -923,60 +949,43 @@ main(int argc, char **argv)
                                     XmNtopWidget, label, XmNtopOffset, 4,
                                     XmNleftAttachment, XmATTACH_FORM,
                                     XmNrightAttachment, XmATTACH_FORM, NULL);
-    /* the categories on the left, as other desktops' menus show them */
-    {
-        XmString items[NCATS];
-        int      i;
-
-        for (i = 0; i < NCATS; i++)
-            items[i] = XmStringCreateLocalized((char *) categories[i].label);
-        n = 0;
-        XtSetArg(a[n], XmNitems, items); n++;
-        XtSetArg(a[n], XmNitemCount, NCATS); n++;
-        XtSetArg(a[n], XmNvisibleItemCount, NCATS); n++;
-        XtSetArg(a[n], XmNselectionPolicy, XmBROWSE_SELECT); n++;
-        XtSetArg(a[n], XmNtopAttachment, XmATTACH_WIDGET); n++;
-        XtSetArg(a[n], XmNtopWidget, field); n++;
-        XtSetArg(a[n], XmNtopOffset, 6); n++;
-        XtSetArg(a[n], XmNleftAttachment, XmATTACH_FORM); n++;
-        XtSetArg(a[n], XmNbottomAttachment, XmATTACH_FORM); n++;
-        catList = XmCreateScrolledList(form, "categories", a, n);
-        XtManageChild(catList);
-        for (i = 0; i < NCATS; i++)
-            XmStringFree(items[i]);
-        XmListSelectPos(catList, 1, False);
-        XtAddCallback(catList, XmNbrowseSelectionCallback, CategoryCB, NULL);
-        /* the category list is reached by Tab or the mouse; arrows in
-         * the field move in the applications */
-    }
+    /* the categories on the left, as other desktops' menus show them,
+     * and the applications, each with its icon */
     n = 0;
-    XtSetArg(a[n], XmNvisibleItemCount, NCATS); n++;
-    XtSetArg(a[n], XmNselectionPolicy, XmBROWSE_SELECT); n++;
-    XtSetArg(a[n], XmNscrollBarDisplayPolicy, XmSTATIC); n++;
+    XtSetArg(a[n], XmNtopAttachment, XmATTACH_WIDGET); n++;
+    XtSetArg(a[n], XmNtopWidget, field); n++;
+    XtSetArg(a[n], XmNtopOffset, 6); n++;
+    XtSetArg(a[n], XmNleftAttachment, XmATTACH_FORM); n++;
+    XtSetArg(a[n], XmNbottomAttachment, XmATTACH_FORM); n++;
+    XtSetArg(a[n], XmNwidth, 190); n++;
+    XtSetArg(a[n], XmNheight, NCATS * 26 + 8); n++;
+    catList = AppListCreate(form, "categories", a, n, field, CatText,
+                            CatIcon, CategoryCB, NULL, NULL);
+    n = 0;
     XtSetArg(a[n], XmNtopAttachment, XmATTACH_WIDGET); n++;
     XtSetArg(a[n], XmNtopWidget, field); n++;
     XtSetArg(a[n], XmNtopOffset, 6); n++;
     XtSetArg(a[n], XmNleftAttachment, XmATTACH_WIDGET); n++;
-    XtSetArg(a[n], XmNleftWidget, XtParent(catList)); n++;
+    XtSetArg(a[n], XmNleftWidget, AppListWidget(catList)); n++;
     XtSetArg(a[n], XmNleftOffset, 6); n++;
     XtSetArg(a[n], XmNrightAttachment, XmATTACH_FORM); n++;
     XtSetArg(a[n], XmNbottomAttachment, XmATTACH_FORM); n++;
-    list = XmCreateScrolledList(form, "apps", a, n);
-    XtManageChild(list);
+    XtSetArg(a[n], XmNwidth, 330); n++;
+    appList = AppListCreate(form, "apps", a, n, field, AppText, AppIcon,
+                            NULL, ActivateRow, DragRow);
 
     XtAddCallback(field, XmNvalueChangedCallback, ChangedCB, NULL);
     XtAddCallback(field, XmNactivateCallback, ActivateCB, NULL);
-    XtAddCallback(list, XmNdefaultActionCallback, DefaultActionCB, NULL);
     XtAddEventHandler(field, KeyPressMask, False, KeyEH, NULL);
-    XtAddEventHandler(list, KeyPressMask, False, KeyEH, NULL);
-    XtAddEventHandler(list, ButtonPressMask | ButtonReleaseMask |
-                      Button1MotionMask, False, DragEH, NULL);
 
+    AppListSetCount(catList, NCATS);
+    AppListAutoHideScrollBar(catList);
     Filter("");
     if (menu)
         XtSetMappedWhenManaged(top, False);
     XtRealizeWidget(top);
-    XSetSelectionOwner(XtDisplay(top), selAtom, XtWindow(top), CurrentTime);
+    if (!pick)
+        XSetSelectionOwner(XtDisplay(top), selAtom, XtWindow(top), CurrentTime);
     XtAddEventHandler(top, PropertyChangeMask, False, CommandEH, NULL);
     del = XmInternAtom(XtDisplay(top), "WM_DELETE_WINDOW", False);
     XmAddWMProtocolCallback(top, del, CloseCB, NULL);

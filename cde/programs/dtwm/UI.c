@@ -98,6 +98,7 @@ extern void EmbeddedClientReposition (Widget, Position, Dimension);
 extern void DropCB (Widget, XtPointer, XtPointer);
 extern void TransferDropCB (Widget, XtPointer, XtPointer);
 extern void CustomizeDropCB (Widget, XtPointer, XtPointer);
+extern void InstallClickCB (Widget, XtPointer, XtPointer);
 extern void CustomizeTransferDropCB (Widget, XtPointer, XtPointer);
 extern void FrontPanelCreate (Widget);
 extern void EmbeddedClientReparent (char *, Widget);
@@ -2825,7 +2826,8 @@ SubpanelCreate (ControlData  * main_control_data,
       XtSetArg (al[ac], XmNmarginHeight, 1);				ac++;
       XtSetArg (al[ac], XmNstring, icon_label);				ac++;
       XtSetArg (al[ac], XmNpixmapPosition, XmPIXMAP_LEFT);		ac++;
-      XtSetArg (al[ac], XmNbehavior, XmICON_LABEL);         		ac++;
+      /* a button: a click chooses an application to add (below) */
+      XtSetArg (al[ac], XmNbehavior, XmICON_BUTTON);         		ac++;
       XtSetArg (al[ac], XmNimageName, dropzone_image);			ac++;
       XtSetArg (al[ac], XmNuserData, subpanel_data);			ac++;
       XtSetArg (al[ac], XmNfontList, panel.font_list);		        ac++;
@@ -2847,6 +2849,8 @@ SubpanelCreate (ControlData  * main_control_data,
 
       XtAddCallback (subpanel_data->dropzone, XmNhelpCallback,
                      (XtCallbackProc) GeneralTopicHelpCB, INSTALL_ZONE);
+      XtAddCallback (subpanel_data->dropzone, XmNcallback,
+                     (XtCallbackProc) InstallClickCB, NULL);
 
 
       /*  Set the drop zone for the install area.  */

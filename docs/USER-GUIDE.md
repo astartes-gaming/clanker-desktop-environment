@@ -35,7 +35,10 @@ see the [README](../README.md).
   Education, Games, Graphics, Internet, Multimedia, Office, Settings,
   System, Other), listed on its left: click one, or press Left and
   Right while the search box is empty. CDE's own applications are
-  filed there too.
+  filed there too. Every entry shows its icon, found the way other
+  desktops find it (icon themes, /usr/share/pixmaps); icons that come
+  only as SVG are converted once with `rsvg-convert` or ImageMagick
+  when either is installed (`apt install librsvg2-bin`).
 - **Windows key shortcuts**: **Windows+E** Home folder, **Windows+R**
   Run, **Windows+T** Terminal, **Windows+A** Application Manager,
   **Windows+I** Settings, **Windows+L** Lock, **Windows+arrows** tile
@@ -44,9 +47,10 @@ see the [README](../README.md).
 - **Application Manager**: type in its **Search** box at the bottom to
   show only the applications (and the groups holding them) whose
   names contain the text.
-- **Adding an application to a drawer**: drag it from the application
-  menu or the Application Manager onto **Install Icon** at the top of
-  an open drawer.
+- **Adding an application to a drawer**: click **Install Icon** at the
+  top of an open drawer and choose the application (Enter or a
+  double-click), or drag one from the application menu or the
+  Application Manager onto **Install Icon**.
 - **Screenshots**: **Print** saves the whole screen, **Alt+Print** the
   active window, as a PNG in your Pictures folder (with scrot, maim,
   ImageMagick or xwd, whichever is installed).
