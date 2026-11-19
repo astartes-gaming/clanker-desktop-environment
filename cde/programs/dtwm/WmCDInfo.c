@@ -688,7 +688,8 @@ Boolean GetFramePartInfo (ClientData *pcd, int part, int *pX, int *pY, unsigned 
 			    2*pcd->frameInfo.upperBorderWidth - 
 			    ((decor & MWM_DECOR_MENU) ? boxdim : 0) -
 			    ((decor & MWM_DECOR_MINIMIZE) ? boxdim : 0) -
-			    ((decor & MWM_DECOR_MAXIMIZE) ? boxdim : 0);
+			    ((decor & MWM_DECOR_MAXIMIZE) ? boxdim : 0) -
+			    (HAS_CLOSE_BUTTON(pcd) ? boxdim : 0);
 		    *pHeight = boxdim;
 		    rval = TRUE;
 		}
@@ -709,7 +710,8 @@ Boolean GetFramePartInfo (ClientData *pcd, int part, int *pX, int *pY, unsigned 
 		if (decor & MWM_DECOR_MINIMIZE) {
 		    *pX = pcd->frameInfo.width - 
 			    pcd->frameInfo.upperBorderWidth - boxdim -
-			    ((decor & MWM_DECOR_MAXIMIZE) ? boxdim : 0);
+			    ((decor & MWM_DECOR_MAXIMIZE) ? boxdim : 0) -
+			    (HAS_CLOSE_BUTTON(pcd) ? boxdim : 0);
 		    *pY = pcd->frameInfo.upperBorderWidth;
 		    *pWidth= boxdim;
 		    *pHeight = boxdim;
@@ -719,6 +721,18 @@ Boolean GetFramePartInfo (ClientData *pcd, int part, int *pX, int *pY, unsigned 
 
 	case FRAME_MAXIMIZE:
 		if (decor & MWM_DECOR_MAXIMIZE) {
+		    *pX = pcd->frameInfo.width - 
+			    pcd->frameInfo.upperBorderWidth - boxdim -
+			    (HAS_CLOSE_BUTTON(pcd) ? boxdim : 0);
+		    *pY = pcd->frameInfo.upperBorderWidth;
+		    *pWidth = boxdim;
+		    *pHeight = boxdim;
+		    rval = TRUE;
+		}
+		break;
+
+	case FRAME_CLOSE:
+		if (HAS_CLOSE_BUTTON(pcd)) {
 		    *pX = pcd->frameInfo.width - 
 			    pcd->frameInfo.upperBorderWidth - boxdim;
 		    *pY = pcd->frameInfo.upperBorderWidth;
@@ -1206,6 +1220,7 @@ Boolean GetDepressInfo (ClientData *pcd, int part, int *pX, int *pY, unsigned in
 	case FRAME_TITLE:
 	case FRAME_MINIMIZE:
 	case FRAME_MAXIMIZE:
+	case FRAME_CLOSE:
 	    if ((rval = GetFramePartInfo (pcd, part, pX, pY, pWidth, pHeight)))
 	    {
 		/*
@@ -1332,6 +1347,7 @@ Boolean GetDepressInfo (ClientData *pcd, int part, int *pX, int *pY, unsigned in
 			}
 			break;
 
+		    case FRAME_CLOSE:		/* the rightmost, like maximize */
 		    case FRAME_MAXIMIZE:
 			/* north and east sides */
 			if (exBevel > *pInvertWidth) 
