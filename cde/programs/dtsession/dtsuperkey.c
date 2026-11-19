@@ -26,9 +26,25 @@
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/keysym.h>
+#include <X11/XKBlib.h>
 #include <X11/extensions/XInput2.h>
 
 #define TAP_MS 700	/* longer than this: a held modifier, not a tap */
+
+/* Any keycode that types Super (keyboards and tools use several:
+ * 133, 134, and 206 for the modifier). */
+static Bool
+IsSuper(Display *dpy, int keycode, KeyCode superL, KeyCode superR)
+{
+    KeySym ks;
+
+    if (keycode <= 0 || keycode > 255)
+        return False;
+    if ((KeyCode) keycode == superL || (KeyCode) keycode == superR)
+        return True;
+    ks = XkbKeycodeToKeysym(dpy, (KeyCode) keycode, 0, 0);
+    return ks == XK_Super_L || ks == XK_Super_R;
+}
 
 static void
 Run(const char *cmd)
@@ -124,15 +140,18 @@ main(int argc, char **argv)
             continue;
         {
             XIRawEvent *r = (XIRawEvent *) c->data;
-            Bool     isSuper = r->detail != 0 &&
-                ((KeyCode) r->detail == superL || (KeyCode) r->detail == superR);
+            Bool     isSuper = IsSuper(dpy, r->detail, superL, superR);
 
             switch (r->evtype)
             {
             case XI_RawKeyPress:
                 if (isSuper)
                 {
-                    if (!down)		/* not an autorepeat */
+                    /* every real press starts over (autorepeats are
+                     * marked), so a release we never saw - the key
+                     * pressed on one Super keycode and released on
+                     * another - cannot block later taps */
+                    if (!(r->flags & XIKeyRepeat))
                     {
                         down = True;
                         other = False;

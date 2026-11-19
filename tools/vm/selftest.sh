@@ -556,6 +556,12 @@ if pgrep -u $U -x dtsuperkey >/dev/null; then
     check "tapping it again closes the menu" eval '! menu_up'
     x xdotool key super+e; sleep 4
     check "Windows+E does not open the menu" eval '! menu_up'
+    # Super pressed and released on different keycodes (xdotool's
+    # super+Left) must not leave the key stuck
+    x xdotool key super+Left; sleep 2
+    x xdotool key super; sleep 4
+    check "after Windows+Left a tap still opens the menu" menu_up
+    x xdotool key super; sleep 3
 else
     skp "Windows key (dtsuperkey not running: no XInput 2?)"
 fi
