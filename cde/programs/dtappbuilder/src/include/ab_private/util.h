@@ -54,6 +54,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <ab_private/abconf.h>
 #include <ab/util_types.h>
 #include <ab_private/util_err.h>
@@ -285,11 +286,18 @@ STRING	util_cvt_bool_to_string(BOOL bool_value, STRING buf, int buf_size);
 **									**
 *************************************************************************/
 
-/* check 1st chars before calling strcmp - avoids a lot of calls */
-#define util_streq(s1,s2) \
-   (   ((s1) == (s2)) \
-    || (((s1) != NULL) && ((s2) != NULL) && (((s1)[0] == (s2)[0]) && (strcmp(s1,s2) == 0))) \
-   )
+/* check 1st chars before calling strcmp - avoids a lot of calls.  An
+ * inline function, not a macro: the same string or both NULL compare
+ * equal, and comparing the pointers here is not mistaken by compilers
+ * for comparing a string with a literal (Clang's -Wstring-compare). */
+static inline BOOL
+util_streq_inline(STRING s1, STRING s2)
+{
+    return (s1 == s2)
+        || ((s1 != NULL) && (s2 != NULL) && (s1[0] == s2[0])
+            && (strcmp(s1, s2) == 0));
+}
+#define util_streq(s1,s2) util_streq_inline((STRING) (s1), (STRING) (s2))
 
 /*
  * allows compare of null strings (NULL < "")
