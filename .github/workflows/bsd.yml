@@ -1,0 +1,158 @@
+name: BSD - FreeBSD, OpenBSD, NetBSD
+
+# CDE has always run on the BSDs (see the cdesktopenv wiki pages
+# FreeBSDBuild, OpenBSDBuild, NetBSD).  These jobs build it on each,
+# in a VM (vmactions), with the packages those pages list plus what
+# configure now requires, and keep the build logs.  "gmake -k" so one
+# run shows every error.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bsd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  freebsd:
+    name: FreeBSD 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build in FreeBSD
+        uses: vmactions/freebsd-vm@811efaaac0668df8bfb8308c3ec997b5ab50037b # v1.6.0
+        with:
+          release: "15"
+          usesh: true
+          mem: 8192
+          sync: rsync
+          prepare: |
+            set -x
+            for p in git autoconf automake libtool bison gmake ksh93 ksh \
+                     open-motif tcl86 opensp xrdb perl5 bdftopcf mkfontscale \
+                     sessreg lmdb jpeg-turbo png freetype2 fontconfig \
+                     libX11 libXt libXext libXmu libXaw libXft libXinerama \
+                     libXrandr libXrender libXScrnSaver libXpm libXi libXtst \
+                     xbitmaps dbus pkgconf; do
+              pkg install -y "$p" >/dev/null 2>&1 || echo "PACKAGE MISSING: $p"
+            done
+          run: |
+            set -e
+            cd cde
+            mkdir -p ../bsd-logs
+            ./autogen.sh > ../bsd-logs/autogen.log 2>&1
+            ./configure --with-tcl=/usr/local/lib/tcl8.6 MAKE=gmake \
+              CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
+              > ../bsd-logs/configure.log 2>&1 || { tail -40 ../bsd-logs/configure.log; exit 1; }
+            set +e
+            gmake -k -j4 > ../bsd-logs/build.log 2>&1
+            status=$?
+            grep -E ': error:|\*\*\*' ../bsd-logs/build.log | sort -u > ../bsd-logs/errors.txt
+            echo "build status $status, $(grep -c ': error:' ../bsd-logs/errors.txt) compiler errors"
+            head -60 ../bsd-logs/errors.txt
+            exit $status
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: freebsd-logs
+          path: bsd-logs/
+
+  openbsd:
+    name: OpenBSD
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build in OpenBSD
+        uses: vmactions/openbsd-vm@f1ca8bc8ecc5b6ef7218e5b914836e067e1546d3 # v1.4.9
+        with:
+          usesh: true
+          mem: 8192
+          sync: rsync
+          prepare: |
+            set -x
+            for p in git autoconf%2.72 automake%1.17 libtool bison gmake ksh93 \
+                     motif tcl%8.6 opensp lmdb jpeg png dbus; do
+              pkg_add -I "$p" >/dev/null 2>&1 || echo "PACKAGE MISSING: $p"
+            done
+          run: |
+            set -e
+            cd cde
+            mkdir -p ../bsd-logs
+            export AUTOCONF_VERSION=2.72 AUTOMAKE_VERSION=1.17
+            export LIBRARY_PATH=/usr/local/lib
+            ./autogen.sh > ../bsd-logs/autogen.log 2>&1
+            ./configure --with-tcl=/usr/local/lib/tcl/tcl8.6 MAKE=gmake \
+              CFLAGS="-I/usr/local/include" CXXFLAGS="-I/usr/local/include" \
+              LDFLAGS="-L/usr/local/lib" \
+              > ../bsd-logs/configure.log 2>&1 || { tail -40 ../bsd-logs/configure.log; exit 1; }
+            set +e
+            gmake -k -j4 > ../bsd-logs/build.log 2>&1
+            status=$?
+            grep -E ': error:|\*\*\*' ../bsd-logs/build.log | sort -u > ../bsd-logs/errors.txt
+            echo "build status $status, $(grep -c ': error:' ../bsd-logs/errors.txt) compiler errors"
+            head -60 ../bsd-logs/errors.txt
+            exit $status
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: openbsd-logs
+          path: bsd-logs/
+
+  netbsd:
+    name: NetBSD 10
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build in NetBSD
+        uses: vmactions/netbsd-vm@5957cf330aef2e6ddc63c604364c99ce2e02b91d # v1.5.3
+        with:
+          release: "10"
+          usesh: true
+          mem: 8192
+          sync: rsync
+          prepare: |
+            set -x
+            for p in git ast-ksh motif tcl autoconf automake libtool gmake \
+                     opensp lmdb jpeg png bison freetype2 fontconfig dbus \
+                     perl libiconv; do
+              /usr/sbin/pkg_add "$p" >/dev/null 2>&1 || pkgin -y install "$p" >/dev/null 2>&1 || echo "PACKAGE MISSING: $p"
+            done
+          run: |
+            set -e
+            cd cde
+            mkdir -p ../bsd-logs
+            export PATH="$PATH:/usr/X11R7/bin:/usr/pkg/bin"
+            ./autogen.sh > ../bsd-logs/autogen.log 2>&1
+            ./configure --with-tcl=/usr/pkg/lib MAKE=gmake \
+              CPPFLAGS="-I/usr/pkg/include" CFLAGS="-I/usr/pkg/include" \
+              LDFLAGS="-L/usr/pkg/lib -Wl,-R/usr/pkg/lib" \
+              > ../bsd-logs/configure.log 2>&1 || { tail -40 ../bsd-logs/configure.log; exit 1; }
+            set +e
+            gmake -k -j4 > ../bsd-logs/build.log 2>&1
+            status=$?
+            grep -E ': error:|\*\*\*' ../bsd-logs/build.log | sort -u > ../bsd-logs/errors.txt
+            echo "build status $status, $(grep -c ': error:' ../bsd-logs/errors.txt) compiler errors"
+            head -60 ../bsd-logs/errors.txt
+            exit $status
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: netbsd-logs
+          path: bsd-logs/

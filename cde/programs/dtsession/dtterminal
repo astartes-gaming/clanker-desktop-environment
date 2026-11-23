@@ -44,6 +44,9 @@ esac
 # kitty and Ghostty need OpenGL and some 150 MB each with software
 # rendering: on small machines (under 768 MB) "auto" keeps dtterm.
 memkb=`sed -n 's/^MemTotal: *\([0-9]*\).*/\1/p' /proc/meminfo 2>/dev/null`
+if [ -z "$memkb" ] && have sysctl; then	# the BSDs: bytes
+    memkb=`sysctl -n hw.physmem 2>/dev/null | awk '{ printf "%d", $1 / 1024 }'`
+fi
 if [ "$choice" = auto ] && [ -n "$memkb" ] && [ "$memkb" -lt 786432 ]; then
     choice=dtterm
 fi

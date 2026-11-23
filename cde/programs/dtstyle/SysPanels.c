@@ -2972,14 +2972,23 @@ TermLabel(int choice)
     }
     {
         /* dtterminal keeps dtterm under 768 MB of memory */
-        FILE *fp = fopen("/proc/meminfo", "r");
         long  kb = 0;
+#if defined(_SC_PHYS_PAGES) && defined(_SC_PAGESIZE)
+        long  pages = sysconf(_SC_PHYS_PAGES), psize = sysconf(_SC_PAGESIZE);
 
-        if (fp)
+        if (pages > 0 && psize > 0)
+            kb = (long) ((double) pages * psize / 1024);
+#endif
+        if (kb <= 0)
         {
-            if (fscanf(fp, "MemTotal: %ld", &kb) != 1)
-                kb = 0;
-            fclose(fp);
+            FILE *fp = fopen("/proc/meminfo", "r");
+
+            if (fp)
+            {
+                if (fscanf(fp, "MemTotal: %ld", &kb) != 1)
+                    kb = 0;
+                fclose(fp);
+            }
         }
         if (kb > 0 && kb < 786432)
         {
