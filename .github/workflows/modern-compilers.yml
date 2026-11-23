@@ -1,0 +1,81 @@
+name: Modern compilers - GCC 15, Clang 21
+
+# The newest compilers (Debian testing): GCC 15, whose default is C23,
+# and Clang, which turns more old-code warnings into errors.  A string
+# compared with == against a literal (-Wstring-compare) is an error
+# here too: it compares addresses, never the text (dtmail's menu help
+# was silently lost that way).
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: modern-compilers-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    container: docker.io/library/debian:testing
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GCC 15
+            cc: gcc-15
+            cxx: g++-15
+            cflags: "-g -O1"
+          - name: Clang 21
+            cc: clang-21
+            cxx: clang++-21
+            cflags: "-g -O1 -Werror=string-compare"
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      LANG: C.UTF-8
+    steps:
+      - name: Install the compilers and build dependencies
+        run: |
+          set -e
+          apt-get -o Acquire::Retries=3 update
+          apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
+            ca-certificates git gcc-15 g++-15 clang-21 \
+            autoconf automake bison build-essential flex ksh \
+            libcrypt-dev libdbus-1-dev libfreetype6-dev libjpeg-dev \
+            liblmdb-dev libmotif-dev libpam0g-dev libpng-dev libssl-dev \
+            libtirpc-dev libtool libutempter-dev libx11-dev libxaw7-dev \
+            libxft-dev libxinerama-dev libxmu-dev libxpm-dev libxrandr-dev \
+            libxrender-dev libxss-dev libxt-dev libxi-dev libxtst-dev m4 \
+            ncompress opensp patch python3 rpcsvc-proto tcl-dev \
+            x11-session-utils x11-xserver-utils x11proto-fonts-dev \
+            xbitmaps xfonts-utils
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Configure
+        run: |
+          set -e
+          cd cde
+          ./autogen.sh
+          ./configure CC="${{ matrix.cc }}" CXX="${{ matrix.cxx }}" \
+            CFLAGS="${{ matrix.cflags }}" CXXFLAGS="-g -O1"
+      - name: Build
+        run: |
+          cd cde
+          make -j"$(nproc)" > build.log 2>&1
+          status=$?
+          grep -E ': error:' build.log | sort -u | head -60
+          tail -20 build.log
+          exit $status
+      - name: Keep the log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-log-${{ matrix.cc }}
+          path: cde/build.log

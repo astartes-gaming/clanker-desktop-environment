@@ -1060,13 +1060,19 @@ FileManip(
          }
          else
          {
-            /* Fail-safe; do it the hard way */
+            /* Fail-safe; do it the hard way.  (The else was bound to
+             * the inner if, so a failed move silently made a symbolic
+             * link and reported success.) */
             if (mode == MOVE_FILE)
+            {
                if (RunFileCommand(MOVE_CMD, from, to, NULL) == 0)
                   return(True);
+            }
             else
+            {
                if (RunFileCommand(LINK_CMD, "-s", from, to) == 0)
                   return(True);
+            }
 
             link_result = (-1);
          }
