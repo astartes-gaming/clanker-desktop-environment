@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -108,50 +109,152 @@ IconBases(char bases[][1024], int max)
     return n;
 }
 
-/* Run argv (no shell), give it a few seconds; True if it succeeded. */
-static Boolean
-RunQuietly(char *const argv[])
+/*
+ * SVG icons are converted in the background, one at a time (a small
+ * machine is not swamped): until a picture is ready its row shows the
+ * generic icon, then the lists are redrawn.  Conversions that fail are
+ * not tried again in this run.
+ */
+#define SVG_QUEUE 128
+#define SVG_TICK  150			/* ms between checks */
+#define SVG_LIMIT 10000			/* ms before a conversion is stopped */
+
+typedef struct { char svg[1200], out[1100]; } SvgJob;
+
+static SvgJob        svgQueue[SVG_QUEUE];
+static int           nSvgQueue;
+static char         *svgFailed[SVG_QUEUE];
+static int           nSvgFailed;
+static pid_t         svgPid = -1;
+static SvgJob        svgRunning;
+static int           svgElapsed;
+static XtAppContext  svgApp;
+static AppList      *allLists[4];
+static int           nAllLists;
+
+static void Draw(AppList *l);
+static void ForgetMissingIcons(void);
+
+static void
+SvgStartNext(void)
 {
-    pid_t pid = fork();
-    int   status, i;
+    char tmp[1200];
 
-    if (pid < 0)
-        return False;
-    if (pid == 0)
+    while (svgPid < 0 && nSvgQueue > 0)
     {
-        int fd;
+        svgRunning = svgQueue[0];
+        memmove(&svgQueue[0], &svgQueue[1], --nSvgQueue * sizeof(SvgJob));
+        snprintf(tmp, sizeof(tmp), "%s.tmp.png", svgRunning.out);
+        svgPid = fork();
+        if (svgPid == 0)
+        {
+            int fd = open("/dev/null", O_RDWR);
 
-        for (fd = 0; fd < 3; fd++)
-            close(fd);
-        execvp(argv[0], argv);
-        _exit(127);
+            if (fd >= 0)
+            {
+                dup2(fd, 0); dup2(fd, 1); dup2(fd, 2);
+            }
+            execl("/bin/sh", "sh", "-c",
+                  "rsvg-convert -w 40 -h 40 -o \"$1\" \"$2\" || "
+                  "convert -background none -density 300 \"$2\" "
+                  "-resize 40x40 \"$1\"",
+                  "sh", tmp, svgRunning.svg, (char *) NULL);
+            _exit(127);
+        }
+        svgElapsed = 0;
     }
-    for (i = 0; i < 50; i++)		/* 5 seconds at most */
+}
+
+static void
+SvgTick(XtPointer data, XtIntervalId *id)
+{
+    int status;
+
+    if (svgPid > 0)
     {
-        if (waitpid(pid, &status, WNOHANG) == pid)
-            return WIFEXITED(status) && WEXITSTATUS(status) == 0;
-        usleep(100000);
+        pid_t r = waitpid(svgPid, &status, WNOHANG);
+        char  tmp[1200];
+
+        svgElapsed += SVG_TICK;
+        if (r == 0 && svgElapsed < SVG_LIMIT)
+        {
+            XtAppAddTimeOut(svgApp, SVG_TICK, SvgTick, NULL);
+            return;
+        }
+        if (r == 0)			/* too slow: give up on it */
+        {
+            kill(svgPid, SIGKILL);
+            waitpid(svgPid, &status, 0);
+            status = 1;
+        }
+        svgPid = -1;
+        snprintf(tmp, sizeof(tmp), "%s.tmp.png", svgRunning.out);
+        if (r != 0 && WIFEXITED(status) && WEXITSTATUS(status) == 0 &&
+            rename(tmp, svgRunning.out) == 0)
+        {
+            int i;
+
+            ForgetMissingIcons();	/* rows waiting on it: load again */
+            for (i = 0; i < nAllLists; i++)
+                Draw(allLists[i]);
+        }
+        else
+        {
+            unlink(tmp);
+            if (nSvgFailed < SVG_QUEUE)
+                svgFailed[nSvgFailed++] = XtNewString(svgRunning.svg);
+        }
     }
-    kill(pid, 9);
-    waitpid(pid, &status, 0);
-    return False;
+    SvgStartNext();
+    if (svgPid > 0)
+        XtAppAddTimeOut(svgApp, SVG_TICK, SvgTick, NULL);
+}
+
+static void
+SvgQueue(const char *svg, const char *out)
+{
+    int i;
+
+    for (i = 0; i < nSvgFailed; i++)
+        if (strcmp(svgFailed[i], svg) == 0)
+            return;
+    if (svgPid > 0 && strcmp(svgRunning.out, out) == 0)
+        return;
+    for (i = 0; i < nSvgQueue; i++)
+        if (strcmp(svgQueue[i].out, out) == 0)
+            return;
+    if (nSvgQueue >= SVG_QUEUE || !svgApp)
+        return;
+    snprintf(svgQueue[nSvgQueue].svg, sizeof(svgQueue[0].svg), "%s", svg);
+    snprintf(svgQueue[nSvgQueue].out, sizeof(svgQueue[0].out), "%s", out);
+    nSvgQueue++;
+    if (svgPid < 0)
+    {
+        SvgStartNext();
+        if (svgPid > 0)
+            XtAppAddTimeOut(svgApp, SVG_TICK, SvgTick, NULL);
+    }
 }
 
 /* A PNG of an SVG icon in $XDG_CACHE_HOME/clanker/icons, made once
- * with rsvg-convert or ImageMagick, whichever is installed. */
+ * with rsvg-convert or ImageMagick, whichever is installed: True if it
+ * is there now, else it is queued (see above). */
 static Boolean
 SvgToPng(const char *svg, const char *base, char *out, size_t len)
 {
     const char *cache = getenv("XDG_CACHE_HOME");
-    char        dir[1024], tmp[1100];
+    char        dir[1024];
     struct stat ss, cs;
 
+    /* $XDG_CACHE_HOME (or ~/.cache) may not exist yet: make it too */
     if (cache && *cache)
-        snprintf(dir, sizeof(dir), "%s/clanker", cache);
+        snprintf(dir, sizeof(dir), "%s", cache);
     else if (getenv("HOME"))
-        snprintf(dir, sizeof(dir), "%s/.cache/clanker", getenv("HOME"));
+        snprintf(dir, sizeof(dir), "%s/.cache", getenv("HOME"));
     else
         return False;
+    (void) mkdir(dir, 0700);
+    strncat(dir, "/clanker", sizeof(dir) - strlen(dir) - 1);
     (void) mkdir(dir, 0700);
     strncat(dir, "/icons", sizeof(dir) - strlen(dir) - 1);
     (void) mkdir(dir, 0700);
@@ -159,17 +262,7 @@ SvgToPng(const char *svg, const char *base, char *out, size_t len)
     if (stat(out, &cs) == 0 && stat(svg, &ss) == 0 &&
         cs.st_mtime >= ss.st_mtime)
         return True;
-    snprintf(tmp, sizeof(tmp), "%s.tmp.png", out);
-    {
-        char *rsvg[] = { "rsvg-convert", "-w", "40", "-h", "40", "-o", tmp,
-                         (char *) svg, NULL };
-        char *im[] = { "convert", "-background", "none", "-density", "300",
-                       (char *) svg, "-resize", "40x40", tmp, NULL };
-
-        if ((RunQuietly(rsvg) || RunQuietly(im)) && rename(tmp, out) == 0)
-            return True;
-    }
-    unlink(tmp);
+    SvgQueue(svg, out);
     return False;
 }
 
@@ -275,6 +368,21 @@ typedef struct {
 
 static CachedIcon cache[2048];
 static int        nCache;
+
+/* Drop the cache entries without a picture, so they are looked up again
+ * (an SVG conversion has finished). */
+static void
+ForgetMissingIcons(void)
+{
+    int i, k = 0;
+
+    for (i = 0; i < nCache; i++)
+        if (cache[i].pm[0] != None)
+            cache[k++] = cache[i];
+        else
+            XtFree(cache[i].name);
+    nCache = k;
+}
 
 static int
 Shift(unsigned long mask)
@@ -772,6 +880,9 @@ AppListCreate(Widget parent, const char *name, Arg *args, int n,
     XtAddEventHandler(l->da, ButtonPressMask | ButtonReleaseMask |
                       Button1MotionMask, False, InputEH, l);
     XtManageChild(l->sw);
+    svgApp = XtWidgetToApplicationContext(l->sw);
+    if (nAllLists < (int) (sizeof(allLists) / sizeof(allLists[0])))
+        allLists[nAllLists++] = l;
     return l;
 }
 
