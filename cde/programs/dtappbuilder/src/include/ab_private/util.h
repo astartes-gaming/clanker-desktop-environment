@@ -302,20 +302,19 @@ util_streq_inline(STRING s1, STRING s2)
 /*
  * allows compare of null strings (NULL < "")
  */
-#define util_strcmp(s1,s2) 		\
-    (((s1) == (s2))? 			\
-        0 				\
-    :					\
-	((s1 == NULL)?			\
-	    (-1)			\
-        :				\
-	    ((s2) == NULL?		\
-		(1)			\
-	    :				\
-		strcmp((s1),(s2))	\
-	    )				\
-        )				\
-    )
+/* inline for the same reason as util_streq: NULL sorts first */
+static inline int
+util_strcmp_inline(STRING s1, STRING s2)
+{
+    if (s1 == s2)
+        return 0;
+    if (s1 == NULL)
+        return -1;
+    if (s2 == NULL)
+        return 1;
+    return strcmp(s1, s2);
+}
+#define util_strcmp(s1,s2) util_strcmp_inline((STRING) (s1), (STRING) (s2))
 
 #define util_strlen(s)	((s) == NULL? 0:strlen(s))
 
