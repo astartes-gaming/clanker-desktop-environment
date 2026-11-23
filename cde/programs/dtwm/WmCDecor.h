@@ -51,6 +51,7 @@ extern void ShowInactiveClientFrame (ClientData *pcd);
 extern void RegenerateClientFrame (ClientData *pcd);
 extern void BevelSystemButton (RList *prTop, RList *prBot, int x, int y, unsigned int width, unsigned int height);
 extern void BevelMinimizeButton (RList *prTop, RList *prBot, int x, int y, unsigned int height);
+extern void BevelCloseButton (RList *prBot, int x, int y, unsigned int height);
 extern void BevelMaximizeButton (RList *prTop, RList *prBot, int x, int y, unsigned int height);
 extern Boolean DepressGadget (ClientData *pcd, int gadget, Boolean depressed);
 extern void PushGadgetIn (ClientData *pcd, int gadget);

@@ -56,7 +56,15 @@ case `basename "$wm"` in
             q() { xfconf-query -c xfwm4 -p /general/$1 2>/dev/null; }
             [ "`q theme`" = Default ] && xfconf-query -c xfwm4 -p /general/theme -s CDE
             [ "`q button_layout`" = "O|SHMC" ] &&
-                xfconf-query -c xfwm4 -p /general/button_layout -s "O|HM"
+                xfconf-query -c xfwm4 -p /general/button_layout -s "O|HMC"
+            mkdir -p "$HOME/.dt" && : > "$mark"
+        fi
+        # Once: the close button (X) joined the CDE layout; add it to
+        # layouts still at the earlier CDE default.
+        mark=$HOME/.dt/.xfwm4-close-button
+        if [ ! -f "$mark" ] && type xfconf-query >/dev/null 2>&1; then
+            [ "`xfconf-query -c xfwm4 -p /general/button_layout 2>/dev/null`" = "O|HM" ] &&
+                xfconf-query -c xfwm4 -p /general/button_layout -s "O|HMC"
             mkdir -p "$HOME/.dt" && : > "$mark"
         fi
         # Its window menu is GTK: the CDE-wm stylesheet from dtxfwmtheme.

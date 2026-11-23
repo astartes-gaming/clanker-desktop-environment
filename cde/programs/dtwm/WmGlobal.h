@@ -499,6 +499,7 @@ typedef struct _ButtonSpec
 #define FRAME_MATTE		15
 #define FRAME_MISC		FRAME_MATTE
 #define FRAME_TITLEBAR		17
+#define FRAME_CLOSE		18	/* the close button (X), right of maximize */
 
 /* icon part contexts */
 #define ICON_PART_NONE		0
@@ -544,6 +545,7 @@ typedef struct _ButtonSpec
 #define F_SUBCONTEXT_W_TITLE		(1L << FRAME_TITLE)
 #define F_SUBCONTEXT_W_MINIMIZE		(1L << FRAME_MINIMIZE)
 #define F_SUBCONTEXT_W_MAXIMIZE		(1L << FRAME_MAXIMIZE)
+#define F_SUBCONTEXT_W_CLOSE		(1L << FRAME_CLOSE)
 #define F_SUBCONTEXT_W_RESIZE_NW	(1L << FRAME_RESIZE_NW)
 #define F_SUBCONTEXT_W_RESIZE_N		(1L << FRAME_RESIZE_N)
 #define F_SUBCONTEXT_W_RESIZE_NE	(1L << FRAME_RESIZE_NE)
@@ -572,7 +574,8 @@ typedef struct _ButtonSpec
 #define F_SUBCONTEXT_W_TITLEBAR		(F_SUBCONTEXT_W_SYSTEM |\
 					 F_SUBCONTEXT_W_TITLE |\
 					 F_SUBCONTEXT_W_MINIMIZE |\
-					 F_SUBCONTEXT_W_MAXIMIZE)
+					 F_SUBCONTEXT_W_MAXIMIZE |\
+					 F_SUBCONTEXT_W_CLOSE)
 
 #define F_SUBCONTEXT_W_FRAME		(F_SUBCONTEXT_W_BORDER |\
 					 F_SUBCONTEXT_W_TITLEBAR)
@@ -1809,6 +1812,12 @@ typedef struct _ClientData *PtrClientData;
 #define TITLE_DEPRESSED			(1L << 1)
 #define MINIMIZE_DEPRESSED		(1L << 2)
 #define MAXIMIZE_DEPRESSED		(1L << 3)
+#define CLOSE_DEPRESSED			(1L << 4)
+
+/* A close button (X) on windows with a title bar that may be closed,
+ * as on other desktops. */
+#define HAS_CLOSE_BUTTON(pcd) \
+    (((pcd)->decor & MWM_DECOR_TITLE) && ((pcd)->clientFunctions & MWM_FUNC_CLOSE))
 
 /* iconFlags field values: */
 #define ICON_HINTS_POSITION		(1L << 0)

@@ -140,6 +140,9 @@ at the next login.
 
 ## Windows
 
+- **Title bar buttons**: on the right, minimize, maximize and **close
+  (X)**, as on other desktops; the button on the left opens the window
+  menu.
 - **Tiling**: drag a window to the left or right edge to fill that half,
   to the top to maximize. **Super+Left/Right** tiles, **Super+Up**
   maximizes, **Super+Down** restores. Double-click a title bar to

@@ -1286,7 +1286,8 @@ void CheckButtonPressBuiltin (XButtonEvent *buttonEvent, Context context, Contex
 	    wmGD.configSet = True;
 	}
 	else if ((buttonEvent->button == SELECT_BUTTON) &&
-            (subContext & (F_SUBCONTEXT_W_MINIMIZE|F_SUBCONTEXT_W_MAXIMIZE)))
+            (subContext & (F_SUBCONTEXT_W_MINIMIZE|F_SUBCONTEXT_W_MAXIMIZE|
+                           F_SUBCONTEXT_W_CLOSE)))
 	{
             /*
 	     * Minimize and maximize button components:
@@ -1771,6 +1772,20 @@ void CheckButtonReleaseBuiltin (XButtonEvent *buttonEvent, Context context, Cont
 	 */
 
 	if ((buttonEvent->button == SELECT_BUTTON) &&
+	    (subContext == F_SUBCONTEXT_W_CLOSE))
+	{
+	    /*
+	     * Close button (X):
+	     * Button 1 click - close the window (WM_DELETE_WINDOW, as
+	     * f.kill does).
+	     */
+
+	    if (wmGD.clickData.clickContext == F_SUBCONTEXT_W_CLOSE)
+	    {
+		F_Kill (NULL, pCD, (XEvent *) buttonEvent);
+	    }
+	}
+	else if ((buttonEvent->button == SELECT_BUTTON) &&
 	    (subContext == F_SUBCONTEXT_W_MINIMIZE))
 	{
 	    /*

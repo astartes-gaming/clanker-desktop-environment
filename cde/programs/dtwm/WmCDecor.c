@@ -962,6 +962,26 @@ void GenerateFrameDisplayLists (ClientData *pcd)
 	
     }
 
+    if (HAS_CLOSE_BUTTON(pcd)) {
+	GetFramePartInfo (pcd, FRAME_CLOSE, &x, &y, &width, &height);
+
+	if (pcd->decorFlags & CLOSE_DEPRESSED) {
+	    GetDepressInfo (pcd, FRAME_CLOSE, &jX, &jY, &jW, &jH, 
+			    &inWidth);
+	    BevelDepressedRectangle (prlTop, prlBot, 
+			    x-xAdj, y-yAdj, width, height,
+			    nTitleBevel, nTitleBevel, 
+			    sTitleBevel, eTitleBevel, inWidth);
+	}
+	else {
+	    BevelRectangle (prlTop, prlBot, 
+			    x-xAdj, y-yAdj, width, height,
+			    nTitleBevel, nTitleBevel, 
+			    sTitleBevel, eTitleBevel);
+	}
+	BevelCloseButton (prlBot, x-xAdj, y-yAdj, height);
+    }
+
     /* draw the client matte (this is in the base window!!!) */
 
     if (matte_width > 0) {
@@ -1626,6 +1646,7 @@ Boolean AllocateGadgetRectangles (ClientData *pcd)
 	if (decor & MWM_DECOR_MENU)	num_rects += 1;
 	if (decor & MWM_DECOR_MINIMIZE)	num_rects += 1;
 	if (decor & MWM_DECOR_MAXIMIZE)	num_rects += 1;
+	if (HAS_CLOSE_BUTTON(pcd))	num_rects += 1;
     
 	/* allocate memory if no memory is allocated */
 	if ( pcd->pTitleGadgets == NULL) {
@@ -1766,6 +1787,17 @@ void ComputeGadgetRectangles (ClientData *pcd)
 	    GetFramePartInfo (pcd, FRAME_MAXIMIZE, 
 	                      &fpX, &fpY, &fpWidth, &fpHeight);
 	    /* copy in and convert to shorts */
+	    pgr[igr].rect.x = fpX;
+	    pgr[igr].rect.y = fpY;
+	    pgr[igr].rect.width = fpWidth;
+	    pgr[igr].rect.height = fpHeight;
+	    igr += 1;
+	}
+
+	if (HAS_CLOSE_BUTTON(pcd)) {
+	    pgr[igr].id = FRAME_CLOSE;
+	    GetFramePartInfo (pcd, FRAME_CLOSE, 
+	                      &fpX, &fpY, &fpWidth, &fpHeight);
 	    pgr[igr].rect.x = fpX;
 	    pgr[igr].rect.y = fpY;
 	    pgr[igr].rect.width = fpWidth;
@@ -2483,6 +2515,39 @@ void BevelSystemButton (RList *prTop, RList *prBot, int x, int y,
 
 
 
+/*
+ *  BevelCloseButton (prBot, x, y, height)
+ *
+ *  The close button's X: two diagonals of small squares in the bottom
+ *  shadow color, inside a gadget "height" pixels square at x, y.
+ */
+void BevelCloseButton (RList *prBot, int x, int y, unsigned int height)
+{
+    int pad, len, dot, i;
+
+    if (height < 9)
+	return;
+    dot = (height >= 18) ? 2 : 1;
+    pad = (int) height / 4 + 1;
+    len = (int) height - 2 * pad - dot + 1;
+    if (len < 2)
+	return;
+    if ((prBot->used + 2 * len > prBot->allocated) &&
+	!ExtendRList (prBot, MAX (2 * len, 10)))
+	return;
+    for (i = 0; i < len; i++)
+    {
+	XRectangle *r = &prBot->prect[prBot->used++];
+
+	r->x = x + pad + i;              r->y = y + pad + i;
+	r->width = r->height = dot;
+	r = &prBot->prect[prBot->used++];
+	r->x = x + pad + len - 1 - i;    r->y = y + pad + i;
+	r->width = r->height = dot;
+    }
+}
+
+
 /*************************************<->*************************************
  *
  *  BevelMinimizeButton (prTop, prBot, x, y, height)
@@ -2663,6 +2728,7 @@ Boolean DepressGadget (ClientData *pcd, int gadget, Boolean depressed)
 	case FRAME_SYSTEM:
 	case FRAME_MINIMIZE:
 	case FRAME_MAXIMIZE:
+	case FRAME_CLOSE:
 	    if (!GetDepressInfo (pcd, gadget, &x, &y, &width, 
 				 &height, &invertWidth))
 		return(FALSE);
@@ -2782,6 +2848,10 @@ void PushGadgetIn (ClientData *pcd, int gadget)
 	    pcd->decorFlags |= MAXIMIZE_DEPRESSED;
 	    break;
 
+	case FRAME_CLOSE:
+	    pcd->decorFlags |= CLOSE_DEPRESSED;
+	    break;
+
 	default:
 	    return;
     }
@@ -2832,6 +2902,10 @@ void PopGadgetOut (ClientData *pcd, int gadget)
 
 	case FRAME_MAXIMIZE:
 	    pcd->decorFlags &= ~MAXIMIZE_DEPRESSED;
+	    break;
+
+	case FRAME_CLOSE:
+	    pcd->decorFlags &= ~CLOSE_DEPRESSED;
 	    break;
 
 	default:
