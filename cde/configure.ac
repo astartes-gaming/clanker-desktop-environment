@@ -494,6 +494,10 @@ CXX_FLAG_CHECK([-Wno-write-strings])
 C_FLAG_CHECK([-Wno-unused-result])
 CXX_FLAG_CHECK([-Wno-unused-result])
 
+dnl Motif's headers (FreeBSD's open-motif, among others) still declare
+dnl "register" parameters, which C++17 - Clang's default - rejects.
+CXX_FLAG_CHECK([-Wno-register])
+
 
 dnl Add X11 goodies here
 EXTRA_LIBS="${X_LIBS} ${EXTRA_LIBS}"

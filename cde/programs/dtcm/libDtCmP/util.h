@@ -53,6 +53,7 @@
 #define _UTIL_H
 
 #include <sys/types.h>
+#include <string.h>
 #include <X11/Xlib.h>
 #include <csa.h>
 #include "timeops.h"
@@ -269,7 +270,8 @@ extern void print_tick(time_t);
 extern boolean_t same_path(char*, char*);
 extern boolean_t same_user(char*, char*);
 extern char * str_to_cr(char*);
-extern char * strncat(char *, const char *, size_t n);
+/* strncat: from <string.h> (redeclaring it breaks where it is a macro,
+ * e.g. FreeBSD with _FORTIFY_SOURCE) */
 extern char * substr(char*, int, int n);
 extern void syserr(char*, int, int, int);
 extern Lines * text_to_lines	(char*, int);

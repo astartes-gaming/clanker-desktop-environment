@@ -53,16 +53,16 @@ reparser.c reparser.h: reparser.y
 rtable2_clnt.c rtable3_clnt.c rtable4_clnt.c cm_clnt.c:
 	$(RM) $@
 	cat EUSinclude > $@
-	rpcgen -l $(@:_clnt.c=.x) | sed -f namechange1.sed | sed -f namechange2.sed >> $@
+	rpcgen -l $(@:_clnt.c=.x) | sed -f namechange1.sed | sed -f namechange2.sed | sed -f namechange3.sed >> $@
 
 rtable2_xdr.c rtable3_xdr.c rtable4_xdr.c agent_xdr.c:
 	$(RM) $@
 	cat EUSinclude > $(@:.x=_xdr.c)
 	rpcgen -c $(@:_xdr.c=.x) | sed -f namechange1.sed | sed -f namechange2.sed >> $(@:.x=_xdr.c)
 
-rtable4_clnt.c rtable4_xdr.c: rtable4.h namechange1.sed namechange2.sed
-rtable3_clnt.c rtable3_xdr.c: rtable3.h namechange1.sed namechange2.sed
-rtable2_clnt.c rtable2_xdr.c: rtable3.h namechange1.sed namechange2.sed
+rtable4_clnt.c rtable4_xdr.c: rtable4.h namechange1.sed namechange2.sed namechange3.sed
+rtable3_clnt.c rtable3_xdr.c: rtable3.h namechange1.sed namechange2.sed namechange3.sed
+rtable2_clnt.c rtable2_xdr.c: rtable3.h namechange1.sed namechange2.sed namechange3.sed
 agent_xdr.c agent.c: agent.h
 
 agent.h:
