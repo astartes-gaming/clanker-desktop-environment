@@ -44,6 +44,9 @@ jobs:
                      xbitmaps dbus pkgconf; do
               pkg install -y "$p" >/dev/null 2>&1 || echo "PACKAGE MISSING: $p"
             done
+            # OpenSP (onsgmls) by its port origin if the name differs
+            command -v onsgmls >/dev/null || pkg install -y textproc/opensp || {
+              pkg search -o -x -i 'opensp|onsgmls' || true; }
           run: |
             set -e
             cd cde
