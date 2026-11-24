@@ -64,6 +64,11 @@ see the [README](../README.md).
 
 ## Starting up
 
+To install, use a package from the project's releases page (`.deb`
+for Debian and Ubuntu, `.rpm` for Fedora, or a tarball), or build it
+yourself; the README explains both.  Afterwards, choose "CDE" on your
+login screen.
+
 While the desktop starts, a splash screen shows the CDE logo, the
 desktop's name and a moving bar on a night-sky background, with the
 copyright notice below; it disappears when the window manager takes

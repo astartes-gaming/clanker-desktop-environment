@@ -86,6 +86,22 @@ CDE behaves as it always did.
 
 ## Install
 
+### Ready-made packages
+
+Each [release](https://github.com/astartes-gaming/clanker-desktop-environment/releases)
+has packages that install in `/usr/dt`:
+
+- Debian, Ubuntu and derivatives (amd64, arm64, i386, armhf, armel,
+  ppc64el, s390x, riscv64):
+  `sudo apt install ./cde-desktop_VERSION-1_ARCH.deb`
+- Fedora and other RPM systems (x86_64, aarch64):
+  `sudo dnf install ./clanker-cde-VERSION-1.fc43.ARCH.rpm`
+- Other Linux systems: `sudo tar -C / -xzf clanker-cde-VERSION-linux-ARCH.tar.gz`
+  (install Motif, ksh, rpcbind and the X libraries yourself)
+
+Then choose "CDE" on your login screen.  Check downloads against
+`SHA256SUMS`.  To build from source instead, read on.
+
 ### Dependencies (Debian/Ubuntu)
 
 ```sh
