@@ -33,6 +33,11 @@ on:
 permissions:
   contents: read
 
+# a newer push to a pull request replaces its (long) build
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   version:
     runs-on: ubuntu-24.04
