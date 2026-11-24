@@ -337,7 +337,7 @@ void            oe_write_audit_rec (long numhits)
 	fprintf (stream, AUDIT_FORMAT "%s\n",
 	    usrblk.userid,
 	    nowstring (&now_gmt),
-	    now_gmt - saveusr.start_time,	/* elapsed search time */
+	    (long) (now_gmt - saveusr.start_time),	/* elapsed search time */
 	    usrblk.dblk->name,
 	    numhits,
 	    (saveusr.lastqry == NULL) ? \

@@ -553,7 +553,7 @@ static void     huffman_code (time_t idstamp)
 	"time_t hctree_id =\t%ldL;\n"
 	"int    hctree_root =\t%d;\n"
 	"static int hctree_array[] = {\n",
-	filename_huc, idstamp, last_node - 257);
+	filename_huc, (long) idstamp, last_node - 257);
     for (i = 257; i <= last_node; i++) {
 	fprintf (outstream_huc, "\t%4d,\t%4d%c\t/* %3d */\n",
 	    hctree1[i].son0 - 257, hctree1[i].son1 - 257,
@@ -565,7 +565,7 @@ static void     huffman_code (time_t idstamp)
     fclose (outstream_huc);
 
     /* write out the tree base (0-256) in sorted order to .huf file */
-    fprintf (outstream_huf, "%ld\tHCTREE_ID\n", idstamp);
+    fprintf (outstream_huf, "%ld\tHCTREE_ID\n", (long) idstamp);
     for (lasti = -1; (i = next_sorted_node (lasti)) >= 0; lasti = i) {
 	/*
 	 * Create huffman code digit string. j ascends tree from i
@@ -796,7 +796,7 @@ int             main (int argc, char *argv[])
     printf (CATGETS(dtsearch_catd, MS_huff, 47,
 	"Identifying timestamp will be '%ld'.\n"
 	"%s Huffman Code Tables in '%s' and '%s'..."),
-	now,
+	(long) now,
 	(no_huffcode_file) ?
 	    CATGETS(dtsearch_catd, MS_huff, 48, "Creating") :
 	    CATGETS(dtsearch_catd, MS_huff, 49, "Rebuilding"),

@@ -345,7 +345,8 @@ timeStamp(char *msg)
     _DtTermProcessUnlock();
 
     (void) gettimeofday(&tv, &tz);
-    (void) fprintf(timeStampFile, "%lu %ld %s\n", tv.tv_sec, tv.tv_usec,
+    (void) fprintf(timeStampFile, "%lu %ld %s\n",
+	    (unsigned long) tv.tv_sec, (long) tv.tv_usec,
 	    (msg && *msg) ? msg : "");
 }
 
