@@ -35,7 +35,10 @@ see the [README](../README.md).
   Education, Games, Graphics, Internet, Multimedia, Office, Settings,
   System, Other), listed on its left: click one, or press Left and
   Right while the search box is empty. CDE's own applications are
-  filed there too. Every entry shows its icon, found the way other
+  filed there too. It lists what is installed, Flatpak and Snap
+  applications included, and follows installs and removals within a
+  couple of seconds, even while it is open; an entry whose program
+  is gone is left out. Every entry shows its icon, found the way other
   desktops find it (icon themes, /usr/share/pixmaps); icons that come
   only as SVG are converted once with `rsvg-convert` or ImageMagick
   when either is installed (`apt install librsvg2-bin`).
@@ -237,43 +240,65 @@ AccessX features) and are applied again at every login.
 ## The terminal
 
 The Terminal button and every action that opens a terminal run
-`dtterminal`, which picks **kitty**, then **Ghostty**, then the
-classic **dtterm**, whichever is installed (dtterm on machines with
-less than 768 MB of memory, where the others are too heavy; choosing
-one in Settings still uses it). kitty and Ghostty get
-the current CDE palette: the text-area color as background, the
+`dtterminal`, which picks **kitty**, then **Ghostty**, then KDE's
+**Konsole**, then the classic **dtterm**, whichever is installed
+(dtterm on machines with less than 768 MB of memory, where the others
+are too heavy; choosing one in Settings still uses it). kitty and
+Ghostty get the current CDE palette: the text-area color as background, the
 active-window color for the cursor, selection and current tab, flat
 Motif-style tabs, and the window manager's Motif frame instead of
 their own title bar. The colors follow the palette each time a
 terminal opens (`~/.dt/terminal-theme/`); fonts, keys and other
 settings in your own `kitty.conf` or Ghostty config stay as they are.
+Konsole keeps your own profile and only takes a "CDE" color scheme
+made from the palette.
 
 - **Choose the terminal:** Settings > Session > *Terminal* (Change
-  cycles through Automatic, kitty, Ghostty and dtterm), or write the
-  name to `~/.dt/terminal`.
+  cycles through Automatic and the installed ones of kitty, Ghostty,
+  Konsole and dtterm), or write the name to `~/.dt/terminal`.
 - **Their own colors instead:** `DT_TERMINAL_THEME=no` in
   `~/.dtprofile`.
 - Old actions that use dtterm-only options (`-C`, `-xrm`, `-sb` …)
   still open dtterm. If kitty or Ghostty cannot start (no OpenGL, as
   on very old graphics), dtterm opens instead.
-- Install: `apt install kitty` (Ghostty comes from its own packages).
+- Install: `apt install kitty` or `apt install konsole` (Ghostty
+  comes from its own packages).
 
-## Using Xfce applications
+## Using Xfce or KDE applications
 
-Settings > Session > **Use Xfce applications when installed** makes the
-Text Editor, Terminal and Home Folder buttons (and the same actions
-elsewhere) open Xfce's applications:
+Settings > Session > **Applications** chooses which desktop's
+applications the Text Editor, Terminal and Home Folder buttons (and
+the same actions elsewhere) open. Change offers only the sets that
+have something installed:
 
-| CDE | Xfce |
-|---|---|
-| Text Editor (dtpad) | Mousepad |
-| Terminal (dtterm) | xfce4-terminal |
-| File Manager (dtfile) | Thunar |
+| CDE | Xfce | KDE |
+|---|---|---|
+| Text Editor (dtpad) | Mousepad | Kate (or KWrite) |
+| Terminal (dtterm) | xfce4-terminal | Konsole |
+| File Manager (dtfile) | Thunar | Dolphin |
 
-They use your CDE palette, and follow palette changes live. When an Xfce
-application is not installed, or the option is off, CDE's own
-application opens instead, so nothing breaks. Install them with e.g.
-`apt install thunar mousepad xfce4-terminal xsettingsd`.
+The Xfce applications use your CDE palette and follow palette changes
+live; Konsole gets the CDE color scheme. When the chosen application is
+not installed, CDE's own opens instead, so nothing breaks. Install them
+with e.g. `apt install thunar mousepad xfce4-terminal xsettingsd` or
+`apt install dolphin kate konsole`.
+
+### KDE applications in a CDE session
+
+When KDE Frameworks are installed, the CDE session presents itself to
+KDE programs the way a Plasma session does (`KDE_FULL_SESSION`), while
+the menu and autostart still follow CDE's own entries:
+
+- Konsole, Dolphin, Kate and the rest use your KDE settings, KDE file
+  dialogs, and "Open with" lists the installed applications.
+- Chromium and Electron programs (Chrome, Brave, VS Code, Claude,
+  Discord...) keep saved logins in **KWallet**, as in Plasma, so moving
+  between Plasma and CDE no longer asks you to sign in again. When you
+  log in through CDE's own login screen, KWallet and GNOME Keyring are
+  unlocked with your password.
+- Files open with KDE's opener (`xdg-open` uses `kde-open`).
+
+`DT_NO_KDE=1` in `~/.dtprofile` turns this off.
 
 ## Laptops
 
@@ -334,6 +359,13 @@ Deleting one of these returns that part of the desktop to its defaults
   Workspace menu > Restart Workspace Manager).
 - **A setting doesn't take effect**: Session options and the window
   manager are read at login; log out and in again.
+- **A browser or Electron app (Claude, VS Code...) asks you to sign
+  in again after using another desktop** (TDE, a window manager on its
+  own): each desktop made it keep logins in a different place. Start it
+  with `--password-store=kwallet6` everywhere (KWallet, as Plasma and
+  CDE use): copy its entry from `/usr/share/applications` to
+  `~/.local/share/applications` and add the option after the program
+  on its `Exec=` lines.
 - **Calendar says "rpc.cmsd is not responding"**: the calendar server
   isn't running. Systems without inetd (most current Linux) start it
   with systemd; once, as root:

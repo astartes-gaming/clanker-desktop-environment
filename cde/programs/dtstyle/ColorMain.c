@@ -116,7 +116,7 @@
 
 #define STR1 ((char *)GETMESSAGE(14, 29, "A palette named '%s' already exists.\nThis new palette will overwrite the old one.\nIs this what you want to do?"))
 #define STR2 ((char *)GETMESSAGE(14, 23, "Delete palette '%s'?\n"))
-#define NEXT_SESSION ((char *)GETMESSAGE(14, 28, "The selected palette will take effect\nat your next session."))
+#define NEXT_SESSION ((char *)GETMESSAGE(14, 28, "The new palette is used at once by window frames, GTK and Qt\napplications and every window opened from now on.  CDE windows\nalready open, such as the Front Panel, keep their colors until\nthey are restarted or you log in again."))
 #define CANT_DELETE ((char *)GETMESSAGE(14, 18, "Can't delete the last palette.\n"))
 #define COLORUSE_WHEN ((char *)GETMESSAGE(14, 27, "The new Color Use value will take effect\nat your next session."))
 

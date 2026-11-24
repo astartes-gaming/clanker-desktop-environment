@@ -513,8 +513,10 @@ $ _DtMessage 27 is for the new ColorUse dialog when you press ok.
 at your next session.
 
 $ _DtMessage 28 is a warning message that appears on Black and White systems
-28 The selected palette will take effect\n\
-at your next session.
+28 The new palette is used at once by window frames, GTK and Qt\n\
+applications and every window opened from now on.  CDE windows\n\
+already open, such as the Front Panel, keep their colors until\n\
+they are restarted or you log in again.
 
 $ _DtMessage 29 appears in a warning dialog
 29 A palette named '%s' aleady exists.\n\
