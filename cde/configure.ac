@@ -228,6 +228,15 @@ AC_SUBST(XM_INCDIR, '-I$(top_builddir)/include/Xm')
 AC_SUBST(CSA_INCDIR, '-I$(top_builddir)/include/csa')
 AC_SUBST(SPC_INCDIR, '-I$(top_builddir)/include/SPC')
 
+dnl dtksh builds the bundled ksh93 (third-party, with its own probes),
+dnl which does not build everywhere CDE does (OpenBSD's headers):
+dnl --disable-dtksh leaves it out.
+AC_ARG_ENABLE([dtksh],
+        AS_HELP_STRING([--disable-dtksh], [Do not build dtksh (default=build it)]),
+        [enable_dtksh="$enableval"], [enable_dtksh="yes"]
+)
+AM_CONDITIONAL([BUILD_DTKSH], [test "$enable_dtksh" != "no"])
+
 dnl language enables
 
 AC_ARG_ENABLE([german],

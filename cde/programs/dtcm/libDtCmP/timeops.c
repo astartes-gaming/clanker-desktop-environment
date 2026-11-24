@@ -963,7 +963,8 @@ set_timezone(char *tzname)
 	 */
 	if (tzname==NULL) system("unset TZ\n");
 #else
-	if (tzname==NULL) tzsetwall();
+	/* the system's zone: tzsetwall() is gone from current BSDs */
+	if (tzname==NULL) { unsetenv("TZ"); tzset(); }
 #endif /* SVR4 */
 
 	else {

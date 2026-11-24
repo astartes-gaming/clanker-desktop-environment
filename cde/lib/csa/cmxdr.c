@@ -61,7 +61,9 @@ bool_t xdr_time_t(XDR *xdrs, time_t *objp);
 bool_t
 xdr_time_t(XDR *xdrs, time_t *objp)
 {
-	if (!_xdr_time_t(xdrs, objp))
+	/* the same size as the type _xdr_time_t takes (above), but maybe
+	 * not the same type: OpenBSD's time_t is long long */
+	if (!_xdr_time_t(xdrs, (void *) objp))
 		return (FALSE);
 	return (TRUE);
 }

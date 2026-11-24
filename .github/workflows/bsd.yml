@@ -100,7 +100,7 @@ jobs:
             export AUTOCONF_VERSION=2.72 AUTOMAKE_VERSION=1.17
             export LIBRARY_PATH=/usr/local/lib
             ./autogen.sh > ../bsd-logs/autogen.log 2>&1
-            ./configure --with-tcl=/usr/local/lib/tcl/tcl8.6 MAKE=gmake \
+            ./configure --with-tcl=/usr/local/lib/tcl/tcl8.6 MAKE=gmake --disable-dtksh \
               CFLAGS="-I/usr/local/include" CXXFLAGS="-I/usr/local/include" \
               LDFLAGS="-L/usr/local/lib" \
               > ../bsd-logs/configure.log 2>&1 || { tail -40 ../bsd-logs/configure.log; echo configure > ../bsd-logs/status; exit 0; }
@@ -151,8 +151,9 @@ jobs:
             export PATH="$PATH:/usr/X11R7/bin:/usr/pkg/bin"
             ./autogen.sh > ../bsd-logs/autogen.log 2>&1
             ./configure --with-tcl=/usr/pkg/lib MAKE=gmake \
-              CPPFLAGS="-I/usr/pkg/include" CFLAGS="-I/usr/pkg/include" \
-              LDFLAGS="-L/usr/pkg/lib -Wl,-R/usr/pkg/lib" \
+              --x-includes=/usr/X11R7/include --x-libraries=/usr/X11R7/lib \
+              CPPFLAGS="-I/usr/pkg/include -I/usr/X11R7/include" CFLAGS="-I/usr/pkg/include" \
+              LDFLAGS="-L/usr/pkg/lib -Wl,-R/usr/pkg/lib -L/usr/X11R7/lib -Wl,-R/usr/X11R7/lib" \
               > ../bsd-logs/configure.log 2>&1 || { tail -40 ../bsd-logs/configure.log; echo configure > ../bsd-logs/status; exit 0; }
             set +e
             gmake -k -j4 > ../bsd-logs/build.log 2>&1
