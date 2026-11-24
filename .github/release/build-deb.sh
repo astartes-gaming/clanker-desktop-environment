@@ -25,7 +25,8 @@ mk-build-deps --install --remove \
     --tool 'apt-get -y -o Acquire::Retries=3 --no-install-recommends' debian/control
 dpkg-buildpackage -b -us -uc -j"$(nproc)"
 mkdir -p /src/out
-cp ../cde-desktop*_"$arch".deb /src/out/
+# debug symbols (cde-desktop-dbgsym) stay out of the release
+cp ../cde-desktop_*_"$arch".deb /src/out/
 # the same files as a plain tarball, for systems without dpkg
 deb=$(ls ../cde-desktop_*_"$arch".deb | head -1)
 rm -rf /tmp/root; mkdir -p /tmp/root

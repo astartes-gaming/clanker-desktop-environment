@@ -9,7 +9,11 @@ DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 override_dh_auto_configure:
 	./autogen.sh
-	dh_auto_configure -- --prefix=/usr --bindir=/usr/bin
+	# CDE lives in /usr/dt (the session entry, the docs and many CDE files
+	# say so); libraries, headers and manuals go where Debian expects them.
+	dh_auto_configure -- --prefix=/usr/dt --bindir=/usr/dt/bin \
+		--libdir=/usr/lib/$(DEB_HOST_MULTIARCH) --includedir=/usr/include \
+		--mandir=/usr/share/man
 
 override_dh_auto_build:
 	dh_auto_build

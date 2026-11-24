@@ -26,10 +26,13 @@ support.  Installs in /usr/dt.
 cd cde
 ./autogen.sh
 %configure --prefix=/usr/dt --bindir=/usr/dt/bin --libdir=/usr/dt/lib \
-    --mandir=/usr/dt/share/man
+    --libexecdir=/usr/dt/libexec --mandir=/usr/dt/share/man
 %make_build
 
 %install
+# CDE's programs find their libraries in /usr/dt/lib through a runpath,
+# which Fedora's check-rpaths would refuse
+export QA_RPATHS=$(( 0x0001|0x0002 ))
 cd cde
 test ! -f programs/dtsearchpath/dtappg/Makefile || \
     sed -i -E '/^[[:space:]]+chown[[:space:]]+root[[:space:]].*dtappgather/s@^.*@	: chown at install@' \
@@ -48,3 +51,7 @@ find ./usr/dt ./etc/dt -type d 2>/dev/null | sed 's|^\.||; s|^\(.*\)$|%dir "\1"|
 /sbin/ldconfig
 
 %files -f %{_builddir}/files.list
+
+%changelog
+* Tue Nov 24 2026 Clanker CDE <noreply@github.com> - %{version}-1
+- Release built by GitHub Actions
