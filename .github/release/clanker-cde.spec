@@ -26,7 +26,8 @@ support.  Installs in /usr/dt.
 cd cde
 ./autogen.sh
 %configure --prefix=/usr/dt --bindir=/usr/dt/bin --libdir=/usr/dt/lib \
-    --libexecdir=/usr/dt/libexec --mandir=/usr/dt/share/man
+    --libexecdir=/usr/dt/libexec --mandir=/usr/dt/share/man \
+    KSH=/usr/bin/ksh
 %make_build
 
 %install
@@ -38,6 +39,11 @@ test ! -f programs/dtsearchpath/dtappg/Makefile || \
     sed -i -E '/^[[:space:]]+chown[[:space:]]+root[[:space:]].*dtappgather/s@^.*@	: chown at install@' \
         programs/dtsearchpath/dtappg/Makefile
 %make_install
+# the login session entries
+install -D -m 0644 contrib/desktopentry/cde.desktop \
+    %{buildroot}/usr/share/xsessions/cde.desktop
+install -D -m 0644 contrib/desktopentry/cde-xwayland.desktop \
+    %{buildroot}/usr/share/wayland-sessions/cde-xwayland.desktop
 # libtool archives are not shipped
 find %{buildroot} -name '*.la' -delete
 # the file list: everything installed
