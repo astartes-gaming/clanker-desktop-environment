@@ -202,12 +202,15 @@
 #error Unable to typedef INT and UINT
 #endif
 
-#if (LONG_BIT == 32)
-  typedef long            LONG;
-  typedef unsigned long   ULONG;
-#elif   (WORD_BIT == 32)
+/* int before long, as Search.h picks DtSrINT32: DB_ADDR is both, and
+ * on 32-bit systems (where int and long are both 32 bits) the two must
+ * be the same type */
+#if   (WORD_BIT == 32)
   typedef int             LONG;
   typedef unsigned int    ULONG;
+#elif (LONG_BIT == 32)
+  typedef long            LONG;
+  typedef unsigned long   ULONG;
 #else
 #error Unable to typedef LONG and ULONG
 #endif
