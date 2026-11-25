@@ -230,7 +230,23 @@ AccessX features) and are applied again at every login.
 - Settings > Color sets the palette. CDE's applications, the Front
   Panel and the window frames use it.
 - **Apply colors to GTK and Qt applications** (same window) makes
-  Firefox, LibreOffice, GTK and Qt applications use the palette too.
+  LibreOffice, GTK and Qt applications use the palette too:
+  - **Qt and KDE applications** (Konsole, Dolphin, Kate, Konqueror,
+    VLC…) follow the CDE GTK theme through Qt's GTK platform theme, or
+    use qt5ct/qt6ct with the CDE palette when those are installed. A
+    `QT_QPA_PLATFORMTHEME` of your own in `~/.dtprofile` wins. A "CDE"
+    color scheme is also written for KDE, so Plasma's Colors settings
+    can use the palette too if you want it there.
+  - **Firefox and LibreWolf**: their tab strip, menus, dialogs,
+    scroll bars and form controls take the palette (a marked line in
+    each profile's `user.js` turns off Firefox's libadwaita colors; it
+    is set back when you untick the box). Firefox's address bar row
+    keeps its own light or dark color.
+  - **Chromium, Chrome, Brave, Edge** and Electron applications: choose
+    *GTK* (or *Qt*) under Settings > Appearance > Theme in the browser;
+    they then follow the palette.
+  - **Flatpak applications** are allowed to read the theme
+    (`flatpak override --user`, read-only, done once).
 - GTK applications **change color at once**, without restarting them
   or logging out, when `xsettingsd` is installed (`apt install
   xsettingsd`). Without it they pick up the new colors when restarted.

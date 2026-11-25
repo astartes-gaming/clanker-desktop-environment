@@ -152,6 +152,11 @@ esac
 #
 if [ -r "$HOME/.dt/theming/env" ]; then
   . "$HOME/.dt/theming/env"
+  # env files from before Qt followed the GTK theme: Qt without
+  # qt5ct/qt6ct takes the CDE colors from it
+  if [ -z "$QT_QPA_PLATFORMTHEME" ]; then
+    QT_QPA_PLATFORMTHEME=gtk3; export QT_QPA_PLATFORMTHEME
+  fi
 elif [ -f "$HOME/.dt/modern-apps" ] &&
      [ -x "${DT_BINPATH:-/usr/dt/bin}/dtxsettings" ]; then
   "${DT_BINPATH:-/usr/dt/bin}/dtxsettings" start 2>/dev/null  # Xfce apps
