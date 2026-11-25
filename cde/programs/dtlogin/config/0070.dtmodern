@@ -201,6 +201,16 @@ if [ -n "$DBUS_SESSION_BUS_ADDRESS" ] &&
 fi
 
 #
+# 4a. Notifications: one server, decided here (several installed ones
+#     claim the D-Bus name, Plasma's among them, which only works in
+#     Plasma).  dunst in the CDE colors when installed.  DT_NO_NOTIFY=1
+#     starts none.
+#
+if [ -n "$DISPLAY" ] && [ -x "${DT_BINPATH:-/usr/dt/bin}/dtnotify" ]; then
+  "${DT_BINPATH:-/usr/dt/bin}/dtnotify" start >/dev/null 2>&1
+fi
+
+#
 # 5. XDG autostart (~/.config/autostart, /etc/xdg/autostart), honoring
 #    OnlyShowIn/NotShowIn for "CDE".  Runs in the background once the
 #    window manager is up, so started applications get decorated.
@@ -272,6 +282,11 @@ if [ -z "$DT_NO_XDG_AUTOSTART" ]; then
         sleep 10
       fi
       $_dtm_autostart >/dev/null 2>&1
+      # clipboard history (Windows+V), unless autostart started one
+      if [ -x "${DT_BINPATH:-/usr/dt/bin}/dtclipboard" ]; then
+        sleep 5
+        "${DT_BINPATH:-/usr/dt/bin}/dtclipboard" start >/dev/null 2>&1
+      fi
     ) &
   fi
   unset _dtm_autostart
