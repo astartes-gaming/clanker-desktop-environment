@@ -430,6 +430,24 @@ build_mainWindow(
 
     ProcessComponentList (shell, mainRC);
 
+    /* A grid, as other desktops' settings show their pages: rows of
+     * at most nine equal cells, so the window fits small screens even
+     * with all the pages. */
+    {
+        WidgetList kids;
+        Cardinal   nkids = 0, k, shown = 0;
+        short      rows;
+
+        XtVaGetValues(mainRC, XmNchildren, &kids, XmNnumChildren, &nkids, NULL);
+        for (k = 0; k < nkids; k++)
+            if (XtIsManaged(kids[k]))
+                shown++;
+        rows = (short) ((shown + 8) / 9);
+        if (rows > 1)
+            XtVaSetValues(mainRC, XmNorientation, XmHORIZONTAL,
+                          XmNpacking, XmPACK_COLUMN,
+                          XmNnumColumns, rows, NULL);
+    }
 }
 
 /*+++++++++++++++++++++++++++++++++++++++
@@ -574,6 +592,60 @@ ProcessComponentList(
       {
           cmp_string = CMPSTR(GETMESSAGE(4, 68, "Shortcuts"));
 	  dtIcon = _DtGetIconFileName(style.screen, SHORTCUTS_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, SEARCHP) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 70, "Search"));
+	  dtIcon = _DtGetIconFileName(style.screen, SEARCHP_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, DISPLAYS) == 0 && SysCmdHave("xrandr"))
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 71, "Displays"));
+	  dtIcon = _DtGetIconFileName(style.screen, DISPLAYS_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, SOUND) == 0 && SysCmdHave("pactl"))
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 72, "Sound"));
+	  dtIcon = _DtGetIconFileName(style.screen, SOUND_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, CONTROLLERS) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 73, "Controllers"));
+	  dtIcon = _DtGetIconFileName(style.screen, CONTROLLERS_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, USERS) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 74, "Users"));
+	  dtIcon = _DtGetIconFileName(style.screen, USERS_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, REGION) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 75, "Region"));
+	  dtIcon = _DtGetIconFileName(style.screen, REGION_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, INPUT) == 0 && SysCmdHave("setxkbmap"))
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 76, "Input"));
+	  dtIcon = _DtGetIconFileName(style.screen, INPUT_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, MEDIA) == 0 && SysCmdHave("udisksctl"))
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 77, "Drives"));
+	  dtIcon = _DtGetIconFileName(style.screen, MEDIA_ICON, NULL, NULL, 0);
+          helpTag = HELP_MAIN_WINDOW;
+      }
+      else if (strcmp(string, BORDERS) == 0)
+      {
+          cmp_string = CMPSTR(GETMESSAGE(4, 78, "Borders"));
+	  dtIcon = _DtGetIconFileName(style.screen, BORDERS_ICON, NULL, NULL, 0);
           helpTag = HELP_MAIN_WINDOW;
       }
       else if (strcmp(string, ACCESS) == 0)
@@ -803,6 +875,25 @@ OpenPanel(char *cd)
 
   else if (strcmp(cd, ACCESS) == 0)
     popup_accessBB(style.shell);
+
+  else if (strcmp(cd, SEARCHP) == 0)
+    popup_searchBB(style.shell);
+  else if (strcmp(cd, DISPLAYS) == 0)
+    popup_displaysBB(style.shell);
+  else if (strcmp(cd, SOUND) == 0)
+    popup_soundBB(style.shell);
+  else if (strcmp(cd, CONTROLLERS) == 0)
+    popup_controllersBB(style.shell);
+  else if (strcmp(cd, USERS) == 0)
+    popup_usersBB(style.shell);
+  else if (strcmp(cd, REGION) == 0)
+    popup_regionBB(style.shell);
+  else if (strcmp(cd, INPUT) == 0)
+    popup_inputBB(style.shell);
+  else if (strcmp(cd, MEDIA) == 0)
+    popup_mediaBB(style.shell);
+  else if (strcmp(cd, BORDERS) == 0)
+    popup_bordersBB(style.shell);
 
 }
 

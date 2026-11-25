@@ -26,7 +26,9 @@
 have() { type "$1" >/dev/null 2>&1; }
 
 DIR="$HOME/.dt/displays"
-DTBIN=`dirname "$0"`
+# output names and saved layouts are split into xrandr arguments;
+# never expanded as file names
+set -f
 
 [ -n "$DISPLAY" ] && have xrandr || exit 0
 

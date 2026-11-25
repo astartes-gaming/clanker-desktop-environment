@@ -259,6 +259,19 @@ ACTION DtAccessibility
                         and the on-screen keyboard.
 }
 
+ACTION DtSearch
+{
+	LABEL		Search
+        ARG_COUNT       0
+        ICON		DtSearch
+        TYPE            COMMAND
+        WINDOW_TYPE     NO_STDIO
+        EXEC_STRING     CDE_INSTALLATION_TOP/bin/dtappfind -search
+        DESCRIPTION     Search applications, settings, open windows, \
+                        files, and the web; calculate; run a command \
+                        (Settings > Search chooses what is searched).
+}
+
 ACTION Dtappfind
 {
 	LABEL		Find Application

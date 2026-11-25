@@ -176,10 +176,14 @@ SvgToPng(const char *svg, const char *base, char *out, size_t len)
 static int
 FindIcon(const char *name, char *out, size_t len)
 {
+    /* the theme chosen in Settings > Session > Icons (~/.dt/icon-theme)
+     * first, then hicolor and common ones */
     static const char *themes[] = {
-        "hicolor", "elementary-xfce", "gnome", "Adwaita", "oxygen",
+        "", "hicolor", "elementary-xfce", "gnome", "Adwaita", "oxygen",
         "Tango", "locolor", NULL
     };
+    static char  chosen[64];
+    static int   readChosen;
     static const int   sizes[] = { 24, 22, 32, 48, 16, 64, 128, 256, 0 };
     static const char *contexts[] = {
         "apps", "categories", "legacy", "places", "devices", "mimetypes",
@@ -209,8 +213,27 @@ FindIcon(const char *name, char *out, size_t len)
 
     if (nBases < 0)
         nBases = IconBases(bases, 16);
+    if (!readChosen)
+    {
+        const char *home = getenv("HOME");
+        char        f[1100];
+        FILE       *fp;
+
+        readChosen = 1;
+        if (home)
+        {
+            snprintf(f, sizeof(f), "%s/.dt/icon-theme", home);
+            if ((fp = fopen(f, "r")) != NULL)
+            {
+                if (fscanf(fp, "%63s", chosen) != 1 || strchr(chosen, '/'))
+                    chosen[0] = '\0';
+                fclose(fp);
+            }
+        }
+        themes[0] = chosen;
+    }
     for (t = 0; themes[t]; t++)
-        for (s = 0; sizes[s]; s++)
+        for (s = 0; sizes[s] && themes[t][0]; s++)
             for (b = 0; b < nBases; b++)
                 for (c = 0; contexts[c]; c++)
                 {
@@ -588,6 +611,30 @@ UpdateScrollBar(AppList *l)
                   view > l->rowH ? view - l->rowH : l->rowH, NULL);
 }
 
+/* The selected row's text: black or white, whichever reads better on
+ * the selection (the list's text color), as reversing the colors can
+ * give gray on white. */
+static Pixel
+SelText(AppList *l)
+{
+    static Pixel  cachedFor, cached;
+    static int    have;
+    Display      *dpy = XtDisplay(l->da);
+    Colormap      cm;
+    XColor        c;
+
+    if (have && cachedFor == l->fg)
+        return cached;
+    XtVaGetValues(l->da, XmNcolormap, &cm, NULL);
+    c.pixel = l->fg;
+    XQueryColor(dpy, cm, &c);
+    cached = ((c.red >> 8) * 299 + (c.green >> 8) * 587 + (c.blue >> 8) * 114) / 1000 > 140 ?
+             BlackPixelOfScreen(XtScreen(l->da)) : WhitePixelOfScreen(XtScreen(l->da));
+    cachedFor = l->fg;
+    have = 1;
+    return cached;
+}
+
 static void
 Draw(AppList *l)
 {
@@ -628,7 +675,7 @@ Draw(AppList *l)
                       y + (l->rowH - APPLIST_ICON) / 2);
         xs = XmStringCreateLocalized((char *) (label ? label : ""));
         th = XmStringHeight(l->rt, xs);
-        XSetForeground(dpy, l->gc, sel ? l->bg : l->fg);
+        XSetForeground(dpy, l->gc, sel ? SelText(l) : l->fg);
         XSetBackground(dpy, l->gc, sel ? l->fg : l->bg);
         XmStringDraw(dpy, win, l->rt, xs, l->gc, 4 + APPLIST_ICON + 6,
                      y + (l->rowH - th) / 2, w - APPLIST_ICON - 12,

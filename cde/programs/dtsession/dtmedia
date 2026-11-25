@@ -1,0 +1,136 @@
+#!/bin/sh
+#####################################################################
+##  dtmedia - USB drives, memory cards and discs for the CDE desktop.
+##
+##  dtmedia start | stop | restart
+##
+##  While it runs, a drive that is plugged in is mounted (udisks2, as
+##  other desktops do: no password for the user at the computer), a
+##  File Manager window opens on it, and a notification says so.  The
+##  choices are Settings > Removable Media's (~/.dt/media: mount=,
+##  open=, notify=).  Programs on the media are never run.
+##
+##  udiskie, when installed, does the work instead (it also offers to
+##  unlock encrypted drives).  DT_NO_AUTOMOUNT=1 in ~/.dtprofile turns
+##  this off.
+##
+##  Bourne shell only (no $(...)).
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+have() { type "$1" >/dev/null 2>&1; }
+
+conf=$HOME/.dt/media
+pidf=$HOME/.dt/media.pid
+
+get() {     # get KEY DEFAULT
+    v=`sed -n "s/^$1=//p" "$conf" 2>/dev/null | tail -1`
+    echo "${v:-$2}"
+}
+
+running() { [ -f "$pidf" ] && kill -0 "`cat "$pidf"`" 2>/dev/null; }
+
+stop() {
+    if running; then
+        # the watcher's process group: udisksctl monitor and the loop
+        kill -- -"`cat "$pidf"`" 2>/dev/null || kill "`cat "$pidf"`" 2>/dev/null
+    fi
+    rm -f "$pidf"
+}
+
+notify() {
+    [ "`get notify 1`" = 1 ] && have notify-send || return 0
+    notify-send -a Drives -i drive-removable-media "$1" "$2" >/dev/null 2>&1
+}
+
+# A block device that appeared: mount it if it holds a file system.
+added() {
+    dev=$1
+    [ -b "$dev" ] || return
+    # only removable or USB devices, with a file system, not mounted
+    info=`udisksctl info -b "$dev" 2>/dev/null` || return
+    echo "$info" | grep -q 'IdUsage: *filesystem' || return
+    echo "$info" | grep -q 'HintIgnore: *true' && return
+    echo "$info" | grep -q 'HintAuto: *true' || return
+    out=`udisksctl mount --no-user-interaction -b "$dev" 2>/dev/null` || return
+    # "Mounted /dev/sdb1 at /media/user/LABEL"
+    dir=`echo "$out" | sed -n 's/^Mounted .* at \(.*\)$/\1/p' | sed 's/\.$//'`
+    label=`echo "$info" | sed -n 's/^ *IdLabel: *//p' | head -1`
+    [ -n "$label" ] || label=`basename "$dev"`
+    notify "$label is ready" "${dir:-$dev}"
+    if [ "`get open 1`" = 1 ] && [ -n "$dir" ] && [ -d "$dir" ]; then
+        bin=`dirname "$0"`
+        if [ -x "$bin/dtmodernapp" ] && [ -f "$HOME/.dt/modern-apps" ]; then
+            "$bin/dtmodernapp" files "$dir" >/dev/null 2>&1 &
+        elif have dtfile; then
+            dtfile -folder "$dir" >/dev/null 2>&1 &
+        elif have xdg-open; then
+            xdg-open "$dir" >/dev/null 2>&1 &
+        fi
+    fi
+}
+
+# The X session is still there.
+alive() {
+    if have xprop; then xprop -root -len 0 _XROOTPMAP_ID >/dev/null 2>&1
+    elif have xrandr; then xrandr --current >/dev/null 2>&1
+    else return 0; fi
+}
+
+watch() {
+    # end with the session: stop the whole group once X is gone
+    [ -n "$DISPLAY" ] && (
+        while alive; do sleep 30; done
+        kill -- -$$ 2>/dev/null
+    ) &
+    # "udisksctl monitor" prints "...: Added /org/freedesktop/UDisks2/
+    # block_devices/sdb1" (or "...sdb1: Added interface ...Filesystem")
+    # when a drive or a file system appears
+    udisksctl monitor 2>/dev/null | while read -r line; do
+        case $line in
+        *Added\ /org/freedesktop/UDisks2/block_devices/*|\
+        */block_devices/*Added\ interface\ org.freedesktop.UDisks2.Filesystem*)
+            name=`echo "$line" | sed -n 's|.*/block_devices/\([A-Za-z0-9_]*\).*|\1|p'`
+            [ -n "$name" ] || continue
+            sleep 1      # let the partition settle
+            added "/dev/$name" ;;
+        esac
+    done
+}
+
+start() {
+    [ -z "$DT_NO_AUTOMOUNT" ] || return 0
+    [ "`get mount 1`" = 1 ] || return 0
+    running && return 0
+    mkdir -p "$HOME/.dt" 2>/dev/null
+    if have udiskie; then
+        args="--automount"
+        [ "`get notify 1`" = 1 ] || args="$args --no-notify"
+        if [ "`get open 1`" = 1 ]; then
+            args="$args --file-manager xdg-open"
+        else
+            args="$args --no-file-manager"
+        fi
+        # shellcheck disable=SC2086
+        (exec udiskie --no-tray $args >/dev/null 2>&1) &
+        echo $! > "$pidf"
+        return 0
+    fi
+    have udisksctl || return 0
+    # its own process group, so that stop ends the pipeline too
+    if have setsid; then
+        setsid "$0" _watch >/dev/null 2>&1 &
+    else
+        "$0" _watch >/dev/null 2>&1 &
+    fi
+    echo $! > "$pidf"
+}
+
+case $1 in
+start)   start ;;
+stop)    stop ;;
+restart) stop; start ;;
+_watch)  watch ;;
+*)       echo "usage: dtmedia start | stop | restart" >&2; exit 2 ;;
+esac
+exit 0

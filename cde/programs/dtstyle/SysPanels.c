@@ -66,7 +66,7 @@
 
 #define MSG(n, s) ((char *)GETMESSAGE(20, n, s))
 
-#define MAX_BUTTONS 6
+#define MAX_BUTTONS 8
 
 typedef struct _Panel Panel;
 typedef void (*PanelProc)(Panel *p);
@@ -732,6 +732,10 @@ NetToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
     NetRun(p, argv);
 }
 
+/* SysPanelsMore.c */
+static void NetVpnCB(Widget w, XtPointer client_data, XtPointer call_data);
+static void NetAirplaneCB(Widget w, XtPointer client_data, XtPointer call_data);
+
 void
 popup_networkBB(Widget shell)
 {
@@ -746,6 +750,8 @@ popup_networkBB(Widget shell)
         PanelButton(net, MSG(5, "Connect"), NetConnectCB);
         PanelButton(net, MSG(6, "Disconnect"), NetDisconnectCB);
         PanelButton(net, MSG(7, "Rescan"), NetRescanCB);
+        PanelButton(net, MSG(272, "VPN..."), NetVpnCB);
+        PanelButton(net, MSG(273, "Airplane Mode"), NetAirplaneCB);
         if (SysCmdHave("nm-connection-editor"))
             PanelButton(net, MSG(8, "Edit Connections..."), NetEditCB);
         XtAddCallback(net->list, XmNdefaultActionCallback, NetConnectCB,
@@ -2578,6 +2584,58 @@ FpAutoHideCB(Widget w, XtPointer client_data, XtPointer call_data)
                           RootWindow(style.display, style.screenNum));
 }
 
+/* Position: ~/.dt/frontpanel-position, "top" or "bottom" (missing:
+ * where the panel was dragged); read by dtwm when it starts. */
+static int
+FpPosRead(void)
+{
+    char  path[1100], word[16] = "";
+    FILE *fp;
+
+    snprintf(path, sizeof(path), "%s/.dt/frontpanel-position", style.home);
+    if ((fp = fopen(path, "r")) == NULL)
+        return 0;
+    if (fscanf(fp, "%15s", word) != 1)
+        word[0] = '\0';
+    fclose(fp);
+    return strcmp(word, "top") == 0 ? 2 : strcmp(word, "bottom") == 0 ? 1 : 0;
+}
+
+static void
+FpPosLabel(Widget b)
+{
+    char     label[200];
+    XmString s;
+    int      pos = FpPosRead();
+
+    snprintf(label, sizeof(label), "%s: %s", MSG(135, "Position"),
+             pos == 2 ? MSG(136, "Top") :
+             pos == 1 ? MSG(137, "Bottom") : MSG(138, "Where I put it"));
+    s = CMPSTR(label);
+    XtVaSetValues(b, XmNlabelString, s, NULL);
+    XmStringFree(s);
+}
+
+static void
+FpPosCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    char  path[1100];
+    FILE *fp;
+    int   pos = (FpPosRead() + 1) % 3;	/* where put -> bottom -> top */
+
+    snprintf(path, sizeof(path), "%s/.dt/frontpanel-position", style.home);
+    if (pos == 0)
+        unlink(path);
+    else if ((fp = fopen(path, "w")) != NULL)
+    {
+        fputs(pos == 2 ? "top\n" : "bottom\n", fp);
+        fclose(fp);
+    }
+    FpPosLabel(w);
+    _DtWmRestartNoConfirm(style.display,
+                          RootWindow(style.display, style.screenNum));
+}
+
 void
 popup_frontPanelBB(Widget shell)
 {
@@ -2598,6 +2656,7 @@ popup_frontPanelBB(Widget shell)
         PanelButton(fpPanel, MSG(88, "Add to Drawer..."), FpAddCB);
         PanelButton(fpPanel, MSG(59, "Remove"), FpRemoveCB);
         PanelButton(fpPanel, MSG(68, "Reset"), FpResetCB);
+        FpPosLabel(PanelButton(fpPanel, MSG(135, "Position"), FpPosCB));
         XtAddCallback(fpPanel->list, XmNdefaultActionCallback, FpChangeCB,
                       (XtPointer) fpPanel);
     }
@@ -2648,7 +2707,8 @@ static const SesOption sesOptions[] = {
 #define SES_WM SES_NOPTIONS	/* the window manager row */
 #define SES_MODERN (SES_NOPTIONS + 1)	/* the applications row */
 #define SES_TERM (SES_NOPTIONS + 2)	/* the terminal row (dtterminal) */
-#define SES_GAMES (SES_NOPTIONS + 3)	/* games in gamescope, if installed */
+#define SES_ICONS (SES_NOPTIONS + 3)	/* CDE's icons for GTK and Qt */
+#define SES_GAMES (SES_NOPTIONS + 4)	/* games in gamescope, if installed */
 
 static Panel *sesPanel = NULL;
 static char  *sesValue[SES_NOPTIONS + 1];	/* current value, or NULL */
@@ -2890,9 +2950,9 @@ ModernLabel(int which)
     switch (which)
     {
     case APPS_XFCE:
-        return MSG(127, "Xfce (Thunar, Mousepad, Xfce Terminal)");
+        return MSG(127, "Xfce (Thunar, Mousepad, Xfce Terminal, and modern mail, calendar, calculator)");
     case APPS_KDE:
-        return MSG(128, "KDE (Dolphin, Kate, Konsole)");
+        return MSG(128, "KDE (Dolphin, Kate, Konsole, KMail, KOrganizer, KCalc)");
     }
     if (!ModernInstalled(APPS_XFCE) && !ModernInstalled(APPS_KDE))
         return MSG(129, "CDE's own (install Xfce or KDE applications "
@@ -2936,7 +2996,25 @@ ModernSet(int which)
             "ACTION DtfileHome\n{\n  LABEL\t\tFile Manager - Home\n"
             "  ICON\t\tFphome\n  ARG_COUNT\t0\n  TYPE\t\tCOMMAND\n"
             "  WINDOW_TYPE\tNO_STDIO\n"
-            "  EXEC_STRING\tdtmodernapp files\n}\n");
+            "  EXEC_STRING\tdtmodernapp files\n}\n\n"
+            /* the CDE programs that have aged the most: the modern
+             * ones when installed (dtmodernapp runs CDE's otherwise) */
+            "ACTION Dtmail\n{\n  LABEL\t\tMail\n"
+            "  ICON\t\tDtMail\n  TYPE\t\tCOMMAND\n"
+            "  WINDOW_TYPE\tNO_STDIO\n"
+            "  EXEC_STRING\tdtmodernapp mail\n}\n\n"
+            "ACTION Dtcm\n{\n  LABEL\t\tCalendar\n"
+            "  ICON\t\tDtCM\n  TYPE\t\tCOMMAND\n"
+            "  WINDOW_TYPE\tNO_STDIO\n"
+            "  EXEC_STRING\tdtmodernapp calendar\n}\n\n"
+            "ACTION Dtcalc\n{\n  LABEL\t\tCalculator\n"
+            "  ICON\t\tDtcalc\n  TYPE\t\tCOMMAND\n"
+            "  WINDOW_TYPE\tNO_STDIO\n"
+            "  EXEC_STRING\tdtmodernapp calc\n}\n\n"
+            "ACTION DtPrintManager\n{\n  LABEL\t\tPrinters\n"
+            "  ICON\t\tFpprnt\n  TYPE\t\tCOMMAND\n"
+            "  WINDOW_TYPE\tNO_STDIO\n"
+            "  EXEC_STRING\tdtmodernapp printers\n}\n");
         if (fclose(fp) != 0)
             return False;
         if ((fp = fopen(flag, "w")) == NULL)
@@ -3051,6 +3129,52 @@ TermLabel(int choice)
     return buf;
 }
 
+/* Settings > Session > Icons: ~/.dt/icon-theme names "CDE", the theme
+ * dticontheme makes from CDE's icons; dtxsettings gives it to GTK and
+ * Qt applications, and the application menu prefers it. */
+static Boolean
+IconsCDE(void)
+{
+    char path[1100];
+
+    ModernPath(path, sizeof(path), "icon-theme");
+    return access(path, F_OK) == 0;
+}
+
+static void
+IconsDone(int rc, char *output, XtPointer data)
+{
+    char *argv[] = { "dtxsettings", "reload", NULL };
+
+    (void) SysCmdRun(argv, NULL, 10, NULL, NULL);
+}
+
+static Boolean
+IconsSet(Boolean on)
+{
+    char  path[1100];
+    FILE *fp;
+    char *argv[] = { "dticontheme", NULL };
+
+    ModernPath(path, sizeof(path), "icon-theme");
+    if (!on)
+    {
+        if (unlink(path) != 0 && errno != ENOENT)
+            return False;
+        IconsDone(0, NULL, NULL);
+        return True;
+    }
+    if ((fp = fopen(path, "w")) == NULL)
+        return False;
+    fputs("CDE\n", fp);
+    if (fclose(fp) != 0)
+        return False;
+    /* make (or refresh) the theme, then tell GTK and Qt */
+    if (!SysCmdRun(argv, NULL, 120, IconsDone, NULL))
+        IconsDone(0, NULL, NULL);
+    return True;
+}
+
 /* Settings > Session > Games: the application menu starts games
  * through dtgamescope (~/.dt/gamescope). */
 static Boolean
@@ -3101,6 +3225,10 @@ SesRefresh(Panel *p)
              MSG(124, "Terminal (kitty, Ghostty and Konsole in the CDE colors)"),
              TermLabel(TermRead()));
     PanelAddItem(p, label, "terminal", "");
+    snprintf(label, sizeof(label), "%s: %s", MSG(139, "Icons"),
+             IconsCDE() ? MSG(140, "CDE's, in every application") :
+                          MSG(141, "your icon theme's"));
+    PanelAddItem(p, label, "icon-theme", "");
     if (TermInstalled("gamescope"))
     {
         snprintf(label, sizeof(label), "%s: %s", MSG(131, "Games"),
@@ -3144,6 +3272,15 @@ SesToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
         }
         if (!TermWrite(c))
             ErrDialog(MSG(125, "The terminal could not be changed."),
+                      style.shell);
+        SesRefresh(p);
+        XmListSelectPos(p->list, row + 1, False);
+        return;
+    }
+    if (row == SES_ICONS)
+    {
+        if (!IconsSet(!IconsCDE()))
+            ErrDialog(MSG(134, "The setting could not be changed."),
                       style.shell);
         SesRefresh(p);
         XmListSelectPos(p->list, row + 1, False);
@@ -3206,7 +3343,7 @@ popup_sessionBB(Widget shell)
                                MSG(70, "Settings - Session"), NULL);
         sesPanel->refresh = SesRefresh;
         XtVaSetValues(sesPanel->list,
-                      XmNvisibleItemCount, SES_NOPTIONS + 4, NULL);
+                      XmNvisibleItemCount, SES_NOPTIONS + 5, NULL);
         PanelButton(sesPanel, MSG(87, "Change"), SesToggleCB);
         XtAddCallback(sesPanel->list, XmNdefaultActionCallback, SesToggleCB,
                       (XtPointer) sesPanel);
@@ -3458,6 +3595,34 @@ ScRefresh(Panel *p)
                  scList[i].cmd);
         PanelAddItem(p, label, scList[i].label, NULL);
     }
+    /* the desktop's own, for reference (sys.dtwmrc) */
+    {
+        static const char *const builtin[][2] = {
+            { "Windows", "Application menu" },
+            { "Windows+E", "Home folder" }, { "Windows+R", "Run" },
+            { "Windows+T", "Terminal" }, { "Windows+A", "Application Manager" },
+            { "Windows+I", "Settings" }, { "Windows+L", "Lock the screen" },
+            { "Windows+P", "Displays: extend, mirror, one screen" },
+            { "Windows+V", "Clipboard history" },
+            { "Windows+S", "Search" },
+            { "Windows+Left/Right", "Tile a window to that half" },
+            { "Windows+Up/Down", "Maximize / restore" },
+            { "Alt+Tab", "Switch windows" }, { "Alt+F2", "Run" },
+            { "Alt+Space", "Window menu" },
+            { "Print", "Screenshot" }, { "Alt+Print", "Screenshot of a window" },
+        };
+        size_t k;
+
+        PanelAddItem(p, " ", "", NULL);
+        PanelAddItem(p, MSG(284, "Built in (add one of your own with the "
+                                 "same keys to change it):"), "", NULL);
+        for (k = 0; k < sizeof(builtin) / sizeof(builtin[0]); k++)
+        {
+            snprintf(label, sizeof(label), "  %-20s %s", builtin[k][0],
+                     builtin[k][1]);
+            PanelAddItem(p, label, "", NULL);
+        }
+    }
     PanelSetStatus(p, scN ? MSG(114, "Your keyboard shortcuts "
                                      "(they work in every application):")
                           : MSG(122, "No shortcuts yet: press Add..."));
@@ -3661,3 +3826,7 @@ popup_shortcutsBB(Widget shell)
         XtManageChild(scPanel->dialog);
     XMapRaised(style.display, XtWindow(XtParent(scPanel->dialog)));
 }
+
+/* Search, Displays, Sound, Controllers, Users, Region, Input, Removable
+ * Media and Window Borders: they use the generic Panel above. */
+#include "SysPanelsMore.c"

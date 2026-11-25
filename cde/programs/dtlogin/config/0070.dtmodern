@@ -73,6 +73,14 @@ export PATH
 unset _dtm_d
 
 #
+# 1. (cont.) Settings > Region: the language and formats chosen there
+#    ("LANG=...; export LANG" lines, letters and digits only).
+#
+if [ -r "$HOME/.dt/region" ]; then
+  . "$HOME/.dt/region"
+fi
+
+#
 # 1a. KDE applications.  When KDE Frameworks are installed, say so the
 #     way a Plasma session does, so that:
 #     - Konsole, Dolphin, Kate... use KDE's settings, file dialogs and
@@ -120,6 +128,26 @@ if [ -z "$DT_NO_KDE" ] && [ -z "$KDE_FULL_SESSION" ]; then
 fi
 
 #
+# 1a'. Settings > Session > Applications chosen with an older version:
+#      add the Mail, Calendar, Calculator and Printers actions it now
+#      sets too (once).
+#
+_dtm_t="$HOME/.dt/types/clanker-modern.dt"
+if [ -f "$HOME/.dt/modern-apps" ] && [ -f "$_dtm_t" ] &&
+   ! grep 'dtmodernapp mail' "$_dtm_t" >/dev/null 2>&1; then
+  for _dtm_a in "Dtmail Mail DtMail mail" "Dtcm Calendar DtCM calendar" \
+                "Dtcalc Calculator Dtcalc calc" \
+                "DtPrintManager Printers Fpprnt printers"; do
+    # (read, not set --: this file is sourced, "$@" is Xsession's)
+    echo "$_dtm_a" | while read _dtm_n _dtm_l _dtm_i _dtm_r; do
+      printf '\nACTION %s\n{\n  LABEL\t\t%s\n  ICON\t\t%s\n  TYPE\t\tCOMMAND\n  WINDOW_TYPE\tNO_STDIO\n  EXEC_STRING\tdtmodernapp %s\n}\n' \
+        "$_dtm_n" "$_dtm_l" "$_dtm_i" "$_dtm_r" >> "$_dtm_t"
+    done
+  done
+fi
+unset _dtm_t _dtm_a
+
+#
 # 1b. Window manager.  xfwm4 when installed (it manages the windows;
 #     dtwm still draws the Front Panel, backdrops and Workspace menu),
 #     otherwise dtwm.  dtsession reads DT_WINDOW_MANAGER unless the
@@ -157,7 +185,7 @@ if [ -r "$HOME/.dt/theming/env" ]; then
   if [ -z "$QT_QPA_PLATFORMTHEME" ]; then
     QT_QPA_PLATFORMTHEME=gtk3; export QT_QPA_PLATFORMTHEME
   fi
-elif [ -f "$HOME/.dt/modern-apps" ] &&
+elif { [ -f "$HOME/.dt/modern-apps" ] || [ -f "$HOME/.dt/icon-theme" ]; } &&
      [ -x "${DT_BINPATH:-/usr/dt/bin}/dtxsettings" ]; then
   "${DT_BINPATH:-/usr/dt/bin}/dtxsettings" start 2>/dev/null  # Xfce apps
 fi
@@ -325,6 +353,29 @@ fi
 
 if [ -z "$DT_NO_TOUCHPAD" ] && [ -x "$_dtm_bin/dttouchpad" ]; then
   "$_dtm_bin/dttouchpad" -watch >/dev/null 2>&1 &
+fi
+
+# Settings > Input: keyboard layouts and options.
+if [ -r "$HOME/.dt/keyboard" ] && _dtm_have setxkbmap; then
+  _dtm_l=`sed -n 's/^layout=//p' "$HOME/.dt/keyboard" | tail -1`
+  _dtm_v=`sed -n 's/^variant=//p' "$HOME/.dt/keyboard" | tail -1`
+  _dtm_o=`sed -n 's/^options=//p' "$HOME/.dt/keyboard" | tail -1`
+  if [ -n "$_dtm_l" ]; then
+    setxkbmap -layout "$_dtm_l" -variant "$_dtm_v" -option "" \
+      ${_dtm_o:+-option "$_dtm_o"} >/dev/null 2>&1
+  fi
+  unset _dtm_l _dtm_v _dtm_o
+fi
+
+# Night light: warmer colors in the evening (Settings > Displays).
+if [ -x "$_dtm_bin/dtnightlight" ] && [ -f "$HOME/.dt/nightlight" ]; then
+  "$_dtm_bin/dtnightlight" start >/dev/null 2>&1
+fi
+
+# USB drives and discs: mounted and opened when plugged in (Settings >
+# Removable Media).
+if [ -x "$_dtm_bin/dtmedia" ]; then
+  "$_dtm_bin/dtmedia" start >/dev/null 2>&1
 fi
 
 # Monitors: one plugged in while logged out is turned on, or the

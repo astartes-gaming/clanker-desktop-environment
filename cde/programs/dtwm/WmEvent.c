@@ -1162,6 +1162,23 @@ Boolean HandleWsKeyPress (XKeyEvent *keyEvent)
  *
  *************************************<->***********************************/
 
+/*
+ * A later binding of the same keys that applies here replaces this one:
+ * the user's own shortcuts (Settings > Shortcuts, included after the
+ * desktop's) change a built-in one instead of both running.
+ */
+static Boolean KeySpecOverridden (KeySpec *spec, Boolean checkContext,
+				  Context context)
+{
+  KeySpec *later;
+
+  for (later = spec->nextKeySpec; later; later = later->nextKeySpec)
+    if (later->state == spec->state && later->keycode == spec->keycode &&
+	((!checkContext) || (context & later->context)))
+      return True;
+  return False;
+}
+
 Boolean HandleKeyPress (XKeyEvent *keyEvent, 
 			KeySpec *keySpecs, 
 			Boolean checkContext, 
@@ -1184,7 +1201,8 @@ Boolean HandleKeyPress (XKeyEvent *keyEvent,
            (NOLOCKMOD(keyEvent->state) == keySpecs->state)) &&
 	  (keyEvent->keycode == keySpecs->keycode))
 	{
-	  if ((!checkContext) || (context & keySpecs->context))
+	  if (((!checkContext) || (context & keySpecs->context)) &&
+	      !KeySpecOverridden (keySpecs, checkContext, context))
 	    {
 	      /*
 	       * A matching key binding has been found.

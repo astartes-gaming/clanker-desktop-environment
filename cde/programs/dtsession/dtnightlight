@@ -1,0 +1,121 @@
+#!/bin/sh
+#####################################################################
+##  dtnightlight - warmer screen colors in the evening (night light).
+##
+##  dtnightlight start | stop | restart | now
+##
+##  Settings > Displays > "Night light" writes ~/.dt/nightlight:
+##      on=1          on or off
+##      from=20       the hour it starts (0-23)
+##      to=7          the hour it ends
+##      temp=4000     color temperature in kelvin (3000 warm - 6500 none)
+##  While on, a small loop checks once a minute and sets the colors:
+##  with gammastep or redshift when installed, otherwise with xrandr's
+##  gamma for each monitor.  "now" applies the setting once.
+##
+##  Bourne shell only (no $(...)).
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+have() { type "$1" >/dev/null 2>&1; }
+
+conf=$HOME/.dt/nightlight
+pidf=$HOME/.dt/nightlight.pid
+
+get() {     # get KEY DEFAULT (digits only)
+    v=`sed -n "s/^$1=//p" "$conf" 2>/dev/null | tail -1 | tr -cd '0-9'`
+    echo "${v:-$2}"
+}
+
+running() { [ -f "$pidf" ] && kill -0 "`cat "$pidf"`" 2>/dev/null; }
+
+# In the night-light hours now?  (handles spans over midnight)
+night() {
+    h=`date +%H | sed 's/^0//'`
+    f=`get from 20`; t=`get to 7`
+    if [ "$f" -le "$t" ]; then
+        [ "$h" -ge "$f" ] && [ "$h" -lt "$t" ]
+    else
+        [ "$h" -ge "$f" ] || [ "$h" -lt "$t" ]
+    fi
+}
+
+# Gamma for a temperature, as "r:g:b" (a few points, interpolated)
+gamma_for() {
+    echo "$1" | awk '{
+        t = $1; if (t < 3000) t = 3000; if (t > 6500) t = 6500
+        # green and blue fall as the color warms; red stays at 1
+        g = 0.70 + (t - 3000) / 3500 * 0.30
+        b = 0.45 + (t - 3000) / 3500 * 0.55
+        printf "1.0:%.2f:%.2f\n", g, b }'
+}
+
+apply() {   # apply TEMP (6500 = normal)
+    temp=$1
+    if have gammastep; then
+        if [ "$temp" -ge 6500 ]; then gammastep -x >/dev/null 2>&1
+        else gammastep -P -O "$temp" >/dev/null 2>&1; fi
+        return
+    fi
+    if have redshift; then
+        if [ "$temp" -ge 6500 ]; then redshift -x >/dev/null 2>&1
+        else redshift -P -O "$temp" >/dev/null 2>&1; fi
+        return
+    fi
+    have xrandr || return
+    g=`gamma_for "$temp"`
+    [ "$temp" -ge 6500 ] && g=1.0:1.0:1.0
+    for o in `xrandr --current 2>/dev/null | awk '/ connected/ { print $1 }'`; do
+        xrandr --output "$o" --gamma "$g" >/dev/null 2>&1
+    done
+}
+
+now() {
+    if [ "`get on 0`" = 1 ] && night; then apply "`get temp 4000`"
+    else apply 6500; fi
+}
+
+# The X session is still there (the loop ends with it).
+alive() {
+    if have xprop; then xprop -root -len 0 _XROOTPMAP_ID >/dev/null 2>&1
+    elif have xrandr; then xrandr --current >/dev/null 2>&1
+    else return 0; fi
+}
+
+loop() {
+    last=
+    while alive; do
+        if [ "`get on 0`" = 1 ] && night; then want=`get temp 4000`; else want=6500; fi
+        # also after a monitor change, which resets the gamma
+        if [ "$want" != "$last" ] || [ "$want" != 6500 ]; then
+            apply "$want"
+            last=$want
+        fi
+        sleep 60
+    done
+}
+
+stop() {
+    if running; then kill "`cat "$pidf"`" 2>/dev/null; fi
+    rm -f "$pidf"
+    apply 6500
+}
+
+start() {
+    [ -n "$DISPLAY" ] || return 0
+    [ "`get on 0`" = 1 ] || { apply 6500; return 0; }
+    running && { now; return 0; }
+    mkdir -p "$HOME/.dt" 2>/dev/null
+    "$0" _loop >/dev/null 2>&1 &
+    echo $! > "$pidf"
+}
+
+case $1 in
+start)   start ;;
+stop)    stop ;;
+restart) stop; start ;;
+now)     now ;;
+_loop)   loop ;;
+*)       echo "usage: dtnightlight start | stop | restart | now" >&2; exit 2 ;;
+esac
+exit 0

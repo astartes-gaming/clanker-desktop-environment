@@ -46,6 +46,7 @@ see the [README](../README.md).
   Run, **Windows+T** Terminal, **Windows+A** Application Manager,
   **Windows+I** Settings, **Windows+L** Lock, **Windows+P** displays
   (extend, mirror, one screen), **Windows+V** clipboard history,
+  **Windows+S** Search,
   **Windows+arrows** tile
   windows (dtwm). `DT_NO_SUPERKEY=1` in `~/.dtprofile` stops the key
   on its own from opening the menu.
@@ -99,16 +100,18 @@ over. Displays with 256 colors or fewer, and `DT_HELLO_CLASSIC=1` in
 |---|---|
 | Clock, calendar, Home Folder, Text Editor, Mail | Start those applications. Click the small arrow above a button to open its drawer; it closes when you start something from it, click the arrow again, or click the desktop. |
 | Lock (padlock) | Locks the screen. |
-| Accessibility (below the lock) | Opens Settings > Accessibility: sticky, slow and bounce keys, mouse keys, large pointer, larger controls, and the **On-Screen Keyboard** button. |
+| Search (below the lock) | Search applications, settings, windows, files and the web; calculate; run a command (see [Search](#search)). Accessibility is in the Settings drawer. |
 | Workspace buttons | Switch workspaces. Double-click a name to rename it. |
 | Light above Exit | Blinks while an application starts. Click it to open the **Task Manager**. |
 | Exit | Logs out. |
 | Printer, Settings, Applications, Help, Trash | Start those. |
-| Settings drawer (arrow above Settings) | Volume up and down, mute, screen brightness up and down, and the sound settings (pavucontrol, alsamixer… whichever is installed). |
+| Settings drawer (arrow above Settings) | Volume up and down, mute, screen brightness up and down, the sound settings (pavucontrol, alsamixer… whichever is installed), and Accessibility. |
 | System tray (right end) | Icons of running applications (network, sound, chat, …). Click or right-click them as usual. |
 
 **Moving the panel**: drag it by the handles at either end. It reserves
 its screen edge only while it sits on one.
+Settings > Front Panel > **Position** puts it at the top or bottom of
+the primary monitor at every login, or leaves it where you dragged it.
 
 **Hiding the panel**: Settings > Front Panel > **Hide automatically**.
 The panel slides off its edge (top or bottom) a moment after the pointer
@@ -155,11 +158,46 @@ icons. `DT_NO_SYSTRAY=1` turns the tray off.
 | Front Panel | What each button opens, and the drawers (see above) |
 | Session | Options in `~/.dtprofile` (below), Xfce or KDE applications, the terminal, and games in Gamescope (when installed) |
 | Accessibility | Sticky, slow and bounce keys, mouse keys, large pointer, on-screen keyboard at login |
-| Shortcuts | Your own keyboard shortcuts: **Add...**, press the keys (with Ctrl, Alt or Super, or a function key), type the command. They work in every application, also with xfwm4. Kept in `~/.dt/shortcuts.dtwmrc`. |
-| Network, Bluetooth, Updates | Wi-Fi, Bluetooth devices, system updates (shown when the system supports them). With [topgrade](https://github.com/topgrade-rs/topgrade) installed, Updates also has **Update Everything**: Flatpak, Snap, firmware and more |
+| Shortcuts | Your own keyboard shortcuts: **Add...**, press the keys (with Ctrl, Alt or Super, or a function key), type the command. They work in every application, also with xfwm4. The desktop's own shortcuts are listed below yours; one of yours with the same keys replaces it (e.g. your own Windows+E). Kept in `~/.dt/shortcuts.dtwmrc`. |
+| Input | Keyboard layouts (add, remove; **Windows+Space**, Alt+Shift or Ctrl+Shift switches between them), Caps Lock as Ctrl or Escape, a Compose key for accents |
+| Controllers | Game controllers that are connected (with their battery when reported): **Test...** (jstest-gtk), **Buttons and Mouse...** (AntiMicroX: use a controller as a mouse and keyboard, remap buttons), **Pair...** (Bluetooth) |
+| Sound | Output and input devices: pick the one in use, volume, mute, the mixer (PipeWire or PulseAudio) |
+| Displays | Monitors: extend, mirror, only one, primary, **Arrange...** (resolution, rotation, position); remembered per set of monitors. **Night light**: warmer colors in the evening, easier on the eyes; **Night Hours...** and **Warmth...** set when and how warm (with gammastep or redshift if installed, else the monitors' gamma) |
+| Borders | Window frames: which title bar buttons (minimize, maximize, close), border width (thicker is easier to grab) |
+| Search | What the Front Panel's **Search** finds (below) |
+| Users | Your account: password, full name, picture (`~/.face`, shown by login screens); **Other Users...** opens the system's user tool |
+| Region | Language, and separately date/time, number, currency and paper formats (from the next login, kept in `~/.dt/region`); time zone; setting the clock from the Internet |
+| Drives | USB drives, memory cards and discs: mount them when inserted, open a File Manager window, notify. Programs on them are never run |
+| Network, Bluetooth, Updates | Wi-Fi; **VPN...** (turn VPN and WireGuard connections on and off), **Airplane Mode** (all radios off, or back on); Bluetooth devices; system updates (shown when the system supports them). With [topgrade](https://github.com/topgrade-rs/topgrade) installed, Updates also has **Update Everything**: Flatpak, Snap, firmware and more |
 
 Changes take effect at once, except the Session options, which are used
 at the next login.
+
+## Search
+
+The magnifier button on the Front Panel, or **Windows+S**, opens
+**Search**, like Spotlight or KRunner. (The magnifier is where the
+Accessibility button was; Accessibility is now in the Settings drawer
+and in Settings.) Type, then pick a row with Up/Down and Enter:
+
+- **Applications**, by name, what they are ("browser") or keywords.
+- A **calculation**: `2*(3+4)` shows `= 14`; Enter copies the result
+  (with `xclip` or `xsel` installed; otherwise it goes in the field).
+  **Units** too: `10 km in mi`, `100 f to c`, `2 gb to mib`,
+  `5 lb to kg` (length, mass, volume, data, time, speed, temperature).
+- **Settings pages** by what they set ("wallpaper", "wifi", "layout").
+- **Open windows**, by title: Enter switches to it.
+- **Recent files**, and **files and folders by name**, searched in the
+  background: with KDE's Baloo index, plocate or locate when present,
+  otherwise the home folder five levels deep (hidden folders skipped).
+- **Search the web** with your engine (DuckDuckGo, Google, Bing,
+  Startpage, Brave Search, Ecosia, Qwant, Wikipedia).
+- **Run** what you typed, when it starts with a program.
+
+Settings > Search turns each of these on or off, and sets the engine,
+the file search tool and how many rows show. The button again, Escape,
+or clicking elsewhere closes it. It is `dtappfind -search`; the
+settings are in `~/.dt/search`.
 
 ## Windows
 
@@ -292,14 +330,26 @@ AccessX features) and are applied again at every login.
     each profile's `user.js` turns off Firefox's libadwaita colors; it
     is set back when you untick the box). Firefox's address bar row
     keeps its own light or dark color.
-  - **Chromium, Chrome, Brave, Edge** and Electron applications: choose
-    *GTK* (or *Qt*) under Settings > Appearance > Theme in the browser;
-    they then follow the palette.
+  - **Chrome, Chromium, Brave, Edge, Vivaldi and Opera** (also from
+    Flatpak): at login each profile that uses the browser's default
+    theme is switched to *GTK* (Settings > Appearance > Theme in the
+    browser), so the window takes the palette. A profile with a theme
+    from the Web Store is left alone, and a browser that is open is
+    done at the next login. Unticking the box sets back what was
+    there. Electron applications (VS Code, Discord…) follow GTK too.
   - **Flatpak applications** are allowed to read the theme
     (`flatpak override --user`, read-only, done once).
 - GTK applications **change color at once**, without restarting them
   or logging out, when `xsettingsd` is installed (`apt install
   xsettingsd`). Without it they pick up the new colors when restarted.
+- **CDE's icons everywhere**: Settings > Session > **Icons** switches GTK
+  applications (and Qt ones that follow GTK, see above) and the
+  application menu to CDE's own icons: folders, the home folder,
+  terminal, editor, calculator, mail, trash, printer, help, and Motif
+  versions of Firefox, Thunderbird, GIMP, VLC, LibreOffice and others.
+  Icons CDE has no picture for come from your usual theme. The theme
+  is made once in `~/.local/share/icons/CDE` (`dticontheme`); it needs
+  `xsettingsd` for running applications to follow.
 - Window frames under xfwm4 change at once (xfwm4 restarts in the
   background; your windows stay open).
 - CDE's own applications (File Manager, Text Editor, Terminal, Help,
@@ -347,6 +397,13 @@ have something installed:
 | Text Editor (dtpad) | Mousepad | Kate (or KWrite) |
 | Terminal (dtterm) | xfce4-terminal | Konsole |
 | File Manager (dtfile) | Thunar | Dolphin |
+| Mail (dtmail) | Thunderbird, Evolution, Geary, Claws Mail | KMail (or Thunderbird) |
+| Calendar (dtcm) | Orage, GNOME Calendar, Evolution, Thunderbird | KOrganizer, Merkuro |
+| Calculator (dtcalc) | Galculator, GNOME Calculator, MATE's, Qalculate | KCalc, Kalk |
+| Print Manager (dtprintinfo) | system-config-printer | KDE's printer settings |
+
+For mail, calendar and calculator the first one installed is used (the
+"Xfce" column also covers the GNOME and MATE ones).
 
 The Xfce applications use your CDE palette and follow palette changes
 live; Konsole gets the CDE color scheme. When the chosen application is
