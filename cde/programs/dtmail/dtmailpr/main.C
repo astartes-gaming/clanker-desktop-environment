@@ -231,7 +231,10 @@ main (int argc, char **argv)
 				NULL);
 
 	if (handleError (dmxenv, "new DtMail::MailBox") == B_TRUE)
+	{
+		if (ffile == NULL) unlink (name);	// our copy of stdin
 		exit (1);
+	}
 
 	mbox.name = new char [strlen (name) +1];
 	strcpy (mbox.name, name);
@@ -253,6 +256,11 @@ main (int argc, char **argv)
 			}
 		}
 	}
+
+	// The message read from stdin was only copied to a file so the
+	// mailbox code could parse it; do not leave the mail behind.
+	if (ffile == NULL)
+		unlink (name);
 
 	return 0;
 }
