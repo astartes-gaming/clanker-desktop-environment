@@ -2648,6 +2648,7 @@ static const SesOption sesOptions[] = {
 #define SES_WM SES_NOPTIONS	/* the window manager row */
 #define SES_MODERN (SES_NOPTIONS + 1)	/* the applications row */
 #define SES_TERM (SES_NOPTIONS + 2)	/* the terminal row (dtterminal) */
+#define SES_GAMES (SES_NOPTIONS + 3)	/* games in gamescope, if installed */
 
 static Panel *sesPanel = NULL;
 static char  *sesValue[SES_NOPTIONS + 1];	/* current value, or NULL */
@@ -3050,6 +3051,31 @@ TermLabel(int choice)
     return buf;
 }
 
+/* Settings > Session > Games: the application menu starts games
+ * through dtgamescope (~/.dt/gamescope). */
+static Boolean
+GamescopeOn(void)
+{
+    char path[1100];
+
+    ModernPath(path, sizeof(path), "gamescope");
+    return access(path, F_OK) == 0;
+}
+
+static Boolean
+GamescopeSet(Boolean on)
+{
+    char  path[1100];
+    FILE *fp;
+
+    ModernPath(path, sizeof(path), "gamescope");
+    if (!on)
+        return unlink(path) == 0 || errno == ENOENT;
+    if ((fp = fopen(path, "w")) == NULL)
+        return False;
+    return fclose(fp) == 0;
+}
+
 static void
 SesRefresh(Panel *p)
 {
@@ -3075,6 +3101,14 @@ SesRefresh(Panel *p)
              MSG(124, "Terminal (kitty, Ghostty and Konsole in the CDE colors)"),
              TermLabel(TermRead()));
     PanelAddItem(p, label, "terminal", "");
+    if (TermInstalled("gamescope"))
+    {
+        snprintf(label, sizeof(label), "%s: %s", MSG(131, "Games"),
+                 GamescopeOn() ? MSG(132, "in Gamescope, at the monitor's "
+                                     "size and refresh rate")
+                               : MSG(133, "in their own windows"));
+        PanelAddItem(p, label, "gamescope", "");
+    }
     PanelBusy(p, False);
     PanelSetStatus(p, MSG(85,
         "Session options in ~/.dtprofile (used at the next login):"));
@@ -3110,6 +3144,15 @@ SesToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
         }
         if (!TermWrite(c))
             ErrDialog(MSG(125, "The terminal could not be changed."),
+                      style.shell);
+        SesRefresh(p);
+        XmListSelectPos(p->list, row + 1, False);
+        return;
+    }
+    if (row == SES_GAMES)
+    {
+        if (!GamescopeSet(!GamescopeOn()))
+            ErrDialog(MSG(134, "The setting could not be changed."),
                       style.shell);
         SesRefresh(p);
         XmListSelectPos(p->list, row + 1, False);
@@ -3163,7 +3206,7 @@ popup_sessionBB(Widget shell)
                                MSG(70, "Settings - Session"), NULL);
         sesPanel->refresh = SesRefresh;
         XtVaSetValues(sesPanel->list,
-                      XmNvisibleItemCount, SES_NOPTIONS + 3, NULL);
+                      XmNvisibleItemCount, SES_NOPTIONS + 4, NULL);
         PanelButton(sesPanel, MSG(87, "Change"), SesToggleCB);
         XtAddCallback(sesPanel->list, XmNdefaultActionCallback, SesToggleCB,
                       (XtPointer) sesPanel);

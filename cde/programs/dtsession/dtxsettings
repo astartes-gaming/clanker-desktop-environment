@@ -10,7 +10,9 @@
 ##  between the names CDE and CDE-B (the same files) so that running
 ##  applications load the new colors at once.  Nothing happens if
 ##  xsettingsd is not installed or another settings daemon (e.g.
-##  xfsettingsd) runs.  Plain POSIX sh.
+##  xfsettingsd) runs.  Qt applications follow it too (Qt's GTK platform
+##  theme, see dtstyle's ExtTheme.c).  Flatpak applications are allowed
+##  (once, read-only) to see the theme.  Plain POSIX sh.
 #####################################################################
 
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -30,6 +32,44 @@ stop() {
     rm -f "$pidf"
 }
 
+# Firefox (and LibreWolf) draw their tab strip, menus, dialogs and form
+# controls in the GTK theme's colors only with libadwaita's colors
+# turned off.  One marked pair of lines in each profile's user.js;
+# when the CDE theme is no longer wanted the pair sets Firefox's
+# default back (Firefox keeps user.js values in prefs.js, so removing
+# the line would not undo it).
+FFMARK="// dtxsettings:"
+ffprofiles() {
+    for d in "$HOME/.mozilla/firefox" "$HOME/.librewolf" \
+             "$HOME/.var/app/org.mozilla.firefox/.mozilla/firefox" \
+             "$HOME/.var/app/io.gitlab.librewolf-community/.librewolf" \
+             "$HOME/snap/firefox/common/.mozilla/firefox"; do
+        for p in "$d"/*/; do
+            [ -f "$p/prefs.js" ] && echo "${p%/}"
+        done
+    done
+}
+firefox_prefs() {
+    if [ "$1" = on ]; then
+        say="$FFMARK Firefox in the CDE GTK theme colors (Settings > Color)"
+        val=false
+    else
+        say="$FFMARK Firefox's own colors again (Settings > Color)"
+        val=true
+    fi
+    ffprofiles | while read -r p; do
+        f=$p/user.js
+        if grep -q -F "$say" "$f" 2>/dev/null; then continue; fi
+        # nothing to undo where it was never turned on
+        [ $val = true ] && ! grep -q -F "$FFMARK" "$f" 2>/dev/null && continue
+        { [ -f "$f" ] && awk -v m="$FFMARK" \
+              'index($0, m) == 1 { skip = 2 } skip > 0 { skip--; next } { print }' "$f"
+          echo "$say"
+          echo "user_pref(\"widget.gtk.libadwaita-colors.enabled\", $val);"
+        } > "$f.dt$$" && mv "$f.dt$$" "$f"
+    done
+}
+
 case $1 in
     stop)   stop; exit 0 ;;
     status) running; exit $? ;;
@@ -37,7 +77,18 @@ case $1 in
     *) echo "usage: dtxsettings start|reload|stop|status" >&2; exit 2 ;;
 esac
 
-if ! wanted; then stop; exit 0; fi
+if ! wanted; then stop; firefox_prefs off; exit 0; fi
+firefox_prefs on
+
+# Flatpak applications (browsers...) cannot see ~/.themes nor the KDE
+# color scheme unless allowed to read them; allow it once, read-only.
+if have flatpak && [ ! -f "$dt/theming/flatpak-ok" ]; then
+    if flatpak override --user --filesystem="$themes:ro" \
+           --filesystem=xdg-data/color-schemes:ro >/dev/null 2>&1; then
+        mkdir -p "$dt/theming" && : > "$dt/theming/flatpak-ok"
+    fi
+fi
+
 have xsettingsd || exit 1
 [ -f "$themes/CDE/gtk-3.0/gtk.css" ] || exit 1
 pgrep -u "`id -u`" -x xfsettingsd >/dev/null 2>&1 && exit 1

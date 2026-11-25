@@ -16,6 +16,7 @@
 #include "WmPanelOnly.h"
 #include "WmWinConf.h"
 #include "WmPanelHide.h"
+#include "WmMultiHead.h"
 #include "DataBaseLoad.h"
 
 #include <stdio.h>
@@ -215,4 +216,38 @@ PanelAutoHideShow(void)
         return;
     Show();
     StartTimer();
+}
+
+/*
+ * The monitor the panel was on was unplugged or moved (RandR change,
+ * WmMultiHead.c): put the panel at the bottom middle of the primary
+ * monitor, where a new session would have it.  A panel still on a
+ * monitor stays where the user put it.
+ */
+void
+PanelKeepOnScreen(void)
+{
+    int x, y, w, h, hx, hy, hw, hh, scr = DefaultScreen(DISPLAY);
+
+    if (!PanelGeometry(&x, &y, &w, &h))
+        return;
+    if (hidden)
+    {
+        x = shownX;
+        y = shownY;
+    }
+    if (RectOnAHead(DISPLAY, scr, x, y, w, h))
+        return;
+    GetPrimaryHead(DISPLAY, scr, &hx, &hy, &hw, &hh);
+    x = hx + (hw > w ? (hw - w) / 2 : 0);
+    y = hy + hh - h;
+    if (hidden)
+    {
+        hidden = False;
+        shownX = x;
+        shownY = y;
+    }
+    PanelMove(x, y);
+    if (enabled)
+        StartTimer();
 }

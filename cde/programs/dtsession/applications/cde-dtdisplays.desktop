@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Displays
+Comment=Arrange monitors: resolution, position, mirror or extend (Windows+P switches quickly)
+Exec=dtdisplays
+TryExec=dtdisplays
+Icon=video-display
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=monitor;screen;display;resolution;projector;mirror;extend;multi-monitor;
+OnlyShowIn=CDE;

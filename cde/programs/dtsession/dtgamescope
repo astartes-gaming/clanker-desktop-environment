@@ -1,0 +1,78 @@
+#!/bin/sh
+#####################################################################
+##  dtgamescope COMMAND [ARGS...] - run a game inside gamescope, at
+##  the size and refresh rate of the monitor under the pointer.
+##
+##  Settings > Session > "Games" turns this on for the games in the
+##  application menu (~/.dt/gamescope).  gamescope gives the game its
+##  own compositor: upscaling (FSR), a frame limiter, HDR and
+##  tear-free fullscreen on any window manager.  Without gamescope the
+##  command just runs.
+##
+##  Steam is not wrapped: Steam games are started by the Steam client,
+##  so put "gamescope -f -- %command%" in a game's Launch Options in
+##  Steam instead (the application menu's Steam entries run Steam).
+##
+##  DT_GAMESCOPE_ARGS in ~/.dtprofile adds options, e.g.
+##  "-F fsr -w 1280 -h 720" (render at 720p, FSR up to the monitor).
+##
+##  Bourne shell only (no $(...)).
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+have() { type "$1" >/dev/null 2>&1; }
+
+[ $# -ge 1 ] || { echo "usage: dtgamescope COMMAND [ARGS...]" >&2; exit 2; }
+
+# Not for Steam itself, nor inside gamescope already.
+case "$*" in
+    *steam://*|steam|steam\ *|*/steam|*/steam\ *) exec "$@" ;;
+esac
+if [ -n "$GAMESCOPE_WAYLAND_DISPLAY" ] || ! have gamescope; then
+    exec "$@"
+fi
+
+# The monitor under the pointer: "WxH+X+Y" and its refresh rate, from
+# xrandr's current state (no probing, so no flicker).
+W= H= R=
+if [ -n "$DISPLAY" ] && have xrandr; then
+    px= py=
+    if have xdotool; then
+        eval `xdotool getmouselocation --shell 2>/dev/null |
+              sed -n 's/^X=/px=/p; s/^Y=/py=/p'`
+    fi
+    geo=`xrandr --current 2>/dev/null | awk -v px="${px:--1}" -v py="${py:--1}" '
+        / connected/ {
+            g = ""
+            for (i = 3; i <= NF; i++)
+                if ($i ~ /^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$/) { g = $i; break }
+            prim = ($3 == "primary")
+            cur = g; next
+        }
+        /^[^ ]/ { cur = ""; next }
+        cur != "" && /\*/ {
+            for (i = 2; i <= NF; i++)
+                if ($i ~ /\*/) { r = $i; gsub(/[*+]/, "", r) }
+            split(cur, a, /[x+]/)
+            line = a[1] " " a[2] " " int(r + 0.5)
+            if (first == "") first = line
+            if (prim) pline = line
+            if (px >= a[3] && py >= a[4] && px < a[3] + a[1] && py < a[4] + a[2])
+                hit = line
+            cur = ""
+        }
+        END {
+            if (hit != "") print hit
+            else if (pline != "") print pline
+            else print first
+        }'`
+    set -- $geo "$@"
+    if [ -n "$geo" ]; then W=$1 H=$2 R=$3; shift 3; fi
+fi
+
+opts="-f"
+[ -n "$W" ] && [ -n "$H" ] && opts="$opts -W $W -H $H"
+[ -n "$R" ] && [ "$R" -gt 0 ] 2>/dev/null && opts="$opts -r $R"
+
+# shellcheck disable=SC2086
+exec gamescope $opts $DT_GAMESCOPE_ARGS -- "$@"

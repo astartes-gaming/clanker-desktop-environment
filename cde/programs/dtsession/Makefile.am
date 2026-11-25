@@ -21,7 +21,8 @@ bin_SCRIPTS = dtsession_res
 # Laptop keys and lock-before-sleep (see Xsession.d/0070.dtmodern)
 dist_bin_SCRIPTS = dthwkeys dtmixer dtscreenshot dtsleeplock dtcompositor dtpower dtaltwm dtwayland \
 		   dtxfwmtheme dttaskmgr dtkeyboard dtmodernapp dtxsettings dtterminal \
-		   dtnotify dtclipboard
+		   dtnotify dtclipboard \
+		   dtdisplays dtgamescope
 
 # freedesktop.org entries for CDE's own applications, so the
 # application menu (dtappfind) files them in the usual categories.
@@ -32,6 +33,7 @@ dist_cdeapps_DATA = applications/cde-dtappmgr.desktop \
 	applications/cde-dtbuilder.desktop \
 	applications/cde-dtcalc.desktop \
 	applications/cde-dtcm.desktop \
+	applications/cde-dtdisplays.desktop \
 	applications/cde-dtfile.desktop \
 	applications/cde-dthelpview.desktop \
 	applications/cde-dticon.desktop \

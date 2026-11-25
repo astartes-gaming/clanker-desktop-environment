@@ -183,6 +183,7 @@ $ *
     Mod4<Key>a			root|icon|window	f.exec "dtaction Dtappmgr"\n\
     Mod4<Key>i			root|icon|window	f.exec "dtstyle"\n\
     Mod4<Key>l			root|icon|window	f.exec "dtaction LockDisplay"\n\
+    Mod4<Key>p			root|icon|window	f.exec "dtdisplays next"\n\
     Mod4<Key>v			root|icon|window	f.exec "dtclipboard show"\n\
     <Key>XF86MonBrightnessUp	ifkey|root|icon|window	f.exec "dthwkeys brightness-up"\n\
     <Key>XF86MonBrightnessDown	ifkey|root|icon|window	f.exec "dthwkeys brightness-down"\n\
@@ -247,6 +248,7 @@ $ *
     Mod4<Key>a			root|icon|window	f.exec "dtaction Dtappmgr"\n\
     Mod4<Key>i			root|icon|window	f.exec "dtstyle"\n\
     Mod4<Key>l			root|icon|window	f.exec "dtaction LockDisplay"\n\
+    Mod4<Key>p			root|icon|window	f.exec "dtdisplays next"\n\
     Mod4<Key>v			root|icon|window	f.exec "dtclipboard show"\n\
     <Key>XF86MonBrightnessUp	ifkey|root|icon|window	f.exec "dthwkeys brightness-up"\n\
     <Key>XF86MonBrightnessDown	ifkey|root|icon|window	f.exec "dthwkeys brightness-down"\n\

@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*
  * Included Files:
@@ -173,6 +174,88 @@ WmHeadInfo_t *GetHeadInfoById(int id) {
 }
 
 
+/*
+ *  GetPrimaryHead, RectOnAHead
+ *
+ *  With several monitors the Front Panel belongs on the primary one
+ *  (Settings > Display, xrandr --primary), not centered across the
+ *  whole desktop where it would straddle two screens.
+ */
+#ifdef HAVE_XRANDR
+#include <X11/extensions/Xrandr.h>
+#endif
+
+void GetPrimaryHead(Display *dpy, int screen, int *x, int *y, int *w, int *h)
+{
+    unsigned int hw, hh, hx, hy;
+
+    *x = 0;
+    *y = 0;
+    *w = DisplayWidth(dpy, screen);
+    *h = DisplayHeight(dpy, screen);
+
+#if defined(HAVE_XRANDR) && defined(RANDR_MAJOR) && \
+    (RANDR_MAJOR > 1 || RANDR_MINOR >= 3)
+    {
+        int ev, er, major = 0, minor = 0;
+
+        if (XRRQueryExtension(dpy, &ev, &er) &&
+            XRRQueryVersion(dpy, &major, &minor) &&
+            (major > 1 || (major == 1 && minor >= 3))) {
+            Window root = RootWindow(dpy, screen);
+            RROutput primary = XRRGetOutputPrimary(dpy, root);
+            XRRScreenResources *res = primary ?
+                XRRGetScreenResourcesCurrent(dpy, root) : NULL;
+            XRROutputInfo *out = res ?
+                XRRGetOutputInfo(dpy, res, primary) : NULL;
+            XRRCrtcInfo *crtc = (out && out->crtc) ?
+                XRRGetCrtcInfo(dpy, res, out->crtc) : NULL;
+            Boolean found = False;
+
+            if (crtc && crtc->width > 0 && crtc->height > 0) {
+                *x = crtc->x;
+                *y = crtc->y;
+                *w = (int) crtc->width;
+                *h = (int) crtc->height;
+                found = True;
+            }
+            if (crtc) XRRFreeCrtcInfo(crtc);
+            if (out) XRRFreeOutputInfo(out);
+            if (res) XRRFreeScreenResources(res);
+            if (found)
+                return;
+        }
+    }
+#endif
+
+    if (!DtXI)
+        DtXI = _DtXineramaInit(dpy);
+    if (DtXI && _DtXineramaGetScreen(DtXI, 0, &hw, &hh, &hx, &hy)) {
+        *x = (int) hx;
+        *y = (int) hy;
+        *w = (int) hw;
+        *h = (int) hh;
+    }
+}
+
+Boolean RectOnAHead(Display *dpy, int screen, int x, int y, int w, int h)
+{
+    unsigned int hw, hh, hx, hy;
+    int i, mx = x + w / 2, my = y + h / 2;
+
+    if (!DtXI)
+        DtXI = _DtXineramaInit(dpy);
+    if (!DtXI)
+        return mx >= 0 && my >= 0 && mx < DisplayWidth(dpy, screen) &&
+               my < DisplayHeight(dpy, screen);
+    for (i = 0; _DtXineramaGetScreen(DtXI, i, &hw, &hh, &hx, &hy); i++)
+        if (mx >= (int) hx && my >= (int) hy &&
+            mx < (int) (hx + hw) && my < (int) (hy + hh))
+            return True;
+    return False;
+}
+
+
 /*************************************<->*************************************
  *
  *  Monitor hotplug and resolution changes.
@@ -187,13 +270,60 @@ WmHeadInfo_t *GetHeadInfoById(int id) {
  *************************************<->***********************************/
 
 #ifdef HAVE_XRANDR
-#include <X11/extensions/Xrandr.h>
 #include "WmBackdrop.h"
 #include "WmFunction.h"
 #include "WmSnap.h"
 #include "WmPanelOnly.h"
+#include "WmPanelHide.h"
 
 static int randrEventBase = -1;
+
+#ifdef RRNotify_OutputChange
+/*
+ * A monitor was connected or disconnected.  The X server leaves a new
+ * monitor dark; "dtdisplays hotplug" (Clanker) turns it on or restores
+ * the arrangement remembered for these monitors.  One run, a second
+ * after the last of the burst of events a plug-in sends.
+ */
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <Xm/Xm.h>
+
+static unsigned char lastConnection[64];	/* by output id */
+static XtIntervalId outputsTimer = 0;
+
+static void OutputsChanged(XtPointer data, XtIntervalId *id)
+{
+    pid_t pid;
+
+    outputsTimer = 0;
+    if (getenv("DT_NO_DISPLAYS"))
+        return;
+    if ((pid = fork()) == 0) {
+        /* grandchild, so no zombie is left behind */
+        if (fork() == 0) {
+            close(ConnectionNumber(DISPLAY));
+            setsid();
+            execl(CDE_INSTALLATION_TOP "/bin/dtdisplays", "dtdisplays",
+                  "hotplug", (char *) NULL);
+            execlp("dtdisplays", "dtdisplays", "hotplug", (char *) NULL);
+            _exit(127);
+        }
+        _exit(0);
+    }
+    if (pid > 0)
+        waitpid(pid, NULL, 0);
+}
+
+static void OutputsChangedSoon(void)
+{
+    if (outputsTimer)
+        XtRemoveTimeOut(outputsTimer);
+    outputsTimer = XtAppAddTimeOut(wmGD.mwmAppContext, 1000,
+                                   OutputsChanged, NULL);
+}
+#endif
 
 static void RefreshHeadInfo(void)
 {
@@ -249,10 +379,37 @@ void InitScreenChangeEvents(void)
 #ifdef RRCrtcChangeNotifyMask
     mask |= RRCrtcChangeNotifyMask;	/* monitors moved, same screen size */
 #endif
+#ifdef RROutputChangeNotifyMask
+    mask |= RROutputChangeNotifyMask;	/* a monitor plugged in or out */
+#endif
     for (i = 0; i < wmGD.numScreens; i++) {
         if (wmGD.Screens[i].managed)
             XRRSelectInput(DISPLAY, wmGD.Screens[i].rootWindow, mask);
     }
+#if defined(RRNotify_OutputChange) && (RANDR_MAJOR > 1 || RANDR_MINOR >= 3)
+    /* what is connected now, so that only real changes count */
+    memset(lastConnection, RR_UnknownConnection, sizeof(lastConnection));
+    for (i = 0; i < wmGD.numScreens; i++) {
+        XRRScreenResources *res;
+        int o;
+
+        if (!wmGD.Screens[i].managed ||
+            !(res = XRRGetScreenResourcesCurrent(DISPLAY,
+                                                 wmGD.Screens[i].rootWindow)))
+            continue;
+        for (o = 0; o < res->noutput; o++) {
+            XRROutputInfo *info = XRRGetOutputInfo(DISPLAY, res, res->outputs[o]);
+
+            if (info) {
+                lastConnection[res->outputs[o] & 63] = info->connection;
+                XRRFreeOutputInfo(info);
+            }
+        }
+        XRRFreeScreenResources(res);
+    }
+    /* a monitor plugged in while logged out: at login (Xsession runs
+     * dtdisplays too, but before dtwm; harmless to repeat) */
+#endif
 #endif
 }
 
@@ -273,6 +430,20 @@ Boolean HandleScreenChangeEvent(XEvent *event)
         root = sce->root;
         time = sce->timestamp;
     }
+#ifdef RRNotify_OutputChange
+    else if (event->type == randrEventBase + RRNotify &&
+             ((XRRNotifyEvent *) event)->subtype == RRNotify_OutputChange) {
+        XRROutputChangeNotifyEvent *oce = (XRROutputChangeNotifyEvent *) event;
+
+        /* dtdisplays turns on a new monitor (or brings back the layout
+         * kept for these monitors); its own changes come back as crtc
+         * changes, handled below */
+        if (oce->connection != lastConnection[oce->output & 63])
+            OutputsChangedSoon();
+        lastConnection[oce->output & 63] = oce->connection;
+        return True;
+    }
+#endif
 #ifdef RRNotify_CrtcChange
     else if (event->type == randrEventBase + RRNotify &&
              ((XRRNotifyEvent *) event)->subtype == RRNotify_CrtcChange) {
@@ -298,6 +469,8 @@ Boolean HandleScreenChangeEvent(XEvent *event)
         ScreenChanged(pSD, oldW, oldH, time);
     if (pSD && wmGD.panelOnly)
         PanelOnlyScreenChanged(pSD);
+    /* a monitor went away with the Front Panel on it */
+    PanelKeepOnScreen();
     return True;
 #else
     return False;

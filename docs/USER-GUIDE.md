@@ -44,8 +44,9 @@ see the [README](../README.md).
   when either is installed (`apt install librsvg2-bin`).
 - **Windows key shortcuts**: **Windows+E** Home folder, **Windows+R**
   Run, **Windows+T** Terminal, **Windows+A** Application Manager,
-  **Windows+I** Settings, **Windows+L** Lock, **Windows+V** clipboard
-  history, **Windows+arrows** tile
+  **Windows+I** Settings, **Windows+L** Lock, **Windows+P** displays
+  (extend, mirror, one screen), **Windows+V** clipboard history,
+  **Windows+arrows** tile
   windows (dtwm). `DT_NO_SUPERKEY=1` in `~/.dtprofile` stops the key
   on its own from opening the menu.
 - **Application Manager**: type in its **Search** box at the bottom to
@@ -152,7 +153,7 @@ icons. `DT_NO_SYSTRAY=1` turns the tray off.
 | Window | Focus behaviour, and the optional compositor |
 | Startup, Autostart | What the session restores, and applications started at login |
 | Front Panel | What each button opens, and the drawers (see above) |
-| Session | Options in `~/.dtprofile` (below), and Xfce applications |
+| Session | Options in `~/.dtprofile` (below), Xfce or KDE applications, the terminal, and games in Gamescope (when installed) |
 | Accessibility | Sticky, slow and bounce keys, mouse keys, large pointer, on-screen keyboard at login |
 | Shortcuts | Your own keyboard shortcuts: **Add...**, press the keys (with Ctrl, Alt or Super, or a function key), type the command. They work in every application, also with xfwm4. Kept in `~/.dt/shortcuts.dtwmrc`. |
 | Network, Bluetooth, Updates | Wi-Fi, Bluetooth devices, system updates (shown when the system supports them). With [topgrade](https://github.com/topgrade-rs/topgrade) installed, Updates also has **Update Everything**: Flatpak, Snap, firmware and more |
@@ -181,6 +182,41 @@ at the next login.
   palette. Without it, or with `DT_WINDOW_MANAGER=dtwm`, CDE's dtwm
   does everything as before. Settings > Session > *Window manager*
   switches between them (next login).
+
+## Multiple monitors
+
+- **Plugging in a monitor** turns it on at once, to the right of the
+  others, as on other desktops. Change the arrangement once and it is
+  remembered for that set of monitors: plugging the same ones in again
+  (or logging in with them) brings it back. Unplugging a monitor moves
+  its windows, and the Front Panel if it was there, to the others.
+- **Windows+P** switches between *Extend* (side by side), *Mirror* (the
+  same picture everywhere, for projectors), *Built-in display only* and
+  *External display only*, showing which in a notification.
+- **Displays** in the application menu (Settings) opens the display
+  settings of KDE, Xfce or LXQt, lxrandr or arandr, whichever is
+  installed, for resolution, refresh rate, rotation, position and the
+  primary monitor; the result is remembered as above.
+- The **Front Panel** starts on the primary monitor, at its bottom
+  middle. Window tiling, maximizing and the wallpaper work per monitor.
+- With [autorandr](https://github.com/phillipberndt/autorandr) set up
+  (`~/.config/autorandr`), its profiles are used instead.
+  `DT_NO_DISPLAYS=1` in `~/.dtprofile` leaves the monitors alone.
+
+## Games
+
+- Steam, Lutris, Heroic and other games are in the application menu
+  under **Games**.
+- **Gamescope**: with [gamescope](https://github.com/ValveSoftware/gamescope)
+  installed, Settings > Session > **Games** can start the games in the
+  menu inside it, at the size and refresh rate of the monitor the
+  pointer is on. Gamescope gives a game its own compositor: FSR
+  upscaling, a frame limiter and tear-free fullscreen.
+  `DT_GAMESCOPE_ARGS` in `~/.dtprofile` adds options, for example
+  `-F fsr -w 1280 -h 720` (draw at 720p, upscale to the monitor).
+  From a terminal: `dtgamescope COMMAND`.
+- Steam itself isn't wrapped. For a Steam game, put
+  `gamescope -f -- %command%` in the game's *Launch Options* in Steam.
 
 ## Touchscreens and tablets
 
@@ -244,7 +280,23 @@ AccessX features) and are applied again at every login.
 - Settings > Color sets the palette. CDE's applications, the Front
   Panel and the window frames use it.
 - **Apply colors to GTK and Qt applications** (same window) makes
-  Firefox, LibreOffice, GTK and Qt applications use the palette too.
+  LibreOffice, GTK and Qt applications use the palette too:
+  - **Qt and KDE applications** (Konsole, Dolphin, Kate, Konqueror,
+    VLC…) follow the CDE GTK theme through Qt's GTK platform theme, or
+    use qt5ct/qt6ct with the CDE palette when those are installed. A
+    `QT_QPA_PLATFORMTHEME` of your own in `~/.dtprofile` wins. A "CDE"
+    color scheme is also written for KDE, so Plasma's Colors settings
+    can use the palette too if you want it there.
+  - **Firefox and LibreWolf**: their tab strip, menus, dialogs,
+    scroll bars and form controls take the palette (a marked line in
+    each profile's `user.js` turns off Firefox's libadwaita colors; it
+    is set back when you untick the box). Firefox's address bar row
+    keeps its own light or dark color.
+  - **Chromium, Chrome, Brave, Edge** and Electron applications: choose
+    *GTK* (or *Qt*) under Settings > Appearance > Theme in the browser;
+    they then follow the palette.
+  - **Flatpak applications** are allowed to read the theme
+    (`flatpak override --user`, read-only, done once).
 - GTK applications **change color at once**, without restarting them
   or logging out, when `xsettingsd` is installed (`apt install
   xsettingsd`). Without it they pick up the new colors when restarted.
@@ -351,6 +403,8 @@ login.
 | `DT_KEYBOARD=command` | The on-screen keyboard to use |
 | `DT_TASKMANAGER=command` | The task manager to use |
 | `DT_XFWM_GTK_THEME=name` | GTK theme for xfwm4's window menu (default CDE-wm) |
+| `DT_NO_DISPLAYS=1` | Don't turn on or arrange monitors when they are plugged in |
+| `DT_GAMESCOPE_ARGS=...` | More gamescope options for games started in Gamescope |
 | `DT_NOTIFY=command` / `DT_NO_NOTIFY=1` | The notification program to use / none |
 | `DT_NO_CLIPBOARD=1` | No clipboard manager at login |
 | `DTSOURCEPROFILE=true` | Also read `~/.profile` at login |
@@ -362,7 +416,9 @@ login.
 |---|---|
 | `~/.dtprofile` | Settings > Session (a marked block at the end; the rest is yours) |
 | `~/.dt/types/clanker-panel.fp`, `.dt` | Settings > Front Panel |
-| `~/.dt/types/clanker-modern.dt`, `~/.dt/modern-apps` | Settings > Session > Xfce applications |
+| `~/.dt/types/clanker-modern.dt`, `~/.dt/modern-apps` | Settings > Session > Applications (Xfce or KDE) |
+| `~/.dt/gamescope` | Settings > Session > Games: in Gamescope |
+| `~/.dt/displays/` | Monitor arrangements, one file per set of connected monitors |
 | `~/.dt/accessibility` | Settings > Accessibility |
 | `~/.dt/touchpad` | Settings > Mouse > Touchpad |
 | `~/.dt/theming/env`, `~/.themes/CDE` | Settings > Color (GTK and Qt themes) |

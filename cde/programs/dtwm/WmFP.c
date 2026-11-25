@@ -40,6 +40,7 @@
 #include "WmGlobal.h"
 #include "WmPanelOnly.h"
 #include "WmPanelHide.h"
+#include "WmMultiHead.h"
 
 
 #include <Dt/DtP.h>
@@ -715,6 +716,25 @@ SetGeometry (Widget w, String geometry, Position * x, Position * y)
 
 
 
+/*
+ * The bottom middle of a monitor, as a geometry string for the panel.
+ * "-0" (the screen's bottom edge) when the monitor reaches it, which
+ * keeps auto-hide and the saved position working as before.
+ */
+static void
+PanelPrimaryGeometry (char *buf, size_t size, int hx, int hy, int hw, int hh)
+{
+   int w = XtWidth (panel.shell), h = XtHeight (panel.shell);
+   int sh = HeightOfScreen (XtScreen (panel.shell));
+   int x = hx + ((hw > w) ? (hw - w) / 2 : 0);
+
+   if (hy + hh >= sh)
+      snprintf (buf, size, "+%d-0", x);
+   else
+      snprintf (buf, size, "+%d+%d", x, hy + hh - h);
+}
+
+
 /************************************************************************
  *
  *   WmPanelistShow
@@ -743,6 +763,7 @@ WmPanelistShow (Widget w)
 
    String    shell_geometry = NULL;
    char      geometry_buffer[32];
+   int       head_x, head_y, head_w, head_h;
 
    XSizeHints   hints;
    long	        supplied;
@@ -784,19 +805,21 @@ WmPanelistShow (Widget w)
    width = XtWidth (panel.shell);
    screen_width = WidthOfScreen (XtScreen (panel.shell));
    display = XtDisplay (panel.shell);
+   GetPrimaryHead (display, XScreenNumberOfScreen (XtScreen (panel.shell)),
+                   &head_x, &head_y, &head_w, &head_h);
 
    if (shell_geometry == NULL)
    {
-      Position  x;
-
       if (panel.element_values[PANEL_GEOMETRY].string_value != NULL)
       {
         shell_geometry = panel.element_values[PANEL_GEOMETRY].parsed_value;
       }
       else
       {
-         x = (screen_width > width) ? (Position)(screen_width - width) / 2 : 0;
-         snprintf (geometry_buffer, 32 - 1, "+%d-0", x);
+         /* the bottom middle of the primary monitor (the whole screen
+          * with one monitor) */
+         PanelPrimaryGeometry (geometry_buffer, sizeof (geometry_buffer),
+                               head_x, head_y, head_w, head_h);
          shell_geometry = geometry_buffer;
       }
       
@@ -834,6 +857,17 @@ WmPanelistShow (Widget w)
    }
 
    SetGeometry (panel.shell, shell_geometry, &x, &y);
+
+   /* A place saved with other monitors (a gap, or off screen now):
+    * the primary monitor instead. */
+   if (!RectOnAHead (display, XScreenNumberOfScreen (XtScreen (panel.shell)),
+                     x, y, XtWidth (panel.shell), XtHeight (panel.shell)))
+   {
+      PanelPrimaryGeometry (geometry_buffer, sizeof (geometry_buffer),
+                            head_x, head_y, head_w, head_h);
+      SetGeometry (panel.shell, geometry_buffer, &x, &y);
+   }
+
    WorkspaceAdjustPanelPosition (x, y, XtWidth (panel.shell),
                                  XtHeight (panel.shell));
 

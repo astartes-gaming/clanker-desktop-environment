@@ -1,0 +1,221 @@
+#!/bin/sh
+#####################################################################
+##  dtdisplays - monitors for the CDE desktop.
+##
+##  dtdisplays            open the display settings (the first installed
+##                        of KDE's, Xfce's, LXQt's, lxrandr, arandr),
+##                        then remember the arrangement
+##  dtdisplays next       Windows+P: extend -> mirror -> built-in screen
+##                        only -> external screen only
+##  dtdisplays extend | mirror | internal | external
+##  dtdisplays save       remember the current arrangement
+##  dtdisplays hotplug    a monitor was connected or removed (dtwm runs
+##                        this); also at login
+##
+##  The arrangement is remembered for each set of connected monitors
+##  (~/.dt/displays/), so plugging the same monitors in again brings
+##  back their layout.  A set seen for the first time is extended to
+##  the right, as other desktops do.  autorandr, when installed and set
+##  up, is used instead.  DT_NO_DISPLAYS=1 in ~/.dtprofile leaves the
+##  monitors alone.
+##
+##  Uses xrandr (RandR 1.2 or newer).  Bourne shell only (no $(...)).
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+have() { type "$1" >/dev/null 2>&1; }
+
+DIR="$HOME/.dt/displays"
+DTBIN=`dirname "$0"`
+
+[ -n "$DISPLAY" ] && have xrandr || exit 0
+
+# "name connected|disconnected primary? WxH+X+Y|- mode rate rotation"
+# for every output, from the server's current state (no probing).
+outputs() {
+    xrandr --current 2>/dev/null | awk '
+        function flush() { if (name != "") print name, st, prim, geo, mode, rate, rot }
+        /^Screen / { next }
+        /^[^ ]/ {
+            flush()
+            name = $1; st = $2; prim = "-"; geo = "-"; mode = "-"; rate = "-"; rot = "normal"
+            for (i = 3; i <= NF; i++) {
+                if ($i == "primary") prim = "primary"
+                else if ($i ~ /^[0-9]+x[0-9]+\+-?[0-9]+\+-?[0-9]+$/) {
+                    geo = $i
+                    if ($(i+1) ~ /^(left|right|inverted)$/) rot = $(i+1)
+                }
+                else if ($i ~ /^\(/) break
+            }
+            next
+        }
+        geo != "-" && /\*/ {
+            mode = $1
+            for (i = 2; i <= NF; i++) if ($i ~ /\*/) { rate = $i; gsub(/[*+]/, "", rate) }
+        }
+        END { flush() }'
+}
+
+connected() { outputs | awk '$2 == "connected" { print $1 }'; }
+
+# The set of connected monitors, as a file name.
+setkey() { connected | sort | tr '\n' '+' | sed 's/+$//; s/[^A-Za-z0-9_.+-]/_/g'; }
+
+# The laptop's own screen, if any.
+internal() { connected | grep -E '^(eDP|LVDS|DSI)' | head -1; }
+
+primary() {
+    p=`outputs | awk '$2 == "connected" && $3 == "primary" { print $1; exit }'`
+    [ -n "$p" ] || p=`internal`
+    [ -n "$p" ] || p=`connected | head -1`
+    echo "$p"
+}
+
+# Connected monitors, the primary first.
+ordered() { p=`primary`; echo "$p"; connected | grep -v -x -F "$p"; }
+
+# Turn off what is no longer connected but still has a picture.
+offargs() { outputs | awk '$2 != "connected" && $4 != "-" { printf " --output %s --off", $1 }'; }
+
+apply() {
+    # shellcheck disable=SC2086
+    xrandr $* >/dev/null 2>&1
+}
+
+save() {
+    mkdir -p "$DIR" 2>/dev/null || return
+    key=`setkey`
+    [ -n "$key" ] || return
+    outputs | awk '
+        $2 == "connected" && $4 != "-" {
+            split($4, g, /[x+]/)
+            printf " --output %s --mode %s --pos %sx%s --rotate %s", $1, $5, g[3], g[4], $7
+            if ($6 != "-") printf " --rate %s", $6
+            if ($3 == "primary") printf " --primary"
+        }
+        $2 == "connected" && $4 == "-" { printf " --output %s --off", $1 }
+        END { print "" }' > "$DIR/$key.new" &&
+    mv "$DIR/$key.new" "$DIR/$key"
+}
+
+extend() {
+    args= prev=
+    for o in `ordered`; do
+        if [ -z "$prev" ]; then args="$args --output $o --auto --primary"
+        else args="$args --output $o --auto --right-of $prev"; fi
+        prev=$o
+    done
+    apply $args `offargs`
+}
+
+mirror() {
+    p=`primary`
+    args="--output $p --auto --primary"
+    for o in `connected | grep -v -x -F "$p"`; do
+        args="$args --output $o --auto --same-as $p"
+    done
+    apply $args `offargs`
+}
+
+only() {    # only $1
+    [ -n "$1" ] || return 1
+    args="--output $1 --auto --primary"
+    for o in `connected | grep -v -x -F "$1"`; do args="$args --output $o --off"; done
+    apply $args `offargs`
+}
+
+notify() {
+    have notify-send || return 0
+    notify-send -a Displays -i video-display -t 2000 \
+        -h string:x-canonical-private-synchronous:displays \
+        -h string:x-dunst-stack-tag:displays "Displays" "$1" >/dev/null 2>&1
+}
+
+hotplug() {
+    # under Wayland (cde-xwayland) the compositor arranges the monitors
+    [ -z "$DT_NO_DISPLAYS" ] && [ -z "$WAYLAND_DISPLAY" ] || return 0
+    if have autorandr && [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/autorandr" ]; then
+        autorandr --change --default default >/dev/null 2>&1
+        return
+    fi
+    key=`setkey`
+    [ -n "$key" ] || return 0
+    if [ -r "$DIR/$key" ]; then
+        apply `cat "$DIR/$key"` `offargs`
+        return
+    fi
+    # A new set of monitors: one alone keeps whatever it has; more
+    # are side by side, only those still dark are added.
+    dark=`outputs | awk '$2 == "connected" && $4 == "-" { print $1 }'`
+    gone=`offargs`
+    [ -n "$dark" ] || [ -n "$gone" ] || return 0
+    extend
+}
+
+quick() {
+    case $1 in
+    extend)   extend; save; notify "Extended across all displays" ;;
+    mirror)   mirror; save; notify "The same picture on every display" ;;
+    internal) only "`internal`" || only "`primary`"; save
+              notify "Built-in display only" ;;
+    external) ext=`connected | grep -v -x -F "\`internal\`" | head -1`
+              only "$ext"; save; notify "External display only" ;;
+    esac
+}
+
+next() {
+    [ -z "$WAYLAND_DISPLAY" ] || return 0
+    n=`connected | wc -l`
+    if [ "$n" -lt 2 ]; then
+        notify "Only one display is connected."
+        return 0
+    fi
+    mkdir -p "$DIR" 2>/dev/null
+    last=`cat "$DIR/.last-quick" 2>/dev/null`
+    case $last in
+        extend)   m=mirror ;;
+        mirror)   m=internal ;;
+        internal) m=external ;;
+        *)        m=extend ;;
+    esac
+    # no built-in screen: extend -> mirror -> the primary only
+    [ -z "`internal`" ] && [ "$m" = external ] && m=extend
+    echo $m > "$DIR/.last-quick"
+    quick $m
+}
+
+case $1 in
+"")
+    if [ -f "$HOME/.dt/modern-apps" ] &&
+       [ "`head -1 "$HOME/.dt/modern-apps" | sed 's/[^a-z].*//'`" = kde ]; then
+        kde=1
+    else
+        kde=
+    fi
+    tool=
+    if [ -n "$kde" ] && have kcmshell6; then tool="kcmshell6 kcm_kscreen"
+    elif [ -n "$kde" ] && have kcmshell5; then tool="kcmshell5 kcm_kscreen"
+    elif have xfce4-display-settings; then tool=xfce4-display-settings
+    elif have lxqt-config-monitor; then tool=lxqt-config-monitor
+    elif have lxrandr; then tool=lxrandr
+    elif have arandr; then tool=arandr
+    elif have kcmshell6; then tool="kcmshell6 kcm_kscreen"
+    elif have kcmshell5; then tool="kcmshell5 kcm_kscreen"
+    fi
+    if [ -z "$tool" ]; then
+        # nothing to arrange them with: the next quick layout
+        next
+        exit 0
+    fi
+    # the tool's own window, then remember what it set
+    QT_QPA_PLATFORM=xcb; export QT_QPA_PLATFORM
+    $tool >/dev/null 2>&1
+    save ;;
+next)     next ;;
+extend|mirror|internal|external) quick $1 ;;
+save)     save ;;
+hotplug)  hotplug ;;
+*)  echo "usage: dtdisplays [next|extend|mirror|internal|external|save|hotplug]" >&2
+    exit 2 ;;
+esac
+exit 0
