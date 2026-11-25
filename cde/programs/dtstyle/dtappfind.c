@@ -182,6 +182,52 @@ HaveProgram(const char *prog)
     return ok;
 }
 
+/* Is the program an Exec= value starts runnable?  (An entry without
+ * TryExec whose program was uninstalled stays out of the menu.)  The
+ * first word, skipping "env" and its VAR=value and -options; a
+ * quoted first word may hold spaces. */
+static Boolean
+ExecRunnable(const char *exec)
+{
+    char        word[1024];
+    const char *p = exec;
+    size_t      n;
+    Boolean     afterEnv = False;
+
+    for (;;)
+    {
+        while (*p == ' ' || *p == '\t')
+            p++;
+        if (!*p)
+            return True;		/* nothing to check */
+        if (*p == '"')
+        {
+            const char *q = strchr(p + 1, '"');
+
+            n = q ? (size_t) (q - p - 1) : strlen(p + 1);
+            snprintf(word, sizeof(word), "%.*s", (int) n, p + 1);
+            p = q ? q + 1 : p + strlen(p);
+        }
+        else
+        {
+            n = strcspn(p, " \t");
+            snprintf(word, sizeof(word), "%.*s", (int) n, p);
+            p += n;
+        }
+        if (strcmp(word, "env") == 0)
+        {
+            afterEnv = True;
+            continue;
+        }
+        if (afterEnv && (word[0] == '-' ||
+                         (strchr(word, '=') && word[0] != '/')))
+            continue;
+        if (!word[0] || strchr(word, '%'))
+            return True;
+        return HaveProgram(word);
+    }
+}
+
 /* Desktop file IDs already seen (earlier folders win). */
 static char *ids[MAX_APPS * 2];
 static int   nIds;
@@ -311,7 +357,7 @@ ReadDir(const char *dir)
             ids[nIds++] = XtNewString(e->d_name);
         if (!app || hide || !name[0] || !exec[0] ||
             !ShownHere(only, notin) ||
-            (tryexec[0] && !HaveProgram(tryexec)))
+            (tryexec[0] ? !HaveProgram(tryexec) : !ExecRunnable(exec)))
             continue;
         apps[nApps].name = XtNewString(name);
         apps[nApps].generic = XtNewString(generic);
@@ -334,11 +380,12 @@ NameCmp(const void *a, const void *b)
     return strcasecmp(((const App *) a)->name, ((const App *) b)->name);
 }
 
-/* $XDG_DATA_HOME/applications, then each of $XDG_DATA_DIRS. */
+/* Call fn for $XDG_DATA_HOME/applications, then for the applications
+ * folder of each of $XDG_DATA_DIRS. */
 static void
-ReadApps(void)
+ForEachAppDir(void (*fn)(const char *dir))
 {
-    char  dir[4200], *dirs, *t, *c;
+    char  dir[4200], *dirs, *t, *c, *save = NULL;
 
     c = getenv("XDG_DATA_HOME");
     if (c && *c)
@@ -346,15 +393,72 @@ ReadApps(void)
     else
         snprintf(dir, sizeof(dir), "%s/.local/share/applications",
                  getenv("HOME") ? getenv("HOME") : "");
-    ReadDir(dir);
+    fn(dir);
     c = getenv("XDG_DATA_DIRS");
     dirs = XtNewString((c && *c) ? c : "/usr/local/share:/usr/share");
-    for (t = strtok(dirs, ":"); t; t = strtok(NULL, ":"))
+    for (t = strtok_r(dirs, ":", &save); t; t = strtok_r(NULL, ":", &save))
     {
         snprintf(dir, sizeof(dir), "%s/applications", t);
-        ReadDir(dir);
+        fn(dir);
     }
     XtFree(dirs);
+}
+
+/* A value that changes when a .desktop file is added to, removed from
+ * or renamed in an application folder (the folder's change time), or
+ * a folder appears or goes: installing and removing programs.  Plain
+ * stat(), so it works on every system (no inotify needed). */
+static unsigned long dirsStamp;
+
+static void
+StampDir(const char *dir)
+{
+    struct stat st;
+
+    dirsStamp *= 31;
+    if (stat(dir, &st) == 0)
+        dirsStamp += (unsigned long) st.st_mtime * 7 +
+                     (unsigned long) st.st_ctime * 3 +
+                     (unsigned long) st.st_ino + 1;
+}
+
+static unsigned long
+AppDirsStamp(void)
+{
+    dirsStamp = 0;
+    ForEachAppDir(StampDir);
+    return dirsStamp;
+}
+
+static void
+FreeApps(void)
+{
+    int i;
+
+    for (i = 0; i < nApps; i++)
+    {
+        if (apps[i].label != apps[i].name)
+            XtFree(apps[i].label);
+        XtFree(apps[i].name);
+        XtFree(apps[i].generic);
+        XtFree(apps[i].keywords);
+        XtFree(apps[i].exec);
+        XtFree(apps[i].path);
+        XtFree(apps[i].icon);
+    }
+    nApps = 0;
+    for (i = 0; i < nIds; i++)
+        XtFree(ids[i]);
+    nIds = 0;
+    XtFree((char *) shown);
+    shown = NULL;
+    nShown = 0;
+}
+
+static void
+ReadApps(void)
+{
+    ForEachAppDir(ReadDir);
     qsort(apps, nApps, sizeof(App), NameCmp);
     /* Two applications of one name (CDE's and another desktop's
      * Calculator): show their programs too. */
@@ -504,6 +608,41 @@ ChangedCB(Widget w, XtPointer client, XtPointer call)
 
     Filter(t);
     XtFree(t);
+}
+
+/* Programs installed or removed while the menu or window is open: the
+ * list follows, as other desktops' menus do. */
+#define WATCH_MS 2000
+static XtAppContext  watchApp;
+static unsigned long appsStamp;
+
+static void
+WatchAppsCB(XtPointer client, XtIntervalId *id)
+{
+    unsigned long now = AppDirsStamp();
+
+    if (now != appsStamp)
+    {
+        char *t;
+
+        appsStamp = now;
+        FreeApps();
+        ReadApps();
+        AppListForgetIcons(appList);
+        t = XmTextFieldGetString(field);
+        Filter(t);
+        XtFree(t);
+    }
+    XtAppAddTimeOut(watchApp, WATCH_MS, WatchAppsCB, NULL);
+}
+
+/* appsStamp is that of the list read (taken before reading it, so a
+ * change during startup shows at the first check). */
+static void
+WatchApps(XtAppContext app)
+{
+    watchApp = app;
+    XtAppAddTimeOut(app, WATCH_MS, WatchAppsCB, NULL);
 }
 
 /* No application matches: run the text as a command (like Alt+F2
@@ -932,6 +1071,7 @@ main(int argc, char **argv)
     }
     /* for dragging rows (DtDnd); the action database is not needed */
     (void) DtInitialize(XtDisplay(top), top, "dtappfind", "Dtappfind");
+    appsStamp = AppDirsStamp();		/* before reading: none missed */
     ReadApps();
 
     form = XtVaCreateManagedWidget("form", xmFormWidgetClass, top,
@@ -1047,6 +1187,7 @@ main(int argc, char **argv)
         XtAddEventHandler(top, FocusChangeMask, False, FocusEH, NULL);
     }
     XmProcessTraversal(field, XmTRAVERSE_CURRENT);
+    WatchApps(app);
     XtAppMainLoop(app);
     return 0;
 }

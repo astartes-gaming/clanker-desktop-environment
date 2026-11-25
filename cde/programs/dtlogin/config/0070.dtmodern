@@ -28,6 +28,8 @@
 ##      DT_NO_SYSTEMD_SESSION=1 don't start graphical-session.target
 ##      DT_WINDOW_MANAGER=dtwm  use dtwm even if xfwm4 is installed
 ##                              (or name another window manager)
+##      DT_NO_KDE=1             don't present the session to KDE and
+##                              Chromium/Electron programs (step 1a)
 ##
 ##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
 #####################################################################
@@ -43,15 +45,78 @@ _dtm_have() { type "$1" >/dev/null 2>&1; }
 : ${XDG_SESSION_TYPE:=x11}
 export XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP DESKTOP_SESSION XDG_SESSION_TYPE
 
-# CDE's own applications' .desktop entries (share/applications next to
-# the CDE bin folder), for the application menu.
+# Where installed applications' .desktop entries are, for the
+# application menu: Flatpak's and Snap's exported ones (their own
+# profile scripts may not have run for this session) and CDE's own
+# (share/applications next to the CDE bin folder).
 _dtm_share=`dirname "${DT_BINPATH:-/usr/dt/bin}"`/share
-if [ -d "$_dtm_share/applications" ]; then
-  case ":${XDG_DATA_DIRS:=/usr/local/share:/usr/share}:" in
-    *":$_dtm_share:"*) ;;
-    *) XDG_DATA_DIRS=$XDG_DATA_DIRS:$_dtm_share ;;
+: ${XDG_DATA_DIRS:=/usr/local/share:/usr/share}
+for _dtm_d in "${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share" \
+              /var/lib/flatpak/exports/share /var/lib/snapd/desktop \
+              "$_dtm_share"; do
+  [ -d "$_dtm_d/applications" ] || continue
+  case ":$XDG_DATA_DIRS:" in
+    *":$_dtm_d:"*) ;;
+    *) XDG_DATA_DIRS=$XDG_DATA_DIRS:$_dtm_d ;;
   esac
-  export XDG_DATA_DIRS
+done
+export XDG_DATA_DIRS
+# Games and Snap programs are started by name from their entries.
+for _dtm_d in /usr/local/games /usr/games /snap/bin; do
+  [ -d "$_dtm_d" ] || continue
+  case ":$PATH:" in
+    *":$_dtm_d:"*) ;;
+    *) PATH=$PATH:$_dtm_d ;;
+  esac
+done
+export PATH
+unset _dtm_d
+
+#
+# 1a. KDE applications.  When KDE Frameworks are installed, say so the
+#     way a Plasma session does, so that:
+#     - Konsole, Dolphin, Kate... use KDE's settings, file dialogs and
+#       theme plugin, and "Open with" finds the installed applications
+#       (the plasma- menu, and the KDE service cache rebuilt for it);
+#     - Chromium and Electron programs (browsers, Claude, VS Code...)
+#       keep their saved logins in KWallet as they do in Plasma, not in
+#       a fixed-key file that Plasma cannot read (signing in again on
+#       every change of desktop);
+#     - xdg-open opens files with kde-open.
+#     XDG_CURRENT_DESKTOP stays CDE, so the application menu and XDG
+#     autostart still follow OnlyShowIn=CDE.  DT_NO_KDE=1 turns it off.
+#
+if [ -z "$DT_NO_KDE" ] && [ -z "$KDE_FULL_SESSION" ]; then
+  _dtm_kde=
+  if _dtm_have kwalletd6 || _dtm_have kded6; then _dtm_kde=6
+  elif _dtm_have kwalletd5 || _dtm_have kded5; then _dtm_kde=5
+  fi
+  # xdg-open needs KDE's opener in a KDE session
+  case $_dtm_kde in
+    6) _dtm_have kde-open || _dtm_kde= ;;
+    5) _dtm_have kde-open5 || _dtm_kde= ;;
+  esac
+  if [ -n "$_dtm_kde" ]; then
+    KDE_FULL_SESSION=true
+    KDE_SESSION_VERSION=$_dtm_kde
+    export KDE_FULL_SESSION KDE_SESSION_VERSION
+    if [ -z "$XDG_MENU_PREFIX" ]; then
+      for _dtm_d in `echo "${XDG_CONFIG_DIRS:-/etc/xdg}" | tr ':' ' '`; do
+        if [ -f "$_dtm_d/menus/plasma-applications.menu" ]; then
+          XDG_MENU_PREFIX=plasma-; export XDG_MENU_PREFIX
+          break
+        fi
+      done
+    fi
+    # the service cache "Open with" reads, for this menu
+    for _dtm_b in kbuildsycoca$_dtm_kde kbuildsycoca6 kbuildsycoca5; do
+      if _dtm_have $_dtm_b; then
+        ($_dtm_b >/dev/null 2>&1 &)
+        break
+      fi
+    done
+  fi
+  unset _dtm_kde _dtm_d _dtm_b
 fi
 
 #
@@ -116,6 +181,9 @@ if [ -n "$DBUS_SESSION_BUS_ADDRESS" ] &&
   _dtm_vars="$_dtm_vars XDG_SESSION_TYPE DESKTOP_SESSION"
   _dtm_vars="$_dtm_vars GTK_THEME GTK2_RC_FILES GTK_OVERLAY_SCROLLING"
   _dtm_vars="$_dtm_vars QT_QPA_PLATFORMTHEME"
+  # KDE applications (step 1a), e.g. kwalletd started by D-Bus
+  [ -n "$KDE_FULL_SESSION" ] &&
+    _dtm_vars="$_dtm_vars KDE_FULL_SESSION KDE_SESSION_VERSION XDG_MENU_PREFIX"
   # xfwm4 sessions: the CDE defaults for xfconfd (step 1b)
   [ -n "$XDG_CONFIG_DIRS" ] && _dtm_vars="$_dtm_vars XDG_CONFIG_DIRS"
   if _dtm_have systemctl && systemctl --user show-environment >/dev/null 2>&1

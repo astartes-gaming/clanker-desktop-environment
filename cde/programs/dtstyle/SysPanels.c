@@ -2646,7 +2646,7 @@ static const SesOption sesOptions[] = {
 };
 #define SES_NOPTIONS ((int) (sizeof(sesOptions) / sizeof(sesOptions[0])))
 #define SES_WM SES_NOPTIONS	/* the window manager row */
-#define SES_MODERN (SES_NOPTIONS + 1)	/* the Xfce applications row */
+#define SES_MODERN (SES_NOPTIONS + 1)	/* the applications row */
 #define SES_TERM (SES_NOPTIONS + 2)	/* the terminal row (dtterminal) */
 
 static Panel *sesPanel = NULL;
@@ -2829,29 +2829,80 @@ SesWmLabel(void)
 }
 
 /*
- * "Use Xfce applications": ~/.dt/modern-apps turns it on, and
- * ~/.dt/types/clanker-modern.dt points the Text Editor, Terminal and
- * Home Folder actions at dtmodernapp, which runs the Xfce application
- * when it is installed and the original CDE action otherwise.
+ * "Applications": CDE's own, Xfce's or KDE's.  ~/.dt/modern-apps holds
+ * "xfce" or "kde" (an empty file, from older versions, means Xfce),
+ * and ~/.dt/types/clanker-modern.dt points the Text Editor, Terminal
+ * and Home Folder actions at dtmodernapp, which runs that desktop's
+ * application when it is installed and the original CDE action
+ * otherwise.  Only the sets with an application installed are offered.
  */
+#define APPS_CDE  0
+#define APPS_XFCE 1
+#define APPS_KDE  2
+#define APPS_N    3
+static const char *appsWord[APPS_N] = { "", "xfce", "kde" };
+static const char *appsProgs[APPS_N] = {
+    "", "thunar mousepad xfce4-terminal", "dolphin kate kwrite konsole" };
 static void
 ModernPath(char *buf, size_t len, const char *rel)
 {
     snprintf(buf, len, "%s/.dt/%s", style.home, rel);
 }
 
-static Boolean
-ModernOn(void)
+static Boolean TermInstalled(const char *prog);
+
+static int
+ModernRead(void)
 {
-    char path[1100];
+    char  path[1100], word[16];
+    FILE *fp;
 
     ModernPath(path, sizeof(path), "modern-apps");
-    return access(path, F_OK) == 0;
+    if ((fp = fopen(path, "r")) == NULL)
+        return APPS_CDE;
+    word[0] = '\0';
+    if (fscanf(fp, "%15s", word) != 1)
+        word[0] = '\0';
+    fclose(fp);
+    return strcmp(word, "kde") == 0 ? APPS_KDE : APPS_XFCE;
+}
+
+/* Is any application of set "which" installed? */
+static Boolean
+ModernInstalled(int which)
+{
+    char  progs[100], *p, *save = NULL;
+    Boolean any = False;
+
+    if (which == APPS_CDE)
+        return True;
+    snprintf(progs, sizeof(progs), "%s", appsProgs[which]);
+    for (p = strtok_r(progs, " ", &save); p && !any;
+         p = strtok_r(NULL, " ", &save))
+        any = TermInstalled(p);
+    return any;
+}
+
+static const char *
+ModernLabel(int which)
+{
+    switch (which)
+    {
+    case APPS_XFCE:
+        return MSG(127, "Xfce (Thunar, Mousepad, Xfce Terminal)");
+    case APPS_KDE:
+        return MSG(128, "KDE (Dolphin, Kate, Konsole)");
+    }
+    if (!ModernInstalled(APPS_XFCE) && !ModernInstalled(APPS_KDE))
+        return MSG(129, "CDE's own (install Xfce or KDE applications "
+                        "for more choices)");
+    return MSG(130, "CDE's own");
 }
 
 static Boolean
-ModernSet(Boolean on)
+ModernSet(int which)
 {
+    Boolean on = (which != APPS_CDE);
     char  flag[1100], types[1100], dir[1100];
     FILE *fp;
     static char *reload[] = { "dtaction", "ReloadActions", NULL };
@@ -2870,9 +2921,9 @@ ModernSet(Boolean on)
         if ((fp = fopen(types, "w")) == NULL)
             return False;
         fprintf(fp,
-            "# Written by Settings > Session (\"Use Xfce applications\").\n"
-            "# dtmodernapp runs the Xfce application if it is installed,\n"
-            "# else the original CDE action.\n\n"
+            "# Written by Settings > Session (\"Applications\").\n"
+            "# dtmodernapp runs the Xfce or KDE application if it is\n"
+            "# installed, else the original CDE action.\n\n"
             "ACTION TextEditor\n{\n  LABEL\t\tText Editor\n"
             "  ICON\t\tDtpenpd\n  TYPE\t\tCOMMAND\n"
             "  WINDOW_TYPE\tNO_STDIO\n"
@@ -2889,7 +2940,9 @@ ModernSet(Boolean on)
             return False;
         if ((fp = fopen(flag, "w")) == NULL)
             return False;
-        fclose(fp);
+        fprintf(fp, "%s\n", appsWord[which]);
+        if (fclose(fp) != 0)
+            return False;
         /* the CDE colors for them */
         if (pCurrentPalette)
             ExtThemeGenerate(pCurrentPalette);
@@ -2901,9 +2954,11 @@ ModernSet(Boolean on)
 }
 
 /* The terminal dtterminal runs: the first word of ~/.dt/terminal
- * ("auto" when missing): auto, kitty, ghostty or dtterm. */
-static const char *termChoices[] = { "auto", "kitty", "ghostty", "dtterm" };
-#define TERM_NCHOICES 4
+ * ("auto" when missing): auto, kitty, ghostty, konsole or dtterm. */
+static const char *termChoices[] = { "auto", "kitty", "ghostty", "konsole",
+                                     "dtterm" };
+#define TERM_NCHOICES 5
+#define TERM_DTTERM   4	/* always there */
 
 static Boolean
 TermInstalled(const char *prog)
@@ -2968,7 +3023,8 @@ TermLabel(int choice)
     {
     case 1: return "kitty";
     case 2: return "Ghostty";
-    case 3: return "dtterm";
+    case 3: return "Konsole";
+    case 4: return "dtterm";
     }
     {
         /* dtterminal keeps dtterm under 768 MB of memory */
@@ -2989,7 +3045,8 @@ TermLabel(int choice)
     }
     snprintf(buf, sizeof(buf), "%s (%s)", MSG(123, "Automatic"),
              TermInstalled("kitty") ? "kitty" :
-             TermInstalled("ghostty") ? "Ghostty" : "dtterm");
+             TermInstalled("ghostty") ? "Ghostty" :
+             TermInstalled("konsole") ? "Konsole" : "dtterm");
     return buf;
 }
 
@@ -3010,12 +3067,12 @@ SesRefresh(Panel *p)
     snprintf(label, sizeof(label), "%s: %s",
              MSG(81, "Window manager"), SesWmLabel());
     PanelAddItem(p, label, "DT_WINDOW_MANAGER", "");
-    snprintf(label, sizeof(label), "[%s] %s", ModernOn() ? "x" : " ",
-             MSG(107, "Use Xfce applications when installed (Thunar, "
-                      "Mousepad, Terminal; at once)"));
+    snprintf(label, sizeof(label), "%s: %s",
+             MSG(126, "Applications (file manager, editor, terminal)"),
+             ModernLabel(ModernRead()));
     PanelAddItem(p, label, "modern-apps", "");
     snprintf(label, sizeof(label), "%s: %s",
-             MSG(124, "Terminal (kitty and Ghostty in the CDE colors)"),
+             MSG(124, "Terminal (kitty, Ghostty and Konsole in the CDE colors)"),
              TermLabel(TermRead()));
     PanelAddItem(p, label, "terminal", "");
     PanelBusy(p, False);
@@ -3041,13 +3098,14 @@ SesToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
         return;
     if (row == SES_TERM)
     {
-        /* automatic -> kitty -> ghostty -> dtterm, the installed ones */
+        /* automatic -> kitty -> ghostty -> konsole -> dtterm, the
+         * installed ones */
         int c = TermRead(), n;
 
         for (n = 0; n < TERM_NCHOICES; n++)
         {
             c = (c + 1) % TERM_NCHOICES;
-            if (c == 0 || c == 3 || TermInstalled(termChoices[c]))
+            if (c == 0 || c == TERM_DTTERM || TermInstalled(termChoices[c]))
                 break;
         }
         if (!TermWrite(c))
@@ -3059,7 +3117,16 @@ SesToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
     }
     if (row == SES_MODERN)
     {
-        if (!ModernSet(!ModernOn()))
+        /* CDE -> Xfce -> KDE, the installed ones */
+        int c = ModernRead(), k;
+
+        for (k = 0; k < APPS_N; k++)
+        {
+            c = (c + 1) % APPS_N;
+            if (ModernInstalled(c))
+                break;
+        }
+        if (!ModernSet(c))
             ErrDialog(MSG(108, "The applications could not be changed."),
                       style.shell);
         SesRefresh(p);
