@@ -222,7 +222,7 @@ BAD_DBA:
 	    fprintf (aa_stderr,
 		PROGNAME"434 Invalid dba %ld.  "
 		"recno=%ld bitvec[%ld]=%02x  db_status=%d.\n",
-		objrecdba, recno, recno>>3, 1<<(recno%8), db_status);
+		(long) objrecdba, (long) recno, (long) (recno>>3), 1<<(recno%8), db_status);
 	    fflush (aa_stderr);
 	}
 	return FALSE;

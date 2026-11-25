@@ -266,7 +266,7 @@ set_time_submenu(Widget parent,
 
 	XmString	xmstr;
 	int		i, j, allocation_counter = 0;
-	char		buf[4], buf2[10];
+	char		buf[16], buf2[24];
 	Widget		menu, menuitem;
 	DisplayType	dt = get_int_prop(p, CP_DEFAULTDISP);
 	int		beg = get_int_prop(p, CP_DAYBEGIN);
@@ -299,18 +299,18 @@ set_time_submenu(Widget parent,
 	for (i = beg; i < end; i++) {
 		if (dt == HOUR12) {
 			if (i > 12)
-                       		 sprintf(buf, "%2d:", i-12);
+                       		 snprintf(buf, sizeof(buf), "%2d:", i-12);
                 	else
                         	if (i == 0)
                                 	cm_strcpy(buf, "12:");
                 	else
-                       		 sprintf(buf, "%2d:", i);	
+                       		 snprintf(buf, sizeof(buf), "%2d:", i);	
 		}
 		else
-			sprintf(buf, "%02d", i);
+			snprintf(buf, sizeof(buf), "%02d", i);
 
 		for (j = 0; j <= 45; j += 15) {
-			sprintf(buf2, "%s%02d", buf, j);
+			snprintf(buf2, sizeof(buf2), "%s%02d", buf, j);
 			(*widget_list)[allocation_counter++] =
 				menuitem = XtVaCreateWidget(buf2,
 				xmPushButtonGadgetClass, menu,

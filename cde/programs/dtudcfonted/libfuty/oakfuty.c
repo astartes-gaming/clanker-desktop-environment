@@ -905,8 +905,17 @@ GetTmpPath( char *path )
 	sp = buf + strlen(buf) -1 ;
 	if( *sp == '/' )	*sp-- = '\0' ;
 	sprintf( sp+1, "/%s", TEMPFILEKEY ) ;
-	/* Get temporary file name */
-	return mktemp( buf );
+	/* Make the temporary file (mkstemp: nobody can plant a symlink
+	 * under its name); callers write it with O_TRUNC or "> file" */
+	{
+	    int fd = mkstemp( buf );
+	    if( fd == -1 ){
+		free( buf );
+		return NULL;
+	    }
+	    close( fd );
+	}
+	return buf;
 }
 
 

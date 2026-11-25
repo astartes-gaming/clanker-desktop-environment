@@ -71,6 +71,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -131,6 +132,36 @@ extern "C" {
 #if defined(NEED_MMAP_WRAPPER)
 }
 #endif
+
+// A unique, not yet existing file name in ~/.dt/tmp (made 0700 when
+// missing, so nothing falls back to the shared /tmp).  mkstemp() picks
+// the name; the file is removed again because the caller opens it as a
+// new mailbox.  Returns malloc'd memory, or NULL.
+static char *
+dtmailTempName(const char *prefix)
+{
+    const char *home = getenv("HOME");
+    char dir[MAXPATHLEN+1];
+
+    if (home == NULL || *home == '\0') return NULL;
+    snprintf(dir, sizeof(dir), "%s/.dt", home);
+    (void) mkdir(dir, 0755);
+    snprintf(dir, sizeof(dir), "%s/%s", home, DtPERSONAL_TMP_DIRECTORY);
+    (void) mkdir(dir, 0700);
+
+    size_t len = strlen(dir) + strlen(prefix) + sizeof("/XXXXXX");
+    char *name = (char *) malloc(len);
+    if (name == NULL) return NULL;
+    snprintf(name, len, "%s/%sXXXXXX", dir, prefix);
+    int fd = mkstemp(name);
+    if (fd < 0) {
+	free(name);
+	return NULL;
+    }
+    close(fd);
+    unlink(name);
+    return name;
+}
 
 extern "C" {
 extern XtPointer _XmStringUngenerate (
@@ -1719,19 +1750,15 @@ PrintCmd::printit( int silent )
 {
     char *p;
     char *silent_str = "DTPRINTSILENT";
-    char *tmpdir = new char[MAXPATHLEN+1];
     DtMailEnv	mail_error;
     MsgScrollingList	*list;
     
     DebugPrintf(1, "%s: printit\n", name());
     
     // Create tmp file.
-    snprintf(tmpdir, MAXPATHLEN+1, "%s/%s", getenv("HOME"), DtPERSONAL_TMP_DIRECTORY);
-    if ((p = tempnam(tmpdir, "dtmail")) == NULL) {
-	delete [] tmpdir;
+    if ((p = dtmailTempName("dtmail")) == NULL) {
 	return;
     }
-    delete [] tmpdir;
     
     mail_error.clear();
     list = _parent->list();
@@ -2228,17 +2255,15 @@ SaveAsTextCmd::writeTextFromScrolledList(int fd)
     //
     // Create temp file.
     //
-    char *tmpdir = new char[MAXPATHLEN+1];
-    snprintf(tmpdir, MAXPATHLEN+1, "%s/%s", getenv("HOME"), DtPERSONAL_TMP_DIRECTORY);
-    if ((tmppath = tempnam(tmpdir, "dtmail")) == NULL) {
+    if ((tmppath = dtmailTempName("dtmail")) == NULL) {
+	char tmpdir[MAXPATHLEN+1];
+	snprintf(tmpdir, sizeof(tmpdir), "%s/%s", getenv("HOME"), DtPERSONAL_TMP_DIRECTORY);
 	snprintf(buf, sizeof(buf), CATGETS(DT_catd, 3, 51, "Unable to create %s."), tmpdir);
 	_genDialog->setToErrorDialog(CATGETS(DT_catd, 3, 52, "Mailer"), buf);
         helpId = DTMAILHELPNOCREATE;        
 	_genDialog->post_and_return(helpId);
-	delete [] tmpdir;
 	return;
     }
-    delete [] tmpdir;
 
     mail_error.clear();
     list = _roam_menu_window->list();

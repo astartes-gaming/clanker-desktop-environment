@@ -43,6 +43,15 @@ in the interface definition.*/
 #include "context.h"
 #include "signon.h"
 
+/* Trace a wide (M_WCHAR) string: m_trace() takes multibyte text */
+static void m_tracew(const M_WCHAR *w)
+  {
+    char *mb = MakeMByteString(w);
+
+    m_trace(mb);
+    m_free(mb, "multi-byte string");
+  }
+
 /* When an explicit or implied end-tag occurs */
 void m_endaction(M_ELEMENT m_elt)
   {
@@ -55,12 +64,9 @@ void m_endaction(M_ELEMENT m_elt)
           strcpy(buffer, "\n");
           m_trace(buffer);
           }
-        sprintf(buffer,
-		"%s%s%s",
-		m_etago,
-		m_nameofelt(m_elt),
-		m_tagc);
-        m_trace(buffer);
+        m_trace(m_etago);
+        m_tracew(m_nameofelt(m_elt));
+        m_trace(m_tagc);
         }
       m_toptstat = M_OTHER;
       }
@@ -169,15 +175,15 @@ void m_strtaction(M_ELEMENT m_elt)
     m_start = TRUE;
     m_getline(&m_stacktop->file, &m_stacktop->line);
     if (m_tagtrace) {
-      sprintf(buffer, "%s%s", m_stago, m_nameofelt(m_elt));
-      m_trace(buffer);
+      m_trace(m_stago);
+      m_tracew(m_nameofelt(m_elt));
       for (m_i = 0, m_par = m_element[m_elt - 1].parptr;
            m_i < m_element[m_elt - 1].parcount;
            m_i++, m_par++)
         if (m_stacktop->param[m_i]) {
-          sprintf(buffer, "%s%s%s",
-                  newpar, &m_pname[m_parameter[m_par - 1].paramname], quote);
-          m_trace(buffer);
+          m_trace(newpar);
+          m_tracew(&m_pname[m_parameter[m_par - 1].paramname]);
+          m_trace(quote);
           buffer[1] = M_EOS;
           for (m_p = m_stacktop->param[m_i] ; *m_p ; m_p++)
             if (*m_p != '"') {

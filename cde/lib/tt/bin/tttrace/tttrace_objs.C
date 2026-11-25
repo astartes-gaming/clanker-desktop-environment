@@ -37,6 +37,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/param.h>
 #include "tttrace_objs.h"
 #include "util/tt_trace.h"
 
@@ -222,7 +226,19 @@ _Tt_trace_optobj::getopts(int argc, char** argv)
 		// We need to set up a FIFO to stuff the output
 		// into, and give the FIFO name to the command/session
 				
-		_pipenm = tempnam(NULL, "trace");
+		// The FIFO goes in a private directory (mkdtemp),
+		// so nobody can plant something under its name.
+		char dirbuf[MAXPATHLEN];
+		const char *tmp = getenv("TMPDIR");
+		if (tmp == NULL || *tmp == '\0') tmp = "/tmp";
+		snprintf(dirbuf, sizeof(dirbuf), "%s/tttraceXXXXXX", tmp);
+		if (mkdtemp(dirbuf) == NULL) {
+			fprintf(stderr, "tttrace: mkdtemp(\"%s\"): %s\n",
+				dirbuf, strerror(errno));
+			exit(2);
+		}
+		_pipenm = dirbuf;
+		_pipenm = _pipenm.cat("/trace");
 		if (mkfifo(_pipenm, S_IWUSR|S_IRUSR) == -1) {
 			fprintf(stderr, "tttrace: mkfifo(\"%s\"): %s\n",
 				(char *)_pipenm, strerror(errno));

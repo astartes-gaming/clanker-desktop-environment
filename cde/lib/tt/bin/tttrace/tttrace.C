@@ -142,6 +142,16 @@ int main(int argc, char **argv)
 				_Tt_string msg = progname.cat( ": " );
 				msg = msg.cat( myopts.pipe_name() );
 				perror( msg );
+			} else {
+				// and the private directory it was in
+				_Tt_string pipenm = myopts.pipe_name();
+				char *dir = strdup( (char *)pipenm );
+				char *slash = dir ? strrchr( dir, '/' ) : 0;
+				if (slash) {
+					*slash = '\0';
+					rmdir( dir );
+				}
+				free( dir );
 			}
 		}
 	}

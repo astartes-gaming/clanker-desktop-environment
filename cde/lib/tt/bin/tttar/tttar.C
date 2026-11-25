@@ -79,15 +79,18 @@ main(int argc, char **argv)
 	verbosity = tttar->verbosity();
 
 	if (tttar->should_tar()) {
-		char *tempnam_result;
+		char dirbuf[MAXPATHLEN];
+		const char *tmp = getenv("TMPDIR");
 		/*
-		 * Create a temporary directory to which we can
+		 * Create a private temporary directory to which we can
 		 * chdir() in order to create or extract the
-		 * tttarfile for or from the tarfile.
+		 * tttarfile for or from the tarfile.  mkdtemp()
+		 * picks the name and creates it in one step.
 		 */
-		tttardir = tempnam_result = tempnam(NULL, "tttardir");
-		free(tempnam_result);
-		if (mkdir( (char *)tttardir, S_IRWXU ) == 0) {
+		if (tmp == NULL || *tmp == '\0') tmp = "/tmp";
+		snprintf(dirbuf, sizeof(dirbuf), "%s/tttardirXXXXXX", tmp);
+		if (mkdtemp(dirbuf) != NULL) {
+			tttardir = dirbuf;
 			tttarfile_name = tttardir.cat( "/tttarfile" );
 			should_tttar = TRUE;
 			if (    (tttar->mode() == EXTRACT)

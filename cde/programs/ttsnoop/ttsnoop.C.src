@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/types.h>
@@ -142,6 +143,34 @@ const char Usage[] =
 "-xrm \"*DtTerm.columns: n\"\n"
 "-xrm \"*DtTerm.mapOnOutput: true\"\n";
 
+// The trace and snoop FIFOs live in one private directory (mkdtemp),
+// so nobody can plant something under their names.
+static char *		fifoDir			= 0;
+
+static char *
+privateFifoName( const char *name )
+{
+	if (fifoDir == 0) {
+		const char *tmp = getenv( "TMPDIR" );
+		if (tmp == 0 || *tmp == '\0') tmp = "/tmp";
+		size_t len = strlen( tmp ) + sizeof "/ttsnoopXXXXXX";
+		fifoDir = (char *)malloc( len );
+		if (fifoDir == 0) return 0;
+		snprintf( fifoDir, len, "%s/ttsnoopXXXXXX", tmp );
+		if (mkdtemp( fifoDir ) == 0) {
+			clog << "ttsnoop: mkdtemp( \"" << fifoDir << "\" ) = ";
+			clog << strerror( errno ) << endl;
+			free( fifoDir );
+			fifoDir = 0;
+			return 0;
+		}
+	}
+	size_t len = strlen( fifoDir ) + strlen( name ) + 2;
+	char *path = (char *)malloc( len );
+	if (path != 0) snprintf( path, len, "%s/%s", fifoDir, name );
+	return path;
+}
+
 static void
 cleanUp()
 {
@@ -160,6 +189,9 @@ cleanUp()
 		} else {
 			unlinkTraceFile = False;
 		}
+	}
+	if (fifoDir != 0 && !unlinkSnoopFile && !unlinkTraceFile) {
+		rmdir( fifoDir );
 	}
 }
 
@@ -508,7 +540,8 @@ main(int argc, char **argv)
 	    //
 	    // Set up fifo for trace output
 	    //
-	    traceFile = tempnam( 0, "ttsnt" );
+	    traceFile = privateFifoName( "trace" );
+	    if (traceFile == 0) exit( 2 );
 	    if (mkfifo( traceFile, S_IWUSR | S_IRUSR ) == -1) {
 		    clog << "ttsnoop: mkfifo( \"" << traceFile << "\" ) = ";
 		    clog << strerror( errno ) << endl;
@@ -523,7 +556,8 @@ main(int argc, char **argv)
 	    //
 	    // Set up fifo for snoop output
 	    //
-	    snoopFile = tempnam( 0, "ttsnp" );
+	    snoopFile = privateFifoName( "snoop" );
+	    if (snoopFile == 0) exit( 2 );
 	    if (mkfifo( snoopFile, S_IWUSR | S_IRUSR ) == -1) {
 		    clog << "ttsnoop: mkfifo( \"" << snoopFile << "\" ) = ";
 		    clog << strerror( errno ) << endl;

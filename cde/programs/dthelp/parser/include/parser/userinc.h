@@ -33,5 +33,10 @@
 #include "delim.h"
 #include "entext.h"
 #include "signonx.h"
+/* Some pval.h files name parameter values LITERAL, NAME and TEXT,
+   like delim.h's token numbers; interface code means the values. */
+#undef LITERAL
+#undef NAME
+#undef TEXT
 #include "pval.h"
 #include "version.h"

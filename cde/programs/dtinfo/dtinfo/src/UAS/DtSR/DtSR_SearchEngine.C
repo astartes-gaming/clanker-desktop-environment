@@ -28,6 +28,8 @@
 #include <limits.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include <iostream>
 #include <fstream>
@@ -273,11 +275,16 @@ DtSR_SearchEngine::DtSR_SearchEngine()
     int len = ocf_tmpl.size();
     char* ocf_path = new char [len + 1];
     *((char *) memcpy(ocf_path, ocf_tmpl.c_str(), len) + len) = '\0';
-    ocf_path = mktemp(ocf_path);
+    // mkstemp() makes the file itself, so no symlink can be planted
+    // under its name in /tmp before we write it
+    int ocf_fd = mkstemp(ocf_path);
+    if (ocf_fd < 0) {
+	delete [] ocf_path;
+	throw(CASTEXCEPT Exception());
+    }
+    close(ocf_fd);
     f_config_path = ocf_path;
-
-    if (ocf_path)
-	free(ocf_path);
+    delete [] ocf_path;
 
     ofstream dtiocf((char*)f_config_path, ios::out);  // TODO
     if (! dtiocf) // could not open ocf_path in specified mode
