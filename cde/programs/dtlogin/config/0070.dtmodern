@@ -128,6 +128,26 @@ if [ -z "$DT_NO_KDE" ] && [ -z "$KDE_FULL_SESSION" ]; then
 fi
 
 #
+# 1a'. Settings > Session > Applications chosen with an older version:
+#      add the Mail, Calendar, Calculator and Printers actions it now
+#      sets too (once).
+#
+_dtm_t="$HOME/.dt/types/clanker-modern.dt"
+if [ -f "$HOME/.dt/modern-apps" ] && [ -f "$_dtm_t" ] &&
+   ! grep 'dtmodernapp mail' "$_dtm_t" >/dev/null 2>&1; then
+  for _dtm_a in "Dtmail Mail DtMail mail" "Dtcm Calendar DtCM calendar" \
+                "Dtcalc Calculator Dtcalc calc" \
+                "DtPrintManager Printers Fpprnt printers"; do
+    # (read, not set --: this file is sourced, "$@" is Xsession's)
+    echo "$_dtm_a" | while read _dtm_n _dtm_l _dtm_i _dtm_r; do
+      printf '\nACTION %s\n{\n  LABEL\t\t%s\n  ICON\t\t%s\n  TYPE\t\tCOMMAND\n  WINDOW_TYPE\tNO_STDIO\n  EXEC_STRING\tdtmodernapp %s\n}\n' \
+        "$_dtm_n" "$_dtm_l" "$_dtm_i" "$_dtm_r" >> "$_dtm_t"
+    done
+  done
+fi
+unset _dtm_t _dtm_a
+
+#
 # 1b. Window manager.  xfwm4 when installed (it manages the windows;
 #     dtwm still draws the Front Panel, backdrops and Workspace menu),
 #     otherwise dtwm.  dtsession reads DT_WINDOW_MANAGER unless the

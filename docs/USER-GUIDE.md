@@ -403,8 +403,7 @@ have something installed:
 | Print Manager (dtprintinfo) | system-config-printer | KDE's printer settings |
 
 For mail, calendar and calculator the first one installed is used (the
-"Xfce" column also covers the GNOME and MATE ones). If you chose a set
-before this version, choose it again once so the new buttons follow it.
+"Xfce" column also covers the GNOME and MATE ones).
 
 The Xfce applications use your CDE palette and follow palette changes
 live; Konsole gets the CDE color scheme. When the chosen application is
