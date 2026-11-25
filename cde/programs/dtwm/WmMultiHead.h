@@ -35,6 +35,12 @@ typedef struct _WmHeadInfo {
 WmHeadInfo_t *GetHeadInfo(const ClientData *pcd);
 WmHeadInfo_t *GetHeadInfoById(int id);
 
+/* The primary monitor (RandR's primary output, else the first head,
+ * else the whole screen), and whether a rectangle's middle is on a
+ * monitor (not lost in a gap or off screen). */
+void GetPrimaryHead(Display *dpy, int screen, int *x, int *y, int *w, int *h);
+Boolean RectOnAHead(Display *dpy, int screen, int x, int y, int w, int h);
+
 /* Monitor hotplug / resolution changes (RandR, when available). */
 void InitScreenChangeEvents(void);
 Boolean HandleScreenChangeEvent(XEvent *event);
