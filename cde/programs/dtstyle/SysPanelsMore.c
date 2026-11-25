@@ -707,7 +707,7 @@ CtBattery(const char *name, char *out, size_t len)
         if (cap[0] && (strstr(e->d_name, "controller") ||
                        (model[0] && strstr(name, model))))
         {
-            snprintf(out, len, MSG(189, ", battery %s%%"), cap);
+            snprintf(out, len, "%s %s%%", MSG(189, ", battery"), cap);
             break;
         }
     }
@@ -1368,7 +1368,8 @@ InLayoutChosen(const char *choice, XtPointer data)
     for (c = code; *c; c++)
         if (!isalnum((unsigned char) *c) && *c != '_' && *c != '-')
             return;
-    if (strlen(inKbd.layouts) + strlen(code) + 2 >= sizeof(inKbd.layouts))
+    if (strlen(inKbd.layouts) + strlen(code) + 2 >= sizeof(inKbd.layouts) ||
+        strlen(inKbd.variants) + 2 >= sizeof(inKbd.variants))
         return;
     if (inKbd.layouts[0])
     {

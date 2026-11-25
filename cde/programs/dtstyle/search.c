@@ -636,14 +636,19 @@ UrlDecode(const char *in, char *out, size_t len)
     out[k] = '\0';
 }
 
+/* The recently used files, read once per search window (the file can
+ * be large; it is not re-read at every key). */
+static char **recentFiles;
+static int    nRecentFiles = -1;
+
 static void
-Recent(const char *text)
+ReadRecent(void)
 {
     char        path[PATH_MAX], line[4096];
     const char *home = getenv("HOME"), *xdg = getenv("XDG_DATA_HOME");
     FILE       *fp;
-    int         found = 0;
 
+    nRecentFiles = 0;
     if (xdg && *xdg == '/')
         snprintf(path, sizeof(path), "%s/recently-used.xbel", xdg);
     else if (home)
@@ -652,11 +657,9 @@ Recent(const char *text)
         return;
     if ((fp = fopen(path, "r")) == NULL)
         return;
-    while (fgets(line, sizeof(line), fp) && found < 5)
+    while (fgets(line, sizeof(line), fp) && nRecentFiles < 2000)
     {
         char *h = strstr(line, "href=\"file://"), *e, file[PATH_MAX];
-        const char *base;
-        char  label[PATH_MAX + 64];
 
         if (!h)
             continue;
@@ -665,14 +668,32 @@ Recent(const char *text)
             continue;
         *e = '\0';
         UrlDecode(h, file, sizeof(file));
-        base = strrchr(file, '/');
+        recentFiles = (char **) XtRealloc((char *) recentFiles,
+                                          (nRecentFiles + 1) * sizeof(char *));
+        recentFiles[nRecentFiles++] = XtNewString(file);
+    }
+    fclose(fp);
+}
+
+static void
+Recent(const char *text)
+{
+    int i, found = 0;
+
+    if (nRecentFiles < 0)
+        ReadRecent();
+    /* the newest are last in the file */
+    for (i = nRecentFiles - 1; i >= 0 && found < 5; i--)
+    {
+        const char *file = recentFiles[i], *base = strrchr(file, '/');
+        char        label[PATH_MAX + 64];
+
         if (!HasCase(base ? base + 1 : file, text) || access(file, F_OK) != 0)
             continue;
         FileLabel("Recent: ", file, label, sizeof(label));
         AddAfter(HIT_RECENT, label, FileIcon(file), file);
         found++;
     }
-    fclose(fp);
 }
 
 /* ------------------------------------------------------------------ */
