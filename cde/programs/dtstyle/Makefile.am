@@ -19,7 +19,9 @@ dtstyle_SOURCES = Main.c MainWin.c Font.c Audio.c Startup.c Mouse.c	\
 		  Startup.h ColorEdit.h Dtwm.h I18nMain.h MainWin.h	\
 		  Resource.h ColorFile.h Font.h I18nUtil.h Mouse.h	\
 		  SaveRestore.h ExtTheme.c ExtTheme.h Touchpad.c Touchpad.h Access.c Access.h \
-		  SysCmd.c SysCmd.h SysPanels.c SysPanels.h
+		  SysCmd.c SysCmd.h SysPanels.c SysPanels.h search.c search.h
+
+EXTRA_DIST = SysPanelsMore.c
 
 # Applies the touchpad settings at login (Xsession.d/0070.dtmodern).
 dttouchpad_SOURCES = dttouchpad.c Touchpad.c Touchpad.h
@@ -30,7 +32,7 @@ dtaccess_SOURCES = dtaccess.c Access.c Access.h
 dtaccess_LDADD = $(XTOOLLIB)
 
 # Find and start an application by typing (Workspace menu, Front Panel)
-dtappfind_SOURCES = dtappfind.c applist.c applist.h
+dtappfind_SOURCES = dtappfind.c applist.c applist.h search.c search.h
 dtappfind_CPPFLAGS = -DCDE_LOGFILES_TOP=\"$(CDE_LOGFILES_TOP)\" \
 	-DCDE_INSTALLATION_TOP=\"$(CDE_INSTALLATION_TOP)\" $(DT_INCDIR)
 dtappfind_LDADD = $(DTCLIENTLIBS) $(PNGLIB) $(XTOOLLIB)

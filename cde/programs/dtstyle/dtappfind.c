@@ -59,6 +59,7 @@
 #include <Dt/Dnd.h>
 #include <Dt/DtXinerama.h>
 #include "applist.h"
+#include "search.h"
 
 #define MAX_APPS 2000
 #define CDE_INSTALLATION_TOP_BIN "/usr/dt/bin"
@@ -488,6 +489,9 @@ ReadApps(void)
     shown = (int *) XtMalloc((nApps ? nApps : 1) * sizeof(int));
 }
 
+static Boolean searchMode;
+static int RowCount(void);
+
 static Boolean
 Contains(const char *hay, const char *want, size_t n)
 {
@@ -533,12 +537,62 @@ Filter(const char *want)
                 shown[k++] = i;
         }
     nShown = k;
-    AppListSetCount(appList, k);
+    if (searchMode)
+    {
+        /* an empty search field shows nothing, as other runners do */
+        if (n == 0)
+            nShown = 0;
+        SearchQuery(want);
+    }
+    AppListSetCount(appList, RowCount());
 }
 
 /* -pick: choosing an application prints its .desktop file instead of
  * starting it (a Front Panel drawer's Install Icon adds it). */
 static Boolean pick = False;
+
+/* -search: the Front Panel's Search button.  The rows are the search
+ * sources' (search.c) around the applications: a calculator result,
+ * then applications, then Settings pages, windows, files, the web. */
+static Boolean searchMode = False;
+
+static int
+AppRows(void)
+{
+    if (!searchMode)
+        return nShown;
+    if (!searchConfig.apps)
+        return 0;
+    return nShown < searchConfig.maxApps ? nShown : searchConfig.maxApps;
+}
+
+static int
+RowCount(void)
+{
+    if (!searchMode)
+        return nShown;
+    return SearchBefore() + AppRows() + SearchAfter();
+}
+
+/* The application of a row (0-based), or -1 (another kind of row). */
+static int
+RowApp(int row)
+{
+    if (searchMode)
+        row -= SearchBefore();
+    return (row >= 0 && row < AppRows()) ? shown[row] : -1;
+}
+
+/* The search hit of a row, or NULL. */
+static const Hit *
+RowHit(int row)
+{
+    if (!searchMode)
+        return NULL;
+    if (row < SearchBefore())
+        return SearchHitBefore(row);
+    return SearchHitAfter(row - SearchBefore() - AppRows());
+}
 
 /* A game (Categories=Game), with Settings > Session > Games set to
  * gamescope (~/.dt/gamescope).  Steam entries run the Steam client,
@@ -567,10 +621,17 @@ Launch(int pos)
 {
     App *a;
     pid_t pid;
+    int   ai;
 
-    if (pos < 1 || pos > nShown)
+    if (pos < 1 || pos > RowCount())
         return;
-    a = &apps[shown[pos - 1]];
+    if ((ai = RowApp(pos - 1)) < 0)
+    {
+        if (SearchActivate(RowHit(pos - 1), field))
+            exit(0);
+        return;
+    }
+    a = &apps[ai];
     if (pick)
     {
         printf("%s\n", a->path);
@@ -700,7 +761,7 @@ RunCommand(const char *cmd)
 static void
 ActivateCB(Widget w, XtPointer client, XtPointer call)
 {
-    if (nShown == 0)
+    if (RowCount() == 0)
     {
         char *t = XmTextFieldGetString(w);
 
@@ -722,14 +783,28 @@ ActivateRow(int row)
 static const char *
 AppText(int row)
 {
-    return (row >= 0 && row < nShown) ? apps[shown[row]].label : "";
+    int        ai = RowApp(row);
+    const Hit *h;
+
+    if (ai >= 0)
+        return apps[ai].label;
+    h = RowHit(row);
+    return h ? h->label : "";
 }
 
 static const char *
 AppIcon(int row)
 {
-    const char *i = (row >= 0 && row < nShown) ? apps[shown[row]].icon : "";
+    int         ai = RowApp(row);
+    const Hit  *h;
+    const char *i;
 
+    if (ai < 0)
+    {
+        h = RowHit(row);
+        return h ? h->icon : NULL;
+    }
+    i = apps[ai].icon;
     return (i && *i) ? i : "application-x-executable";
 }
 
@@ -770,7 +845,7 @@ KeyEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
         exit(0);
     /* Left and Right in an empty search field: the previous or next
      * category (the field has nothing to move through then) */
-    if ((ks == XK_Left || ks == XK_Right) && w == field)
+    if ((ks == XK_Left || ks == XK_Right) && w == field && !searchMode)
     {
         char *t = XmTextFieldGetString(field);
         Boolean empty = !t || !*t;
@@ -790,7 +865,7 @@ KeyEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
             return;
         }
     }
-    if (nShown == 0 || (ks != XK_Up && ks != XK_Down &&
+    if (RowCount() == 0 || (ks != XK_Up && ks != XK_Down &&
                         ks != XK_Page_Up && ks != XK_Page_Down))
         return;
     *cont = False;
@@ -801,7 +876,7 @@ KeyEH(Widget w, XtPointer client, XEvent *ev, Boolean *cont)
     else if (ks == XK_Page_Up) p -= visible;
     else p += visible;
     if (p < 1) p = 1;
-    if (p > nShown) p = nShown;
+    if (p > RowCount()) p = RowCount();
     AppListSelect(appList, p - 1);
 }
 
@@ -1016,10 +1091,10 @@ ConvertCB(Widget w, XtPointer client, XtPointer call)
     DtDndConvertCallbackStruct *c = (DtDndConvertCallbackStruct *) call;
 
     if (c->reason == DtCR_DND_CONVERT_DATA && dragRow >= 1 &&
-        dragRow <= nShown)
+        RowApp(dragRow - 1) >= 0)
     {
         c->dragData->data.files[0] =
-            XtNewString(apps[shown[dragRow - 1]].path);
+            XtNewString(apps[RowApp(dragRow - 1)].path);
         c->status = DtDND_SUCCESS;
     }
     else if (c->reason == DtCR_DND_CONVERT_DATA)
@@ -1042,11 +1117,42 @@ DragRow(int row, XEvent *ev)
     static XtCallbackRec finishRec[] = { { DragFinishCB, NULL }, { NULL, NULL } };
 
     dragRow = row + 1;
-    if (dragRow < 1 || dragRow > nShown)
+    if (dragRow < 1 || RowApp(row) < 0)
         return;
     (void) DtDndVaDragStart(AppListWidget(appList), ev,
                             DtDND_FILENAME_TRANSFER, 1, XmDROP_COPY,
                             convertRec, finishRec, NULL);
+}
+
+/* Files found in the background (search.c): the rows grew; keep the
+ * selected row. */
+static void
+SearchChanged(void)
+{
+    int sel = AppListSelected(appList);
+
+    AppListSetCount(appList, RowCount());
+    if (sel > 0 && sel < RowCount())
+        AppListSelect(appList, sel);
+}
+
+/* Settings > Front Panel > Position: top */
+static Boolean
+PanelOnTop(void)
+{
+    char  path[PATH_MAX], word[16] = "";
+    const char *home = getenv("HOME");
+    FILE *fp;
+
+    if (!home)
+        return False;
+    snprintf(path, sizeof(path), "%s/.dt/frontpanel-position", home);
+    if ((fp = fopen(path, "r")) == NULL)
+        return False;
+    if (fscanf(fp, "%15s", word) != 1)
+        word[0] = '\0';
+    fclose(fp);
+    return strcmp(word, "top") == 0;
 }
 
 int
@@ -1082,17 +1188,26 @@ main(int argc, char **argv)
         pick = True;
         argc = 1;
     }
+    if (argc == 2 && strcmp(argv[1], "-search") == 0)
+    {
+        searchMode = True;
+        menu = True;			/* placed, closes on focus loss */
+        argc = 1;
+        SearchReadConfig();
+    }
 
     XtSetLanguageProc(NULL, NULL, NULL);
     top = XtVaAppInitialize(&app, "Dtappfind", NULL, 0, &argc, argv, NULL,
-                            XmNtitle, pick ? "Add to Drawer" : "Applications",
-                            XmNiconName, pick ? "Add to Drawer" : "Applications",
+                            XmNtitle, pick ? "Add to Drawer" :
+                                      searchMode ? "Search" : "Applications",
+                            XmNiconName, pick ? "Add to Drawer" :
+                                      searchMode ? "Search" : "Applications",
                             NULL);
     {
         char name[64];
 
-        snprintf(name, sizeof(name), "_CLANKER_APPFIND_S%d",
-                 DefaultScreen(XtDisplay(top)));
+        snprintf(name, sizeof(name), searchMode ? "_CLANKER_SEARCH_S%d" :
+                 "_CLANKER_APPFIND_S%d", DefaultScreen(XtDisplay(top)));
         selAtom = XInternAtom(XtDisplay(top), name, False);
         cmdAtom = XInternAtom(XtDisplay(top), "_CLANKER_APPFIND_CMD", False);
         /* a pick window is its own: no hand-off to an open menu */
@@ -1109,6 +1224,8 @@ main(int argc, char **argv)
                                    NULL);
     s = XmStringCreateLocalized(pick ?
         "Choose the application to add to the drawer (Enter or double-click):" :
+        searchMode ?
+        "Search applications, settings, windows, files and the web; calculate:" :
         "Search, or type a command to run:");
     label = XtVaCreateManagedWidget("label", xmLabelWidgetClass, form,
                                     XmNlabelString, s,
@@ -1148,18 +1265,28 @@ main(int argc, char **argv)
         XtSetArg(a[n], XmNwidth, widest + APPLIST_ICON + 40); n++;  /* icon gap, shadows */
     }
     XtSetArg(a[n], XmNheight, NCATS * 26 + 8); n++;
-    catList = AppListCreate(form, "categories", a, n, field, CatText,
-                            CatIcon, CategoryCB, NULL, NULL);
+    if (!searchMode)
+        catList = AppListCreate(form, "categories", a, n, field, CatText,
+                                CatIcon, CategoryCB, NULL, NULL);
     n = 0;
     XtSetArg(a[n], XmNtopAttachment, XmATTACH_WIDGET); n++;
     XtSetArg(a[n], XmNtopWidget, field); n++;
     XtSetArg(a[n], XmNtopOffset, 6); n++;
-    XtSetArg(a[n], XmNleftAttachment, XmATTACH_WIDGET); n++;
-    XtSetArg(a[n], XmNleftWidget, AppListWidget(catList)); n++;
-    XtSetArg(a[n], XmNleftOffset, 6); n++;
+    if (searchMode)
+    {
+        XtSetArg(a[n], XmNleftAttachment, XmATTACH_FORM); n++;
+        XtSetArg(a[n], XmNwidth, 600); n++;
+        XtSetArg(a[n], XmNheight, 14 * 26 + 8); n++;
+    }
+    else
+    {
+        XtSetArg(a[n], XmNleftAttachment, XmATTACH_WIDGET); n++;
+        XtSetArg(a[n], XmNleftWidget, AppListWidget(catList)); n++;
+        XtSetArg(a[n], XmNleftOffset, 6); n++;
+        XtSetArg(a[n], XmNwidth, 330); n++;
+    }
     XtSetArg(a[n], XmNrightAttachment, XmATTACH_FORM); n++;
     XtSetArg(a[n], XmNbottomAttachment, XmATTACH_FORM); n++;
-    XtSetArg(a[n], XmNwidth, 330); n++;
     appList = AppListCreate(form, "apps", a, n, field, AppText, AppIcon,
                             NULL, ActivateRow, DragRow);
 
@@ -1167,8 +1294,13 @@ main(int argc, char **argv)
     XtAddCallback(field, XmNactivateCallback, ActivateCB, NULL);
     XtAddEventHandler(field, KeyPressMask, False, KeyEH, NULL);
 
-    AppListSetCount(catList, NCATS);
-    AppListAutoHideScrollBar(catList);
+    if (catList)
+    {
+        AppListSetCount(catList, NCATS);
+        AppListAutoHideScrollBar(catList);
+    }
+    if (searchMode)
+        SearchInit(top, app, SearchChanged);
     Filter("");
     if (menu)
         XtSetMappedWhenManaged(top, False);
@@ -1209,7 +1341,12 @@ main(int argc, char **argv)
         }
         XtVaGetValues(top, XmNwidth, &w, XmNheight, &h, NULL);
         x = mx + (sw - (int) w) / 2;
-        y = my + sh - (int) h - 110;
+        if (searchMode)
+            y = my + sh / 6;		/* high, as runners open */
+        else if (PanelOnTop())
+            y = my + 110;		/* below a Front Panel at the top */
+        else
+            y = my + sh - (int) h - 110;
         if (y < my)
             y = my;
         XtVaSetValues(top, XmNx, x, XmNy, y, NULL);

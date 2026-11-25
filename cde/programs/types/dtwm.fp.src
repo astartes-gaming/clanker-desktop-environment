@@ -288,9 +288,9 @@ CONTROL Keyboard
   CONTAINER_NAME	Switch
   CONTAINER_TYPE	SWITCH
   POSITION_HINTS	3
-  ICON			DtAccess
-  LABEL			Accessibility
-  PUSH_ACTION		DtAccessibility
+  ICON			DtSearch
+  LABEL			Search
+  PUSH_ACTION		DtSearch
   HELP_TOPIC		FPOnItemSwitch
   HELP_VOLUME		FPanel
 }
@@ -429,6 +429,17 @@ CONTROL SoundSettings
   ICON			Dtaudio
   LABEL			Sound Settings
   PUSH_ACTION		DtSoundSettings
+}
+
+CONTROL Accessibility
+{
+  TYPE			icon
+  CONTAINER_NAME	QuickSettingsSubpanel
+  CONTAINER_TYPE	SUBPANEL
+  POSITION_HINTS	7
+  ICON			DtAccess
+  LABEL			Accessibility
+  PUSH_ACTION		DtAccessibility
 }
 
 SUBPANEL PersPrintersSubpanel

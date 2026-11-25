@@ -99,12 +99,12 @@ over. Displays with 256 colors or fewer, and `DT_HELLO_CLASSIC=1` in
 |---|---|
 | Clock, calendar, Home Folder, Text Editor, Mail | Start those applications. Click the small arrow above a button to open its drawer; it closes when you start something from it, click the arrow again, or click the desktop. |
 | Lock (padlock) | Locks the screen. |
-| Accessibility (below the lock) | Opens Settings > Accessibility: sticky, slow and bounce keys, mouse keys, large pointer, larger controls, and the **On-Screen Keyboard** button. |
+| Search (below the lock) | Search applications, settings, windows, files and the web; calculate; run a command (see [Search](#search)). Accessibility is in the Settings drawer. |
 | Workspace buttons | Switch workspaces. Double-click a name to rename it. |
 | Light above Exit | Blinks while an application starts. Click it to open the **Task Manager**. |
 | Exit | Logs out. |
 | Printer, Settings, Applications, Help, Trash | Start those. |
-| Settings drawer (arrow above Settings) | Volume up and down, mute, screen brightness up and down, and the sound settings (pavucontrol, alsamixer… whichever is installed). |
+| Settings drawer (arrow above Settings) | Volume up and down, mute, screen brightness up and down, the sound settings (pavucontrol, alsamixer… whichever is installed), and Accessibility. |
 | System tray (right end) | Icons of running applications (network, sound, chat, …). Click or right-click them as usual. |
 
 **Moving the panel**: drag it by the handles at either end. It reserves
@@ -158,10 +158,42 @@ icons. `DT_NO_SYSTRAY=1` turns the tray off.
 | Session | Options in `~/.dtprofile` (below), Xfce or KDE applications, the terminal, and games in Gamescope (when installed) |
 | Accessibility | Sticky, slow and bounce keys, mouse keys, large pointer, on-screen keyboard at login |
 | Shortcuts | Your own keyboard shortcuts: **Add...**, press the keys (with Ctrl, Alt or Super, or a function key), type the command. They work in every application, also with xfwm4. Kept in `~/.dt/shortcuts.dtwmrc`. |
+| Input | Keyboard layouts (add, remove; **Windows+Space**, Alt+Shift or Ctrl+Shift switches between them), Caps Lock as Ctrl or Escape, a Compose key for accents |
+| Controllers | Game controllers that are connected (with their battery when reported): **Test...** (jstest-gtk), **Buttons and Mouse...** (AntiMicroX: use a controller as a mouse and keyboard, remap buttons), **Pair...** (Bluetooth) |
+| Sound | Output and input devices: pick the one in use, volume, mute, the mixer (PipeWire or PulseAudio) |
+| Displays | Monitors: extend, mirror, only one, primary, **Arrange...** (resolution, rotation, position); remembered per set of monitors |
+| Borders | Window frames: which title bar buttons (minimize, maximize, close), border width (thicker is easier to grab) |
+| Search | What the Front Panel's **Search** finds (below) |
+| Users | Your account: password, full name, picture (`~/.face`, shown by login screens); **Other Users...** opens the system's user tool |
+| Region | Language, and separately date/time, number, currency and paper formats (from the next login, kept in `~/.dt/region`); time zone; setting the clock from the Internet |
+| Drives | USB drives, memory cards and discs: mount them when inserted, open a File Manager window, notify. Programs on them are never run |
 | Network, Bluetooth, Updates | Wi-Fi, Bluetooth devices, system updates (shown when the system supports them). With [topgrade](https://github.com/topgrade-rs/topgrade) installed, Updates also has **Update Everything**: Flatpak, Snap, firmware and more |
 
 Changes take effect at once, except the Session options, which are used
 at the next login.
+
+## Search
+
+The magnifier button on the Front Panel (where Accessibility was; that
+is now in the Settings drawer and Settings) opens **Search**, like
+Spotlight or KRunner. Type, then pick a row with Up/Down and Enter:
+
+- **Applications**, by name, what they are ("browser") or keywords.
+- A **calculation**: `2*(3+4)` shows `= 14`; Enter copies the result
+  (with `xclip` or `xsel` installed; otherwise it goes in the field).
+- **Settings pages** by what they set ("wallpaper", "wifi", "layout").
+- **Open windows**, by title: Enter switches to it.
+- **Recent files**, and **files and folders by name**, searched in the
+  background: with KDE's Baloo index, plocate or locate when present,
+  otherwise the home folder five levels deep (hidden folders skipped).
+- **Search the web** with your engine (DuckDuckGo, Google, Bing,
+  Startpage, Brave Search, Ecosia, Qwant, Wikipedia).
+- **Run** what you typed, when it starts with a program.
+
+Settings > Search turns each of these on or off, and sets the engine,
+the file search tool and how many rows show. The button again, Escape,
+or clicking elsewhere closes it. It is `dtappfind -search`; the
+settings are in `~/.dt/search`.
 
 ## Windows
 

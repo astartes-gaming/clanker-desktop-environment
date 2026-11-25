@@ -22,7 +22,7 @@ bin_SCRIPTS = dtsession_res
 dist_bin_SCRIPTS = dthwkeys dtmixer dtscreenshot dtsleeplock dtcompositor dtpower dtaltwm dtwayland \
 		   dtxfwmtheme dttaskmgr dtkeyboard dtmodernapp dtxsettings dtterminal \
 		   dtdisplays dtgamescope \
-		   dtnotify dtclipboard
+		   dtnotify dtclipboard dtmedia
 
 # freedesktop.org entries for CDE's own applications, so the
 # application menu (dtappfind) files them in the usual categories.

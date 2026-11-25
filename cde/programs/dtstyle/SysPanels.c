@@ -3714,3 +3714,7 @@ popup_shortcutsBB(Widget shell)
         XtManageChild(scPanel->dialog);
     XMapRaised(style.display, XtWindow(XtParent(scPanel->dialog)));
 }
+
+/* Search, Displays, Sound, Controllers, Users, Region, Input, Removable
+ * Media and Window Borders: they use the generic Panel above. */
+#include "SysPanelsMore.c"
