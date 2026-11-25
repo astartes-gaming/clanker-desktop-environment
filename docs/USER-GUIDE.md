@@ -157,7 +157,7 @@ icons. `DT_NO_SYSTRAY=1` turns the tray off.
 | Front Panel | What each button opens, and the drawers (see above) |
 | Session | Options in `~/.dtprofile` (below), Xfce or KDE applications, the terminal, and games in Gamescope (when installed) |
 | Accessibility | Sticky, slow and bounce keys, mouse keys, large pointer, on-screen keyboard at login |
-| Shortcuts | Your own keyboard shortcuts: **Add...**, press the keys (with Ctrl, Alt or Super, or a function key), type the command. They work in every application, also with xfwm4. Kept in `~/.dt/shortcuts.dtwmrc`. |
+| Shortcuts | Your own keyboard shortcuts: **Add...**, press the keys (with Ctrl, Alt or Super, or a function key), type the command. They work in every application, also with xfwm4. The desktop's own shortcuts are listed below yours; one of yours with the same keys replaces it (e.g. your own Windows+E). Kept in `~/.dt/shortcuts.dtwmrc`. |
 | Input | Keyboard layouts (add, remove; **Windows+Space**, Alt+Shift or Ctrl+Shift switches between them), Caps Lock as Ctrl or Escape, a Compose key for accents |
 | Controllers | Game controllers that are connected (with their battery when reported): **Test...** (jstest-gtk), **Buttons and Mouse...** (AntiMicroX: use a controller as a mouse and keyboard, remap buttons), **Pair...** (Bluetooth) |
 | Sound | Output and input devices: pick the one in use, volume, mute, the mixer (PipeWire or PulseAudio) |

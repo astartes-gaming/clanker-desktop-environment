@@ -3595,6 +3595,33 @@ ScRefresh(Panel *p)
                  scList[i].cmd);
         PanelAddItem(p, label, scList[i].label, NULL);
     }
+    /* the desktop's own, for reference (sys.dtwmrc) */
+    {
+        static const char *const builtin[][2] = {
+            { "Windows", "Application menu" },
+            { "Windows+E", "Home folder" }, { "Windows+R", "Run" },
+            { "Windows+T", "Terminal" }, { "Windows+A", "Application Manager" },
+            { "Windows+I", "Settings" }, { "Windows+L", "Lock the screen" },
+            { "Windows+P", "Displays: extend, mirror, one screen" },
+            { "Windows+V", "Clipboard history" },
+            { "Windows+Left/Right", "Tile a window to that half" },
+            { "Windows+Up/Down", "Maximize / restore" },
+            { "Alt+Tab", "Switch windows" }, { "Alt+F2", "Run" },
+            { "Alt+Space", "Window menu" },
+            { "Print", "Screenshot" }, { "Alt+Print", "Screenshot of a window" },
+        };
+        size_t k;
+
+        PanelAddItem(p, " ", "", NULL);
+        PanelAddItem(p, MSG(284, "Built in (add one of your own with the "
+                                 "same keys to change it):"), "", NULL);
+        for (k = 0; k < sizeof(builtin) / sizeof(builtin[0]); k++)
+        {
+            snprintf(label, sizeof(label), "  %-20s %s", builtin[k][0],
+                     builtin[k][1]);
+            PanelAddItem(p, label, "", NULL);
+        }
+    }
     PanelSetStatus(p, scN ? MSG(114, "Your keyboard shortcuts "
                                      "(they work in every application):")
                           : MSG(122, "No shortcuts yet: press Add..."));
