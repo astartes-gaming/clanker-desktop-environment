@@ -167,7 +167,7 @@ icons. `DT_NO_SYSTRAY=1` turns the tray off.
 | Users | Your account: password, full name, picture (`~/.face`, shown by login screens); **Other Users...** opens the system's user tool |
 | Region | Language, and separately date/time, number, currency and paper formats (from the next login, kept in `~/.dt/region`); time zone; setting the clock from the Internet |
 | Drives | USB drives, memory cards and discs: mount them when inserted, open a File Manager window, notify. Programs on them are never run |
-| Network, Bluetooth, Updates | Wi-Fi, Bluetooth devices, system updates (shown when the system supports them). With [topgrade](https://github.com/topgrade-rs/topgrade) installed, Updates also has **Update Everything**: Flatpak, Snap, firmware and more |
+| Network, Bluetooth, Updates | Wi-Fi; **VPN...** (turn VPN and WireGuard connections on and off), **Airplane Mode** (all radios off, or back on); Bluetooth devices; system updates (shown when the system supports them). With [topgrade](https://github.com/topgrade-rs/topgrade) installed, Updates also has **Update Everything**: Flatpak, Snap, firmware and more |
 
 Changes take effect at once, except the Session options, which are used
 at the next login.

@@ -732,6 +732,10 @@ NetToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
     NetRun(p, argv);
 }
 
+/* SysPanelsMore.c */
+static void NetVpnCB(Widget w, XtPointer client_data, XtPointer call_data);
+static void NetAirplaneCB(Widget w, XtPointer client_data, XtPointer call_data);
+
 void
 popup_networkBB(Widget shell)
 {
@@ -746,6 +750,8 @@ popup_networkBB(Widget shell)
         PanelButton(net, MSG(5, "Connect"), NetConnectCB);
         PanelButton(net, MSG(6, "Disconnect"), NetDisconnectCB);
         PanelButton(net, MSG(7, "Rescan"), NetRescanCB);
+        PanelButton(net, MSG(272, "VPN..."), NetVpnCB);
+        PanelButton(net, MSG(273, "Airplane Mode"), NetAirplaneCB);
         if (SysCmdHave("nm-connection-editor"))
             PanelButton(net, MSG(8, "Edit Connections..."), NetEditCB);
         XtAddCallback(net->list, XmNdefaultActionCallback, NetConnectCB,

@@ -1735,3 +1735,90 @@ popup_bordersBB(Widget shell)
 {
     ShowPanel(&wbPanel, WbMake);
 }
+
+/* ------------------------------------------------------------------ */
+/* Network page extras: VPN connections, airplane mode (nmcli)         */
+/* ------------------------------------------------------------------ */
+
+/* "NAME (on)" / "NAME (off)" rows: choosing one turns it the other way */
+static void
+NetVpnChosen(const char *choice, XtPointer data)
+{
+    char   name[256];
+    size_t n;
+    Boolean on;
+    char  *argv[] = { "nmcli", "connection", NULL, "id", name, NULL };
+
+    snprintf(name, sizeof(name), "%s", choice);
+    n = strlen(name);
+    on = n > 5 && strcmp(name + n - 5, " (on)") == 0;
+    if (on)
+        name[n - 5] = '\0';
+    else if (n > 6 && strcmp(name + n - 6, " (off)") == 0)
+        name[n - 6] = '\0';
+    argv[2] = on ? "down" : "up";
+    Run((Panel *) data, argv);
+}
+
+static void
+NetVpnListDone(int rc, char *output, XtPointer data)
+{
+    char  *line, *text = output, **items = NULL, *f[4];
+    int    n = 0, i;
+
+    while ((line = NextLine(&text)) != NULL)
+    {
+        char row[300];
+
+        /* NAME:TYPE:DEVICE (terse, ':' escaped) */
+        if (SysCmdSplitTerse(line, f, 4) < 3)
+            continue;
+        if (!strstr(f[1], "vpn") && !strstr(f[1], "wireguard"))
+            continue;
+        snprintf(row, sizeof(row), "%s (%s)", f[0], f[2][0] ? "on" : "off");
+        items = (char **) XtRealloc((char *) items, (n + 1) * sizeof(char *));
+        items[n++] = XtNewString(row);
+    }
+    if (n)
+        Choose(MSG(274, "VPN"), MSG(275, "VPN connections (choose one to "
+               "turn it on or off; add them with Edit Connections...):"),
+               items, n, NetVpnChosen, data);
+    else
+        ErrDialog(MSG(276, "No VPN connection is set up. Add one with "
+                           "Edit Connections... (or import a WireGuard or "
+                           "OpenVPN file with nmcli)."), style.shell);
+    for (i = 0; i < n; i++)
+        XtFree(items[i]);
+    XtFree((char *) items);
+}
+
+static void
+NetVpnCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    char *argv[] = { "nmcli", "-t", "-f", "NAME,TYPE,DEVICE", "connection",
+                     "show", NULL };
+
+    if (!SysCmdRun(argv, NULL, 20, NetVpnListDone, client_data))
+        ErrDialog(MSG(151, "The program for this is not installed."),
+                  style.shell);
+}
+
+static void
+NetAirplaneDone(int rc, char *output, XtPointer data)
+{
+    /* "enabled:disabled" (Wi-Fi, mobile): any radio on -> all off,
+     * all off -> on ("disabled" does not contain "enabled") */
+    Boolean anyOn = output && strstr(output, "enabled") != NULL;
+    char   *argv[] = { "nmcli", "radio", "all", NULL, NULL };
+
+    argv[3] = anyOn ? "off" : "on";
+    Run((Panel *) data, argv);
+}
+
+static void
+NetAirplaneCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    char *argv[] = { "nmcli", "-t", "-f", "WIFI,WWAN", "radio", NULL };
+
+    (void) SysCmdRun(argv, NULL, 20, NetAirplaneDone, client_data);
+}
