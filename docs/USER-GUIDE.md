@@ -338,6 +338,14 @@ AccessX features) and are applied again at every login.
 - GTK applications **change color at once**, without restarting them
   or logging out, when `xsettingsd` is installed (`apt install
   xsettingsd`). Without it they pick up the new colors when restarted.
+- **CDE's icons everywhere**: Settings > Session > **Icons** switches GTK
+  applications (and Qt ones that follow GTK, see above) and the
+  application menu to CDE's own icons: folders, the home folder,
+  terminal, editor, calculator, mail, trash, printer, help, and Motif
+  versions of Firefox, Thunderbird, GIMP, VLC, LibreOffice and others.
+  Icons CDE has no picture for come from your usual theme. The theme
+  is made once in `~/.local/share/icons/CDE` (`dticontheme`); it needs
+  `xsettingsd` for running applications to follow.
 - Window frames under xfwm4 change at once (xfwm4 restarts in the
   background; your windows stay open).
 - CDE's own applications (File Manager, Text Editor, Terminal, Help,

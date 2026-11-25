@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-bin_PROGRAMS = dtstyle dttouchpad dtaccess dtappfind
+bin_PROGRAMS = dtstyle dttouchpad dtaccess dtappfind dticontheme
 
 dtstyle_CPPFLAGS = -DCDE_CONFIGURATION_TOP=\"$(CDE_CONFIGURATION_TOP)\"	\
 	-DCDE_INSTALLATION_TOP=\"$(CDE_INSTALLATION_TOP)\" -I../dthelp	\
@@ -30,6 +30,11 @@ dttouchpad_LDADD = $(XILIB) $(XTOOLLIB)
 # Applies Settings > Accessibility at login (XKB AccessX)
 dtaccess_SOURCES = dtaccess.c Access.c Access.h
 dtaccess_LDADD = $(XTOOLLIB)
+
+# CDE's icons as an icon theme for GTK and Qt (Settings > Session > Icons)
+dticontheme_SOURCES = dticontheme.c
+dticontheme_CPPFLAGS = -DCDE_INSTALLATION_TOP=\"$(CDE_INSTALLATION_TOP)\"
+dticontheme_LDADD = $(PNGLIB) $(XTOOLLIB)
 
 # Find and start an application by typing (Workspace menu, Front Panel)
 dtappfind_SOURCES = dtappfind.c applist.c applist.h search.c search.h

@@ -2701,7 +2701,8 @@ static const SesOption sesOptions[] = {
 #define SES_WM SES_NOPTIONS	/* the window manager row */
 #define SES_MODERN (SES_NOPTIONS + 1)	/* the applications row */
 #define SES_TERM (SES_NOPTIONS + 2)	/* the terminal row (dtterminal) */
-#define SES_GAMES (SES_NOPTIONS + 3)	/* games in gamescope, if installed */
+#define SES_ICONS (SES_NOPTIONS + 3)	/* CDE's icons for GTK and Qt */
+#define SES_GAMES (SES_NOPTIONS + 4)	/* games in gamescope, if installed */
 
 static Panel *sesPanel = NULL;
 static char  *sesValue[SES_NOPTIONS + 1];	/* current value, or NULL */
@@ -3104,6 +3105,52 @@ TermLabel(int choice)
     return buf;
 }
 
+/* Settings > Session > Icons: ~/.dt/icon-theme names "CDE", the theme
+ * dticontheme makes from CDE's icons; dtxsettings gives it to GTK and
+ * Qt applications, and the application menu prefers it. */
+static Boolean
+IconsCDE(void)
+{
+    char path[1100];
+
+    ModernPath(path, sizeof(path), "icon-theme");
+    return access(path, F_OK) == 0;
+}
+
+static void
+IconsDone(int rc, char *output, XtPointer data)
+{
+    char *argv[] = { "dtxsettings", "reload", NULL };
+
+    (void) SysCmdRun(argv, NULL, 10, NULL, NULL);
+}
+
+static Boolean
+IconsSet(Boolean on)
+{
+    char  path[1100];
+    FILE *fp;
+    char *argv[] = { "dticontheme", NULL };
+
+    ModernPath(path, sizeof(path), "icon-theme");
+    if (!on)
+    {
+        if (unlink(path) != 0 && errno != ENOENT)
+            return False;
+        IconsDone(0, NULL, NULL);
+        return True;
+    }
+    if ((fp = fopen(path, "w")) == NULL)
+        return False;
+    fputs("CDE\n", fp);
+    if (fclose(fp) != 0)
+        return False;
+    /* make (or refresh) the theme, then tell GTK and Qt */
+    if (!SysCmdRun(argv, NULL, 120, IconsDone, NULL))
+        IconsDone(0, NULL, NULL);
+    return True;
+}
+
 /* Settings > Session > Games: the application menu starts games
  * through dtgamescope (~/.dt/gamescope). */
 static Boolean
@@ -3154,6 +3201,10 @@ SesRefresh(Panel *p)
              MSG(124, "Terminal (kitty, Ghostty and Konsole in the CDE colors)"),
              TermLabel(TermRead()));
     PanelAddItem(p, label, "terminal", "");
+    snprintf(label, sizeof(label), "%s: %s", MSG(139, "Icons"),
+             IconsCDE() ? MSG(140, "CDE's, in every application") :
+                          MSG(141, "your icon theme's"));
+    PanelAddItem(p, label, "icon-theme", "");
     if (TermInstalled("gamescope"))
     {
         snprintf(label, sizeof(label), "%s: %s", MSG(131, "Games"),
@@ -3197,6 +3248,15 @@ SesToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
         }
         if (!TermWrite(c))
             ErrDialog(MSG(125, "The terminal could not be changed."),
+                      style.shell);
+        SesRefresh(p);
+        XmListSelectPos(p->list, row + 1, False);
+        return;
+    }
+    if (row == SES_ICONS)
+    {
+        if (!IconsSet(!IconsCDE()))
+            ErrDialog(MSG(134, "The setting could not be changed."),
                       style.shell);
         SesRefresh(p);
         XmListSelectPos(p->list, row + 1, False);
@@ -3259,7 +3319,7 @@ popup_sessionBB(Widget shell)
                                MSG(70, "Settings - Session"), NULL);
         sesPanel->refresh = SesRefresh;
         XtVaSetValues(sesPanel->list,
-                      XmNvisibleItemCount, SES_NOPTIONS + 4, NULL);
+                      XmNvisibleItemCount, SES_NOPTIONS + 5, NULL);
         PanelButton(sesPanel, MSG(87, "Change"), SesToggleCB);
         XtAddCallback(sesPanel->list, XmNdefaultActionCallback, SesToggleCB,
                       (XtPointer) sesPanel);

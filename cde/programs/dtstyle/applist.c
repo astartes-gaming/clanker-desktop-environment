@@ -176,10 +176,14 @@ SvgToPng(const char *svg, const char *base, char *out, size_t len)
 static int
 FindIcon(const char *name, char *out, size_t len)
 {
+    /* the theme chosen in Settings > Session > Icons (~/.dt/icon-theme)
+     * first, then hicolor and common ones */
     static const char *themes[] = {
-        "hicolor", "elementary-xfce", "gnome", "Adwaita", "oxygen",
+        "", "hicolor", "elementary-xfce", "gnome", "Adwaita", "oxygen",
         "Tango", "locolor", NULL
     };
+    static char  chosen[64];
+    static int   readChosen;
     static const int   sizes[] = { 24, 22, 32, 48, 16, 64, 128, 256, 0 };
     static const char *contexts[] = {
         "apps", "categories", "legacy", "places", "devices", "mimetypes",
@@ -209,8 +213,27 @@ FindIcon(const char *name, char *out, size_t len)
 
     if (nBases < 0)
         nBases = IconBases(bases, 16);
+    if (!readChosen)
+    {
+        const char *home = getenv("HOME");
+        char        f[1100];
+        FILE       *fp;
+
+        readChosen = 1;
+        if (home)
+        {
+            snprintf(f, sizeof(f), "%s/.dt/icon-theme", home);
+            if ((fp = fopen(f, "r")) != NULL)
+            {
+                if (fscanf(fp, "%63s", chosen) != 1 || strchr(chosen, '/'))
+                    chosen[0] = '\0';
+                fclose(fp);
+            }
+        }
+        themes[0] = chosen;
+    }
     for (t = 0; themes[t]; t++)
-        for (s = 0; sizes[s]; s++)
+        for (s = 0; sizes[s] && themes[t][0]; s++)
             for (b = 0; b < nBases; b++)
                 for (c = 0; contexts[c]; c++)
                 {

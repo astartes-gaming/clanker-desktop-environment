@@ -24,8 +24,15 @@ themes=$HOME/.themes
 running() {
     [ -f "$pidf" ] && kill -0 "`cat $pidf`" 2>/dev/null
 }
-wanted() {
+colors() {
     [ -f "$dt/theming/env" ] || [ -f "$dt/modern-apps" ]
+}
+# Settings > Session > Icons: CDE's icons (dticontheme) for GTK and Qt
+icons() {
+    [ -f "$dt/icon-theme" ]
+}
+wanted() {
+    colors || icons
 }
 stop() {
     running && kill "`cat $pidf`" 2>/dev/null
@@ -83,35 +90,55 @@ browsers() {
     [ -x "$b" ] && have python3 && "$b" "$1" >/dev/null 2>&1
 }
 
-if ! wanted; then stop; firefox_prefs off; browsers off; exit 0; fi
-firefox_prefs on
-browsers on
+if ! colors; then firefox_prefs off; browsers off; fi
+if ! wanted; then stop; exit 0; fi
+if colors; then
+    firefox_prefs on
+    browsers on
+fi
+icon=
+if icons; then
+    icon=`head -1 "$dt/icon-theme" | sed 's/[^A-Za-z0-9_.-]//g'`
+    idir="${XDG_DATA_HOME:-$HOME/.local/share}/icons/$icon"
+    if [ "$icon" = CDE ] && [ ! -f "$idir/index.theme" ]; then
+        b=`dirname "$0"`/dticontheme
+        [ -x "$b" ] || b=dticontheme
+        "$b" >/dev/null 2>&1
+    fi
+fi
 
 # Flatpak applications (browsers...) cannot see ~/.themes nor the KDE
 # color scheme unless allowed to read them; allow it once, read-only.
 if have flatpak && [ ! -f "$dt/theming/flatpak-ok" ]; then
     if flatpak override --user --filesystem="$themes:ro" \
-           --filesystem=xdg-data/color-schemes:ro >/dev/null 2>&1; then
+           --filesystem=xdg-data/color-schemes:ro \
+           --filesystem=xdg-data/icons:ro >/dev/null 2>&1; then
         mkdir -p "$dt/theming" && : > "$dt/theming/flatpak-ok"
     fi
 fi
 
 have xsettingsd || exit 1
-[ -f "$themes/CDE/gtk-3.0/gtk.css" ] || exit 1
+if colors && [ ! -f "$themes/CDE/gtk-3.0/gtk.css" ]; then
+    icons || exit 1
+fi
 pgrep -u "`id -u`" -x xfsettingsd >/dev/null 2>&1 && exit 1
 
-name=CDE
-if [ "$1" = reload ] && running &&
-   grep -q '^Net/ThemeName "CDE"' "$conf" 2>/dev/null; then
-    name=CDE-B
-fi
-[ -e "$themes/CDE-B" ] || ln -s CDE "$themes/CDE-B"
 mkdir -p "$dt"
-cat > "$conf" <<EOC
-# Written by dtxsettings (CDE session): GTK theme in the CDE palette.
-Net/ThemeName "$name"
-Gtk/OverlayScrolling 0
-EOC
+{
+    echo "# Written by dtxsettings (CDE session): GTK theme in the CDE palette,"
+    echo "# CDE's icons (Settings > Session > Icons)."
+    if colors && [ -f "$themes/CDE/gtk-3.0/gtk.css" ]; then
+        name=CDE
+        if [ "$1" = reload ] && running &&
+           grep -q '^Net/ThemeName "CDE"' "$conf" 2>/dev/null; then
+            name=CDE-B
+        fi
+        [ -e "$themes/CDE-B" ] || ln -s CDE "$themes/CDE-B"
+        echo "Net/ThemeName \"$name\""
+        echo "Gtk/OverlayScrolling 0"
+    fi
+    [ -n "$icon" ] && echo "Net/IconThemeName \"$icon\""
+} > "$conf"
 
 if running; then
     kill -HUP "`cat $pidf`"
