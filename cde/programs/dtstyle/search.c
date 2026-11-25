@@ -435,6 +435,95 @@ CExpr(void)
     }
 }
 
+/* Unit conversion: "10 km to mi", "100 f in c", "2 gb to mb" */
+static const struct { const char *name; int kind; double factor; } units[] = {
+    /* length, in meters */
+    { "mm", 1, 0.001 }, { "cm", 1, 0.01 }, { "m", 1, 1 }, { "km", 1, 1000 },
+    { "in", 1, 0.0254 }, { "ft", 1, 0.3048 }, { "yd", 1, 0.9144 },
+    { "mi", 1, 1609.344 }, { "nmi", 1, 1852 },
+    /* mass, in grams */
+    { "mg", 2, 0.001 }, { "g", 2, 1 }, { "kg", 2, 1000 }, { "t", 2, 1e6 },
+    { "oz", 2, 28.349523125 }, { "lb", 2, 453.59237 }, { "st", 2, 6350.29318 },
+    /* volume, in liters */
+    { "ml", 3, 0.001 }, { "l", 3, 1 }, { "gal", 3, 3.785411784 },
+    { "qt", 3, 0.946352946 }, { "pt", 3, 0.473176473 }, { "cup", 3, 0.2365882365 },
+    { "floz", 3, 0.0295735295625 },
+    /* data, in bytes */
+    { "b", 4, 1 }, { "kb", 4, 1e3 }, { "mb", 4, 1e6 }, { "gb", 4, 1e9 },
+    { "tb", 4, 1e12 }, { "kib", 4, 1024.0 }, { "mib", 4, 1048576.0 },
+    { "gib", 4, 1073741824.0 }, { "tib", 4, 1099511627776.0 },
+    /* time, in seconds */
+    { "s", 5, 1 }, { "min", 5, 60 }, { "h", 5, 3600 }, { "day", 5, 86400 },
+    { "week", 5, 604800 },
+    /* speed, in m/s */
+    { "kmh", 6, 1 / 3.6 }, { "mph", 6, 0.44704 }, { "ms", 6, 1 }, { "kn", 6, 0.514444 },
+    /* temperature: special */
+    { "c", 7, 0 }, { "f", 7, 0 }, { "k", 7, 0 },
+};
+#define NUNITS ((int) (sizeof(units) / sizeof(units[0])))
+
+static int
+Unit(const char *w)
+{
+    char u[16];
+    int  i, n = 0;
+
+    for (; *w && n < 15; w++)
+        if (*w != '/' && *w != '.' && *w != '\xb0')	/* km/h, deg */
+            u[n++] = (char) tolower((unsigned char) *w);
+    u[n] = '\0';
+    if (n > 1 && u[n - 1] == 's' && strcmp(u, "ms") != 0 && strcmp(u, "s") != 0)
+    {
+        /* plurals: "miles", "hours" */
+        for (i = 0; i < NUNITS; i++)
+            if (strcmp(units[i].name, u) == 0)
+                return i;
+        u[--n] = '\0';
+    }
+    if (strcmp(u, "mile") == 0) return Unit("mi");
+    if (strcmp(u, "hour") == 0 || strcmp(u, "hr") == 0) return Unit("h");
+    if (strcmp(u, "meter") == 0 || strcmp(u, "metre") == 0) return Unit("m");
+    if (strcmp(u, "foot") == 0 || strcmp(u, "feet") == 0) return Unit("ft");
+    if (strcmp(u, "inch") == 0 || strcmp(u, "inche") == 0) return Unit("in");
+    if (strcmp(u, "pound") == 0) return Unit("lb");
+    if (strcmp(u, "liter") == 0 || strcmp(u, "litre") == 0) return Unit("l");
+    for (i = 0; i < NUNITS; i++)
+        if (strcmp(units[i].name, u) == 0)
+            return i;
+    return -1;
+}
+
+static Boolean
+Convert(const char *text)
+{
+    char   a[32], to[8], b[32], buf[200], res[64];
+    double v, base, out;
+    int    ua, ub;
+
+    if (sscanf(text, "%lf %31s %7s %31s", &v, a, to, b) != 4 ||
+        (strcasecmp(to, "to") != 0 && strcasecmp(to, "in") != 0))
+        return False;
+    if ((ua = Unit(a)) < 0 || (ub = Unit(b)) < 0 || units[ua].kind != units[ub].kind)
+        return False;
+    if (units[ua].kind == 7)
+    {
+        char fa = units[ua].name[0], fb = units[ub].name[0];
+
+        base = fa == 'c' ? v : fa == 'f' ? (v - 32) * 5 / 9 : v - 273.15;
+        out = fb == 'c' ? base : fb == 'f' ? base * 9 / 5 + 32 : base + 273.15;
+    }
+    else
+        out = v * units[ua].factor / units[ub].factor;
+    snprintf(res, sizeof(res), "%.10g", out);
+    snprintf(buf, sizeof(buf), "= %s %s", res, b);
+    before[0].kind = HIT_CALC;
+    before[0].label = XtNewString(buf);
+    before[0].icon = XtNewString("accessories-calculator|Dtcalc");
+    before[0].data = XtNewString(res);
+    nBefore = 1;
+    return True;
+}
+
 static void
 Calculate(const char *text)
 {
@@ -975,7 +1064,7 @@ SearchQuery(const char *text)
     }
     if (!*query)
         return;
-    if (searchConfig.calc)
+    if (searchConfig.calc && !Convert(query))
         Calculate(query);
     if (searchConfig.settings)
         Settings(query);

@@ -181,6 +181,8 @@ Spotlight or KRunner. Type, then pick a row with Up/Down and Enter:
 - **Applications**, by name, what they are ("browser") or keywords.
 - A **calculation**: `2*(3+4)` shows `= 14`; Enter copies the result
   (with `xclip` or `xsel` installed; otherwise it goes in the field).
+  **Units** too: `10 km in mi`, `100 f to c`, `2 gb to mib`,
+  `5 lb to kg` (length, mass, volume, data, time, speed, temperature).
 - **Settings pages** by what they set ("wallpaper", "wifi", "layout").
 - **Open windows**, by title: Enter switches to it.
 - **Recent files**, and **files and folders by name**, searched in the
