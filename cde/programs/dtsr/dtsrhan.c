@@ -1972,7 +1972,7 @@ void	process_record (void)
     while (key_current != NULL) {
 	if (key_current->field == NULL) {
 	    if (strcmp (key_current->field_id, "time") == 0)
-		sprintf (key_value, "%ld%06ld", now, key_count);
+		sprintf (key_value, "%ld%06ld", (long) now, key_count);
 	    else	/* must be 'count' */
 		sprintf (key_value, "%09ld", key_count);
 	} else if (key_current->field->value[0] != 0) {

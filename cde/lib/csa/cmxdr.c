@@ -61,7 +61,7 @@ bool_t xdr_time_t(XDR *xdrs, time_t *objp);
 bool_t
 xdr_time_t(XDR *xdrs, time_t *objp)
 {
-	if (!_xdr_time_t(xdrs, objp))
+	if (!_xdr_time_t(xdrs, (void *) objp))
 		return (FALSE);
 	return (TRUE);
 }

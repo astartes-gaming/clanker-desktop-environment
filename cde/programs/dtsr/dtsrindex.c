@@ -302,7 +302,7 @@ static void     print_exit_code (int exit_code)
 	totalstart = time (NULL) - totalstart;
     printf (CATGETS(dtsearch_catd, MS_cborodin, 206,
 	"%s: Exit Code = %d, Total elapsed time %ldm %lds.\n"),
-	aa_argv0, exit_code, totalstart / 60L, totalstart % 60L);
+	aa_argv0, exit_code, (long) (totalstart / 60), (long) (totalstart % 60));
     return;
 }	/* print_exit_code() */
 
@@ -1761,7 +1761,8 @@ INVALID_FZK_FORMAT:
     printf (CATGETS(dtsearch_catd, MS_cborodin, 1225,
 	"%s: Pass 1 completed in %lum %lus, read %lu records.\n"
 	"  %s, parsed %lu words.\n"),
-	aa_argv0, elapsed / 60L, elapsed % 60L, record_count,
+	aa_argv0, (unsigned long) (elapsed / 60), (unsigned long) (elapsed % 60),
+	record_count,
 	buf, num_of_diff_words);
     if (record_count > batch_size) {
 	printf (CATGETS(dtsearch_catd, MS_cborodin, 33,
@@ -1801,7 +1802,8 @@ INVALID_FZK_FORMAT:
     elapsed = time (NULL) - timestart;
     printf (CATGETS(dtsearch_catd, MS_cborodin, 1246,
 	"%s: Pass 2 completed in %lum %lus, updated %lu words.\n"),
-	aa_argv0, elapsed / 60L, elapsed % 60L, count_word_ii);
+	aa_argv0, (unsigned long) (elapsed / 60), (unsigned long) (elapsed % 60),
+	count_word_ii);
     if (normal_retncode == 1)
 	printf (CATGETS(dtsearch_catd, MS_cborodin, 2,
 	    "%s: Warnings were detected.\n"), aa_argv0);

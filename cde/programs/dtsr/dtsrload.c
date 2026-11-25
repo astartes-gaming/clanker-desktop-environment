@@ -527,8 +527,8 @@ static void     print_progress (void)
 	"%s: %ld input records processed in %ldm %lds, (%ld%%).\n"
 	"  %ld duplicates, %ld new, %ld updates.\n"),
 	aa_argv0,
-	input_reccount, seconds / 60L, seconds % 60L,
-	(bytes_in * 100L) / fstat_input.st_size,
+	input_reccount, (long) (seconds / 60), (long) (seconds % 60),
+	(long) ((bytes_in * 100L) / fstat_input.st_size),
 	duplicate_recids, created_reccount, updated_reccount);
     need_final_progress_msg = FALSE;
     return;

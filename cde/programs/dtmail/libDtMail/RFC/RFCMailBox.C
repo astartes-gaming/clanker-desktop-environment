@@ -4578,12 +4578,13 @@ RFCMailBox::dumpMaps(const char *str)
       if ((total_file_size % 4096) == 0) {
 	fprintf(df,
 		"Total file size falls on page boundary, totalsize = %lu\n",
-		total_file_size);
+		(unsigned long) total_file_size);
       }
     }
   
     fprintf(df, "\nstat buffer entries: st_ino = %lu, st_dev = %lu, st_nlink = %lu, st_size = %ld\n",
-	    buf.st_ino, buf.st_dev, buf.st_nlink, buf.st_size);
+	    (unsigned long) buf.st_ino, (unsigned long) buf.st_dev,
+	    (unsigned long) buf.st_nlink, (long) buf.st_size);
   
     fprintf(df, "\n\n");
   }

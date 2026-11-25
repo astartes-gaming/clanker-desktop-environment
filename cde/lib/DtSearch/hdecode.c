@@ -189,7 +189,7 @@ void	hc_decode (
 	first_time = FALSE;
 	printf ("\n***** created hctree from '%s' ******\n"
 	    "hctree_id = %ld\nhctree_root = %d\n",
-	    hctree_name, hctree_id, hctree_root);
+	    hctree_name, (long) hctree_id, hctree_root);
     }
 #endif
 

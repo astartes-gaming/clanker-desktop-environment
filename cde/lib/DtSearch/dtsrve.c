@@ -261,7 +261,7 @@ int             ve_initialize (void)
 		"%s Incompatible data compression table used for database '%s'.\n"
 		"  Database compressed with %ld, "
 		"engine decompressor is %ld.\n"),
-		PROGNAME" 156", db->name, db->dbrec.or_hufid, hctree_id);
+		PROGNAME" 156", db->name, (long) db->dbrec.or_hufid, (long) hctree_id);
 	    DtSearchAddMessage (msgbuf);
 	    goto DELETE_DB;
 	}
