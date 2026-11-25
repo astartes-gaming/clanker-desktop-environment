@@ -70,7 +70,19 @@ added() {
     fi
 }
 
+# The X session is still there.
+alive() {
+    if have xprop; then xprop -root -len 0 _XROOTPMAP_ID >/dev/null 2>&1
+    elif have xrandr; then xrandr --current >/dev/null 2>&1
+    else return 0; fi
+}
+
 watch() {
+    # end with the session: stop the whole group once X is gone
+    [ -n "$DISPLAY" ] && (
+        while alive; do sleep 30; done
+        kill -- -$$ 2>/dev/null
+    ) &
     # "udisksctl monitor" prints "...: Added /org/freedesktop/UDisks2/
     # block_devices/sdb1" (or "...sdb1: Added interface ...Filesystem")
     # when a drive or a file system appears

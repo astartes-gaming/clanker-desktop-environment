@@ -481,18 +481,115 @@ DpArrangeCB(Widget w, XtPointer client_data, XtPointer call_data)
         Launch1("dtdisplays", NULL);
 }
 
+/* ---- night light (dtnightlight; ~/.dt/nightlight) ---------------- */
+
+static int
+NlGet(const char *key, int def)
+{
+    char  path[1100], line[128];
+    FILE *fp;
+    size_t n = strlen(key);
+    int   v = def;
+
+    snprintf(path, sizeof(path), "%s/.dt/nightlight", style.home);
+    if ((fp = fopen(path, "r")) == NULL)
+        return def;
+    while (fgets(line, sizeof(line), fp))
+        if (strncmp(line, key, n) == 0 && line[n] == '=')
+            v = atoi(line + n + 1);
+    fclose(fp);
+    return v;
+}
+
+static void
+NlSet(int on, int from, int to, int temp)
+{
+    char  path[1100], tmp[1100];
+    FILE *fp;
+    char *argv[] = { CDE_INSTALLATION_TOP "/bin/dtnightlight", "restart", NULL };
+
+    snprintf(path, sizeof(path), "%s/.dt/nightlight", style.home);
+    snprintf(tmp, sizeof(tmp), "%s.new", path);
+    if ((fp = fopen(tmp, "w")) == NULL)
+        return;
+    fprintf(fp, "# Settings > Displays > Night light (dtnightlight)\n"
+            "on=%d\nfrom=%d\nto=%d\ntemp=%d\n", on, from, to, temp);
+    if (fclose(fp) == 0 && rename(tmp, path) == 0)
+        (void) SysCmdRun(argv, NULL, 20, NULL, NULL);
+}
+
+static void
+NlToggleCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    XmToggleButtonCallbackStruct *cb = (XmToggleButtonCallbackStruct *) call_data;
+
+    NlSet(cb->set ? 1 : 0, NlGet("from", 20), NlGet("to", 7),
+          NlGet("temp", 4000));
+}
+
+static const char *nlHours[] = { "20:00 - 07:00", "21:00 - 06:00",
+                                 "19:00 - 07:00", "22:00 - 07:00",
+                                 "18:00 - 08:00", "00:00 - 24:00 (always)" };
+
+static void
+NlHoursChosen(const char *choice, XtPointer data)
+{
+    int from = 20, to = 7;
+
+    if (sscanf(choice, "%d:00 - %d", &from, &to) != 2 || from < 0 ||
+        from > 23 || to < 0 || to > 24)
+        return;
+    if (from == 0 && to == 24)
+        to = 24;
+    NlSet(1, from, to, NlGet("temp", 4000));
+    XmToggleButtonGadgetSetState(((Panel *) data)->toggle, True, False);
+}
+
+static void
+NlHoursCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    Choose(MSG(277, "Night Light Hours"), MSG(278, "When the colors are warmer:"),
+           (char **) nlHours, 6, NlHoursChosen, client_data);
+}
+
+static const char *nlWarmth[] = { "3000 K  (warmest)", "3500 K", "4000 K",
+                                  "4500 K", "5000 K  (slight)" };
+
+static void
+NlWarmthChosen(const char *choice, XtPointer data)
+{
+    int t = atoi(choice);
+
+    if (t < 3000 || t > 6500)
+        return;
+    NlSet(1, NlGet("from", 20), NlGet("to", 7), t);
+    XmToggleButtonGadgetSetState(((Panel *) data)->toggle, True, False);
+}
+
+static void
+NlWarmthCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    Choose(MSG(279, "Night Light Warmth"), MSG(280, "How warm the colors get:"),
+           (char **) nlWarmth, 5, NlWarmthChosen, client_data);
+}
+
 static Panel *
 DpMake(Widget shell)
 {
     Panel *p = PanelCreate(shell, "displaysDialog",
-                           MSG(173, "Settings - Displays"), NULL);
+                           MSG(173, "Settings - Displays"),
+                           MSG(281, "Night light"));
 
     p->refresh = DpRefresh;
+    XmToggleButtonGadgetSetState(p->toggle, NlGet("on", 0) == 1, False);
+    XtAddCallback(p->toggle, XmNvalueChangedCallback, NlToggleCB, (XtPointer) p);
     PanelButton(p, MSG(174, "Extend"), DpExtendCB);
     PanelButton(p, MSG(175, "Mirror"), DpMirrorCB);
     PanelButton(p, MSG(176, "Only This One"), DpOnlyCB);
     PanelButton(p, MSG(177, "Make Primary"), DpPrimaryCB);
     PanelButton(p, MSG(178, "Arrange..."), DpArrangeCB);
+    PanelButton(p, MSG(282, "Night Hours..."), NlHoursCB);
+    PanelButton(p, MSG(283, "Warmth..."), NlWarmthCB);
     return p;
 }
 

@@ -161,7 +161,7 @@ icons. `DT_NO_SYSTRAY=1` turns the tray off.
 | Input | Keyboard layouts (add, remove; **Windows+Space**, Alt+Shift or Ctrl+Shift switches between them), Caps Lock as Ctrl or Escape, a Compose key for accents |
 | Controllers | Game controllers that are connected (with their battery when reported): **Test...** (jstest-gtk), **Buttons and Mouse...** (AntiMicroX: use a controller as a mouse and keyboard, remap buttons), **Pair...** (Bluetooth) |
 | Sound | Output and input devices: pick the one in use, volume, mute, the mixer (PipeWire or PulseAudio) |
-| Displays | Monitors: extend, mirror, only one, primary, **Arrange...** (resolution, rotation, position); remembered per set of monitors |
+| Displays | Monitors: extend, mirror, only one, primary, **Arrange...** (resolution, rotation, position); remembered per set of monitors. **Night light**: warmer colors in the evening, easier on the eyes; **Night Hours...** and **Warmth...** set when and how warm (with gammastep or redshift if installed, else the monitors' gamma) |
 | Borders | Window frames: which title bar buttons (minimize, maximize, close), border width (thicker is easier to grab) |
 | Search | What the Front Panel's **Search** finds (below) |
 | Users | Your account: password, full name, picture (`~/.face`, shown by login screens); **Other Users...** opens the system's user tool |

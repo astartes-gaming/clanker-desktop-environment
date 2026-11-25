@@ -347,6 +347,11 @@ if [ -r "$HOME/.dt/keyboard" ] && _dtm_have setxkbmap; then
   unset _dtm_l _dtm_v _dtm_o
 fi
 
+# Night light: warmer colors in the evening (Settings > Displays).
+if [ -x "$_dtm_bin/dtnightlight" ] && [ -f "$HOME/.dt/nightlight" ]; then
+  "$_dtm_bin/dtnightlight" start >/dev/null 2>&1
+fi
+
 # USB drives and discs: mounted and opened when plugged in (Settings >
 # Removable Media).
 if [ -x "$_dtm_bin/dtmedia" ]; then

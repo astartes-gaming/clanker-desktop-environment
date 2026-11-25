@@ -66,7 +66,7 @@
 
 #define MSG(n, s) ((char *)GETMESSAGE(20, n, s))
 
-#define MAX_BUTTONS 6
+#define MAX_BUTTONS 8
 
 typedef struct _Panel Panel;
 typedef void (*PanelProc)(Panel *p);
