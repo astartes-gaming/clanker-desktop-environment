@@ -3604,6 +3604,7 @@ ScRefresh(Panel *p)
             { "Windows+I", "Settings" }, { "Windows+L", "Lock the screen" },
             { "Windows+P", "Displays: extend, mirror, one screen" },
             { "Windows+V", "Clipboard history" },
+            { "Windows+S", "Search" },
             { "Windows+Left/Right", "Tile a window to that half" },
             { "Windows+Up/Down", "Maximize / restore" },
             { "Alt+Tab", "Switch windows" }, { "Alt+F2", "Run" },

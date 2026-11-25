@@ -46,6 +46,7 @@ see the [README](../README.md).
   Run, **Windows+T** Terminal, **Windows+A** Application Manager,
   **Windows+I** Settings, **Windows+L** Lock, **Windows+P** displays
   (extend, mirror, one screen), **Windows+V** clipboard history,
+  **Windows+S** Search,
   **Windows+arrows** tile
   windows (dtwm). `DT_NO_SUPERKEY=1` in `~/.dtprofile` stops the key
   on its own from opening the menu.
@@ -174,7 +175,8 @@ at the next login.
 
 ## Search
 
-The magnifier button on the Front Panel (where Accessibility was; that
+The magnifier button on the Front Panel, or **Windows+S** (where
+Accessibility was on the panel; that
 is now in the Settings drawer and Settings) opens **Search**, like
 Spotlight or KRunner. Type, then pick a row with Up/Down and Enter:
 
