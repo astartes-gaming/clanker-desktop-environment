@@ -44,6 +44,7 @@
 
 #include <locale.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <errno.h>
 #include <X11/Intrinsic.h>
 #include <X11/Xlib.h>
@@ -1220,7 +1221,14 @@ addOkCB(
   strcpy(tmpstr, newPalette->directory);
   len = strlen(tmpstr);
   strcat(tmpstr, "dtXXXXXX");
-  mktemp(tmpstr);
+  {
+    /* a unique name; the palette is written to NAME.dp later */
+    int fd = mkstemp(tmpstr);
+    if (fd != -1) {
+      close(fd);
+      unlink(tmpstr);
+    }
+  }
 
   newPalette->name = (char *) XtMalloc(15 * sizeof(char));
   strcpy(newPalette->name, tmpstr + len);

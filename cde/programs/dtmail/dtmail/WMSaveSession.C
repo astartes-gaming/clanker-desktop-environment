@@ -40,6 +40,8 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <time.h>
 #include <sys/param.h>
@@ -713,7 +715,24 @@ SendMsgDialog::smpSaveSessionLocal(void)
 	return;
     
     // Create a dead letter if this one is currently in use
-    if ((save_filename = tempnam(_auto_save_path, "session")) == NULL) 
+    // a unique name in the auto-save directory (mkstemp); doAutoSave()
+    // creates the file itself
+    save_filename = NULL;
+    {
+	size_t len = strlen(_auto_save_path) + sizeof("/sessionXXXXXX");
+	char *name = (char *) malloc(len);
+	if (name != NULL) {
+	    snprintf(name, len, "%s/sessionXXXXXX", _auto_save_path);
+	    int fd = mkstemp(name);
+	    if (fd >= 0) {
+		close(fd);
+		unlink(name);
+		save_filename = name;
+	    } else
+		free(name);
+	}
+    }
+    if (save_filename == NULL)
     {
         for (int suffix = 1; ; suffix++) {
             save_filename = (char*) malloc((size_t) MAXPATHLEN + 1);

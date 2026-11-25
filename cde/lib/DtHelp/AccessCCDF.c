@@ -1366,7 +1366,9 @@ _DtHelpCeGetCcdfVolLocale (
 	if (mLang != NULL && *mLang != '\0') lang = mLang;
       }
 
-    asprintf(&locale, "%s.%s", lang, resStr);
+    locale = malloc(strlen(lang) + strlen(resStr) + 2);
+    if (locale != NULL)
+        sprintf(locale, "%s.%s", lang, resStr);
 
 done:
     free(mLang);

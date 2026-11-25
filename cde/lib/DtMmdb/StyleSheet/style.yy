@@ -130,7 +130,6 @@ const char* toUpperCase(unsigned char* string)
 
 %type<charData>
 	OPER_mult
-	OPER_binop
 	OPER_add
 	OPER_feature
 
@@ -365,16 +364,6 @@ multi_expr	: multi_expr OPER_mult term
            $$ = new Expression($1);
 	}
 	;
-
-OPER_binop : OPER_mult
-        {
-	   $$=$1;
-        }
-	| OPER_add
-	{
-	   $$=$1;
-	}
-        ;
 
 OPER_mult	: OPER_star
         {

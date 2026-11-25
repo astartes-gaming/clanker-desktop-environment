@@ -25,6 +25,7 @@
 //%%  (c) Copyright 1993, 1994 Sun Microsystems, Inc.
 //%%  (c) Copyright 1993, 1994 Novell, Inc.
 //%%  $XConsortium: DtTt.C /main/4 1996/03/19 10:47:59 barstow $
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -622,6 +623,31 @@ _DtTtChoices(
 #define AIX_CONST_STRING
 #endif
 
+// A new file of our own in $TMPDIR (or /tmp), made by mkstemp() so
+// nobody can plant a symlink under its name.  Returns its name (malloc'd)
+// and, when fdp is given, the open descriptor; else it is closed.
+static char *
+_DtTempFile(
+	const char *	prefix,
+	int *		fdp
+)
+{
+    const char *tmp = getenv( "TMPDIR" );
+    if (tmp == 0 || *tmp == '\0') tmp = "/tmp";
+    size_t len = strlen( tmp ) + strlen( prefix ) + sizeof "/XXXXXX";
+    char *file = (char *)malloc( len );
+    if (file == 0) return 0;
+    snprintf( file, len, "%s/%sXXXXXX", tmp, prefix );
+    int fd = mkstemp( file );
+    if (fd < 0) {
+	    free( file );
+	    return 0;
+    }
+    if (fdp != 0) *fdp = fd;
+    else close( fd );
+    return file;
+}
+
 void
 _DtOpen(
 	Widget		label,
@@ -629,7 +655,11 @@ _DtOpen(
 	const char *	tempnamTemplate
 )
 {
-    char *file = tempnam( 0, AIX_CONST_STRING tempnamTemplate );
+    char *file = _DtTempFile( tempnamTemplate, 0 );
+    if (file == 0) {
+	    DtTtSetLabel( label, "mkstemp()", errno );
+	    return;
+    }
     std::ostringstream cmdStream;
     cmdStream << cmd << " > " << file << ends;
     int sysStat = system( cmdStream.str().c_str() );
@@ -671,10 +701,15 @@ _DtOpen(
 	const char *	tempnamTemplate
 )
 {
-    char *file = tempnam( 0, AIX_CONST_STRING tempnamTemplate );
-    int fd = open( file, O_WRONLY|O_CREAT|O_EXCL, S_IRUSR|S_IWUSR );
+    int fd = -1;
+    char *file = _DtTempFile( tempnamTemplate, &fd );
+    if (file == 0) {
+	    DtTtSetLabel( label, "mkstemp()", errno );
+	    return;
+    }
     if (write( fd, buf, len ) < 0) {
 	    DtTtSetLabel( label, file, errno );
+	    close( fd );
 	    return;
     }
     close( fd );

@@ -3943,7 +3943,12 @@ RFCMailBox::lockFile(DtMailEnv & error)
   assert(_lockFileName != NULL);
   char *tempLockFileName = new char[MAXPATHLEN];
   sprintf(tempLockFileName, "%sXXXXXX", _real_path);
-  mktemp(tempLockFileName);
+  {
+    // a unique name (mkstemp); the file is made again with O_EXCL below
+    int temp_fd;
+    PRIV_ENABLED(temp_fd,mkstemp(tempLockFileName));
+    if (temp_fd >= 0) (void) close(temp_fd);
+  }
   PRIV_ENABLED(return_status,SafeRemove(tempLockFileName));
 
   // loop through attempting to create the temporary lock file,
@@ -4153,7 +4158,12 @@ RFCMailBox::dotDtmailLock(DtMailEnv & error)
   
   // Create the temporary mail lock file name.
   sprintf(tempLockFileName, "%sXXXXXX", _real_path);
-  mktemp(tempLockFileName);
+  {
+    // a unique name (mkstemp); the file is made again with O_EXCL below
+    int temp_fd;
+    PRIV_ENABLED(temp_fd,mkstemp(tempLockFileName));
+    if (temp_fd >= 0) (void) close(temp_fd);
+  }
   PRIV_ENABLED(return_status,SafeRemove(tempLockFileName));
 
   // Attempt to create the temporary file.

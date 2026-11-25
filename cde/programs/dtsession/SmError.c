@@ -55,6 +55,7 @@
  *************************************<+>*************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #ifdef _SUN_OS
 #include <string.h>
 #endif
@@ -273,6 +274,8 @@ ToolkitError(
 
     PrintError(DtError, message);
     SM_EXIT(-1);
+    /* SmExit() returns before the session is fully up; Xt can't go on */
+    exit(-1);
 }
 
 

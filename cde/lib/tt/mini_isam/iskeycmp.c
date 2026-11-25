@@ -79,8 +79,9 @@ _iskeycmp(const void *lkey, const void *rkey)
     ret = 0;
     for (i = 0, p = _curtab; ret == 0 && i < _ncurtab;i++, p++) {
 	
-	l = charLkey + p->kp2_offset;
-	r = charRkey + p->kp2_offset;
+	/* the ld*() readers take char *; they only read */
+	l = (char *) charLkey + p->kp2_offset;
+	r = (char *) charRkey + p->kp2_offset;
 
 	switch (p->kp2_type) {
 	case CHARTYPE:

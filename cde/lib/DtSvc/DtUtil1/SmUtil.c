@@ -42,6 +42,8 @@
 #endif
 
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <Dt/WsmP.h>
@@ -222,7 +224,13 @@ getSessionPath(
       int len = strlen(tmpPath);
 
       (void)strcat(tmpPath, "dtXXXXXX");
-      (void)mktemp(tmpPath);
+      {
+        /* a unique name; the client creates the file itself */
+        int fd = mkstemp(tmpPath);
+        if (fd == -1) goto abort;
+        (void)close(fd);
+        (void)unlink(tmpPath);
+      }
 
       *saveFile = (char *) XtMalloc(15 * sizeof(char));
       if(*saveFile == NULL) goto abort;

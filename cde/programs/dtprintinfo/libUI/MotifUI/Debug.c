@@ -60,7 +60,6 @@ Debug(
  *   FUNCTION:
  *   RETURNS:
  */
-__attribute__((noreturn))
 static int
 XError(
    Display *dpy,

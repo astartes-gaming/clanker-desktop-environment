@@ -23,6 +23,7 @@
 /* $TOG: main.C /main/7 1998/10/26 17:19:37 mgreess $ */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <locale.h>
 #include "dmx.hh"
@@ -170,8 +171,29 @@ main (int argc, char **argv)
 			getenv("HOME"),
 			DtPERSONAL_TMP_DIRECTORY);
 
-	        name = tempnam(tmpdir, "dtmpr");
-		if ((msgFile = fopen (name, "w+")) == NULL)
+		// mkstemp() makes the file itself: in ~/.dt/tmp, else
+		// in $TMPDIR or /tmp (where tempnam() used to fall back to)
+		int fd = -1;
+		for (int pass = 0; pass < 2 && fd < 0; pass++)
+		{
+			const char *dir = tmpdir;
+			if (pass == 1)
+			{
+				dir = getenv("TMPDIR");
+				if (dir == NULL || *dir == '\0') dir = "/tmp";
+			}
+			size_t len = strlen(dir) + sizeof("/dtmprXXXXXX");
+			name = (char *) malloc(len);
+			if (name == NULL) break;
+			snprintf(name, len, "%s/dtmprXXXXXX", dir);
+			fd = mkstemp(name);
+			if (fd < 0)
+			{
+				free(name);
+				name = NULL;
+			}
+		}
+		if (fd < 0 || (msgFile = fdopen (fd, "w+")) == NULL)
 		{
 			perror ("tmpfile");
 			exit (1);

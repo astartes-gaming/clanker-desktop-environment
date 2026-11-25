@@ -68,6 +68,8 @@
  *Hitachi, Ltd., 6, Kanda Surugadai 4-Chome, Chiyoda-ku, Tokyo 101, Japan
  */
 
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <wchar.h>
 #if defined(__linux__) || defined(CSRG_BASED)
@@ -512,18 +514,32 @@ static char *tooltalk_save_buffer_to_file(
 
     // 1. Get buffer content into file.
     snprintf(tmpdir, MAXPATHLEN+1, "%s/%s", getenv("HOME"), DtPERSONAL_TMP_DIRECTORY);
-    p = tempnam(tmpdir, "mail");
-    if (p == NULL)
-    {
-	delete [] tmpdir;
-	return NULL;
-    }
 
-    int fd = SafeOpen(p, O_RDWR | O_CREAT);
+    // mkstemp() makes the file itself: in ~/.dt/tmp, else in $TMPDIR
+    // or /tmp (where tempnam() used to fall back to)
+    int fd = -1;
+    for (int pass = 0; pass < 2 && fd < 0; pass++)
+    {
+	const char *dir = tmpdir;
+	if (pass == 1)
+	{
+	    dir = getenv("TMPDIR");
+	    if (dir == NULL || *dir == '\0') dir = "/tmp";
+	}
+	size_t n = strlen(dir) + sizeof("/mailXXXXXX");
+	p = (char *) malloc(n);
+	if (p == NULL) break;
+	snprintf(p, n, "%s/mailXXXXXX", dir);
+	fd = mkstemp(p);
+	if (fd < 0)
+	{
+	    free(p);
+	    p = NULL;
+	}
+    }
     if (fd < 0)
     {
 	delete [] tmpdir;
-	free(p);
 	return NULL;
     }
     if (SafeWrite(fd, contents, len) != len)
