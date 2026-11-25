@@ -717,6 +717,30 @@ SetGeometry (Widget w, String geometry, Position * x, Position * y)
 
 
 /*
+ * ~/.dt/frontpanel-position (Settings > Front Panel): "top" or
+ * "bottom"; 't', 'b', or 0 for where the panel was left.
+ */
+static int
+PanelPositionPref (void)
+{
+   char  path[1024], word[16];
+   char *home = getenv ("HOME");
+   FILE *fp;
+   int   c = 0;
+
+   if (!home)
+      return 0;
+   snprintf (path, sizeof (path), "%s/.dt/frontpanel-position", home);
+   if ((fp = fopen (path, "r")) == NULL)
+      return 0;
+   if (fscanf (fp, "%15s", word) == 1 &&
+       (strcmp (word, "top") == 0 || strcmp (word, "bottom") == 0))
+      c = word[0];
+   fclose (fp);
+   return c;
+}
+
+/*
  * The bottom middle of a monitor, as a geometry string for the panel.
  * "-0" (the screen's bottom edge) when the monitor reaches it, which
  * keeps auto-hide and the saved position working as before.
@@ -825,6 +849,24 @@ WmPanelistShow (Widget w)
       
       XtSetArg (al[0], XmNgeometry, shell_geometry);
       XtSetValues (panel.shell, al, 1);
+   }
+
+   /* Settings > Front Panel > Position: the top or bottom middle of
+    * the primary monitor, whatever place the session saved. */
+   switch (PanelPositionPref ())
+   {
+   case 't':
+      snprintf (geometry_buffer, sizeof (geometry_buffer), "+%d+%d",
+                head_x + ((head_w > (int) XtWidth (panel.shell)) ?
+                          (head_w - (int) XtWidth (panel.shell)) / 2 : 0),
+                head_y);
+      shell_geometry = geometry_buffer;
+      break;
+   case 'b':
+      PanelPrimaryGeometry (geometry_buffer, sizeof (geometry_buffer),
+                            head_x, head_y, head_w, head_h);
+      shell_geometry = geometry_buffer;
+      break;
    }
 
 

@@ -109,6 +109,8 @@ over. Displays with 256 colors or fewer, and `DT_HELLO_CLASSIC=1` in
 
 **Moving the panel**: drag it by the handles at either end. It reserves
 its screen edge only while it sits on one.
+Settings > Front Panel > **Position** puts it at the top or bottom of
+the primary monitor at every login, or leaves it where you dragged it.
 
 **Hiding the panel**: Settings > Front Panel > **Hide automatically**.
 The panel slides off its edge (top or bottom) a moment after the pointer

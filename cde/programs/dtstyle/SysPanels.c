@@ -2578,6 +2578,58 @@ FpAutoHideCB(Widget w, XtPointer client_data, XtPointer call_data)
                           RootWindow(style.display, style.screenNum));
 }
 
+/* Position: ~/.dt/frontpanel-position, "top" or "bottom" (missing:
+ * where the panel was dragged); read by dtwm when it starts. */
+static int
+FpPosRead(void)
+{
+    char  path[1100], word[16] = "";
+    FILE *fp;
+
+    snprintf(path, sizeof(path), "%s/.dt/frontpanel-position", style.home);
+    if ((fp = fopen(path, "r")) == NULL)
+        return 0;
+    if (fscanf(fp, "%15s", word) != 1)
+        word[0] = '\0';
+    fclose(fp);
+    return strcmp(word, "top") == 0 ? 2 : strcmp(word, "bottom") == 0 ? 1 : 0;
+}
+
+static void
+FpPosLabel(Widget b)
+{
+    char     label[200];
+    XmString s;
+    int      pos = FpPosRead();
+
+    snprintf(label, sizeof(label), "%s: %s", MSG(135, "Position"),
+             pos == 2 ? MSG(136, "Top") :
+             pos == 1 ? MSG(137, "Bottom") : MSG(138, "Where I put it"));
+    s = CMPSTR(label);
+    XtVaSetValues(b, XmNlabelString, s, NULL);
+    XmStringFree(s);
+}
+
+static void
+FpPosCB(Widget w, XtPointer client_data, XtPointer call_data)
+{
+    char  path[1100];
+    FILE *fp;
+    int   pos = (FpPosRead() + 1) % 3;	/* where put -> bottom -> top */
+
+    snprintf(path, sizeof(path), "%s/.dt/frontpanel-position", style.home);
+    if (pos == 0)
+        unlink(path);
+    else if ((fp = fopen(path, "w")) != NULL)
+    {
+        fputs(pos == 2 ? "top\n" : "bottom\n", fp);
+        fclose(fp);
+    }
+    FpPosLabel(w);
+    _DtWmRestartNoConfirm(style.display,
+                          RootWindow(style.display, style.screenNum));
+}
+
 void
 popup_frontPanelBB(Widget shell)
 {
@@ -2598,6 +2650,7 @@ popup_frontPanelBB(Widget shell)
         PanelButton(fpPanel, MSG(88, "Add to Drawer..."), FpAddCB);
         PanelButton(fpPanel, MSG(59, "Remove"), FpRemoveCB);
         PanelButton(fpPanel, MSG(68, "Reset"), FpResetCB);
+        FpPosLabel(PanelButton(fpPanel, MSG(135, "Position"), FpPosCB));
         XtAddCallback(fpPanel->list, XmNdefaultActionCallback, FpChangeCB,
                       (XtPointer) fpPanel);
     }
