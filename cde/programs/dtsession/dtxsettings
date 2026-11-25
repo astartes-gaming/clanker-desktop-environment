@@ -77,8 +77,15 @@ case $1 in
     *) echo "usage: dtxsettings start|reload|stop|status" >&2; exit 2 ;;
 esac
 
-if ! wanted; then stop; firefox_prefs off; exit 0; fi
+# Chrome, Chromium, Brave, Edge... in GTK mode (dtbrowsertheme)
+browsers() {
+    b=`dirname "$0"`/dtbrowsertheme
+    [ -x "$b" ] && have python3 && "$b" "$1" >/dev/null 2>&1
+}
+
+if ! wanted; then stop; firefox_prefs off; browsers off; exit 0; fi
 firefox_prefs on
+browsers on
 
 # Flatpak applications (browsers...) cannot see ~/.themes nor the KDE
 # color scheme unless allowed to read them; allow it once, read-only.

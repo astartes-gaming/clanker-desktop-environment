@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+#####################################################################
+##  dtbrowsertheme on|off - Chromium-based browsers in the CDE colors.
+##
+##  Chrome, Chromium, Brave, Edge, Vivaldi and Opera draw their window
+##  in the GTK theme's colors when their theme setting is "GTK"
+##  (Settings > Appearance > Theme).  With Settings > Color > "Apply
+##  colors to GTK and Qt applications" on, dtxsettings runs "on" at
+##  login: each profile that uses the browser's own default theme is
+##  set to GTK, and its previous setting is remembered; "off" puts it
+##  back.  A profile with a theme of its own (from the Web Store) is
+##  left alone, and so is a browser that is running (it would write
+##  its settings back on exit): it is done at the next login.
+##
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+import json
+import os
+import sys
+
+HOME = os.path.expanduser("~")
+CONFIG = os.environ.get("XDG_CONFIG_HOME") or os.path.join(HOME, ".config")
+STATE = os.path.join(HOME, ".dt", "theming", "chromium-before.json")
+
+# user data folders: native, then Flatpak
+DIRS = [
+    os.path.join(CONFIG, d) for d in (
+        "chromium", "google-chrome", "google-chrome-beta",
+        "google-chrome-unstable", "BraveSoftware/Brave-Browser",
+        "microsoft-edge", "microsoft-edge-beta", "vivaldi", "opera",
+        "thorium", "ungoogled-chromium")
+] + [
+    os.path.join(HOME, ".var/app", app, "config", d) for app, d in (
+        ("org.chromium.Chromium", "chromium"),
+        ("com.google.Chrome", "google-chrome"),
+        ("com.brave.Browser", "BraveSoftware/Brave-Browser"),
+        ("com.microsoft.Edge", "microsoft-edge"),
+        ("com.vivaldi.Vivaldi", "vivaldi"),
+        ("io.github.ungoogled_software.ungoogled_chromium", "chromium"))
+]
+
+GTK = 1          # extensions.theme.system_theme: 0 default, 1 GTK, 2 Qt
+
+
+def running(datadir):
+    # Chromium's lock: a symlink "host-pid" while the browser runs
+    lock = os.path.join(datadir, "SingletonLock")
+    try:
+        target = os.readlink(lock)
+    except OSError:
+        return False
+    try:
+        pid = int(target.rsplit("-", 1)[1])
+        os.kill(pid, 0)
+        return True
+    except (ValueError, IndexError, ProcessLookupError):
+        return False
+    except PermissionError:
+        return True
+
+
+def profiles(datadir):
+    try:
+        names = os.listdir(datadir)
+    except OSError:
+        return
+    for n in names:
+        if n == "Default" or n.startswith("Profile "):
+            p = os.path.join(datadir, n, "Preferences")
+            if os.path.isfile(p):
+                yield p
+
+
+def load(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def save(path, data):
+    tmp = path + ".dt-tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, separators=(",", ":"))
+    os.replace(tmp, path)
+
+
+def main():
+    if len(sys.argv) != 2 or sys.argv[1] not in ("on", "off"):
+        sys.stderr.write("usage: dtbrowsertheme on|off\n")
+        return 2
+    on = sys.argv[1] == "on"
+    before = load(STATE) or {}
+    changed = False
+    for d in DIRS:
+        if not os.path.isdir(d) or running(d):
+            continue
+        for pref in profiles(d):
+            data = load(pref)
+            if not isinstance(data, dict):
+                continue
+            theme = data.setdefault("extensions", {}).setdefault("theme", {})
+            if not isinstance(theme, dict):
+                continue
+            cur = theme.get("system_theme", 0)
+            if on:
+                # a Web Store theme of its own: leave it
+                if theme.get("id") or cur == GTK or pref in before:
+                    continue
+                before[pref] = cur
+                theme["system_theme"] = GTK
+            else:
+                if pref not in before:
+                    continue
+                if cur == GTK:
+                    theme["system_theme"] = before[pref]
+                del before[pref]
+            try:
+                save(pref, data)
+                changed = True
+            except OSError:
+                pass
+    if changed or not on:
+        os.makedirs(os.path.dirname(STATE), exist_ok=True)
+        if before:
+            save(STATE, before)
+        elif os.path.exists(STATE):
+            os.remove(STATE)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

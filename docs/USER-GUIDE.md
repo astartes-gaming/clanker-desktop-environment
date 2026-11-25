@@ -326,9 +326,13 @@ AccessX features) and are applied again at every login.
     each profile's `user.js` turns off Firefox's libadwaita colors; it
     is set back when you untick the box). Firefox's address bar row
     keeps its own light or dark color.
-  - **Chromium, Chrome, Brave, Edge** and Electron applications: choose
-    *GTK* (or *Qt*) under Settings > Appearance > Theme in the browser;
-    they then follow the palette.
+  - **Chrome, Chromium, Brave, Edge, Vivaldi and Opera** (also from
+    Flatpak): at login each profile that uses the browser's default
+    theme is switched to *GTK* (Settings > Appearance > Theme in the
+    browser), so the window takes the palette. A profile with a theme
+    from the Web Store is left alone, and a browser that is open is
+    done at the next login. Unticking the box sets back what was
+    there. Electron applications (VS Code, Discord…) follow GTK too.
   - **Flatpak applications** are allowed to read the theme
     (`flatpak override --user`, read-only, done once).
 - GTK applications **change color at once**, without restarting them
