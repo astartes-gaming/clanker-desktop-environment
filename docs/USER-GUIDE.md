@@ -45,7 +45,8 @@ see the [README](../README.md).
 - **Windows key shortcuts**: **Windows+E** Home folder, **Windows+R**
   Run, **Windows+T** Terminal, **Windows+A** Application Manager,
   **Windows+I** Settings, **Windows+L** Lock, **Windows+P** displays
-  (extend, mirror, one screen), **Windows+arrows** tile
+  (extend, mirror, one screen), **Windows+V** clipboard history,
+  **Windows+arrows** tile
   windows (dtwm). `DT_NO_SUPERKEY=1` in `~/.dtprofile` stops the key
   on its own from opening the menu.
 - **Application Manager**: type in its **Search** box at the bottom to
@@ -58,6 +59,19 @@ see the [README](../README.md).
 - **Screenshots**: **Print** saves the whole screen, **Alt+Print** the
   active window, as a PNG in your Pictures folder (with scrot, maim,
   ImageMagick or xwd, whichever is installed).
+- **Notifications** from applications (mail, downloads, chat, low
+  battery) appear at the top right, in your palette when
+  [dunst](https://dunst-project.org) is installed (`apt install
+  dunst`); with Xfce applications chosen, Xfce's notifications are
+  used. Otherwise the first installed notification program runs.
+  `~/.config/dunst/dunstrc` of your own is used as is. `DT_NOTIFY` in
+  `~/.dtprofile` picks another program, `DT_NO_NOTIFY=1` none.
+- **Volume and brightness keys** show the new level in a small popup.
+- **Clipboard history**: **Windows+V** lists what you copied recently;
+  pick an entry to paste it. It uses CopyQ, Diodon, Clipman, ClipIt
+  or Parcellite, whichever is installed (`apt install copyq`), started
+  at login. Copied text also survives closing the program it came
+  from. `DT_NO_CLIPBOARD=1` turns this off.
 - **Workspace menu**: right-click the desktop for applications, Lock
   Screen, Suspend, Restart and Shut Down.
 - **Settings**: everything you can change (it was called Style Manager in
@@ -391,6 +405,8 @@ login.
 | `DT_XFWM_GTK_THEME=name` | GTK theme for xfwm4's window menu (default CDE-wm) |
 | `DT_NO_DISPLAYS=1` | Don't turn on or arrange monitors when they are plugged in |
 | `DT_GAMESCOPE_ARGS=...` | More gamescope options for games started in Gamescope |
+| `DT_NOTIFY=command` / `DT_NO_NOTIFY=1` | The notification program to use / none |
+| `DT_NO_CLIPBOARD=1` | No clipboard manager at login |
 | `DTSOURCEPROFILE=true` | Also read `~/.profile` at login |
 | `TT_ALLOW_REMOTE=1`, `DT_ICE_TCP=1` | Allow ToolTalk / the session manager over the network (off by default) |
 
