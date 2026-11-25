@@ -2944,9 +2944,9 @@ ModernLabel(int which)
     switch (which)
     {
     case APPS_XFCE:
-        return MSG(127, "Xfce (Thunar, Mousepad, Xfce Terminal)");
+        return MSG(127, "Xfce (Thunar, Mousepad, Xfce Terminal, and modern mail, calendar, calculator)");
     case APPS_KDE:
-        return MSG(128, "KDE (Dolphin, Kate, Konsole)");
+        return MSG(128, "KDE (Dolphin, Kate, Konsole, KMail, KOrganizer, KCalc)");
     }
     if (!ModernInstalled(APPS_XFCE) && !ModernInstalled(APPS_KDE))
         return MSG(129, "CDE's own (install Xfce or KDE applications "
@@ -2990,7 +2990,25 @@ ModernSet(int which)
             "ACTION DtfileHome\n{\n  LABEL\t\tFile Manager - Home\n"
             "  ICON\t\tFphome\n  ARG_COUNT\t0\n  TYPE\t\tCOMMAND\n"
             "  WINDOW_TYPE\tNO_STDIO\n"
-            "  EXEC_STRING\tdtmodernapp files\n}\n");
+            "  EXEC_STRING\tdtmodernapp files\n}\n\n"
+            /* the CDE programs that have aged the most: the modern
+             * ones when installed (dtmodernapp runs CDE's otherwise) */
+            "ACTION Dtmail\n{\n  LABEL\t\tMail\n"
+            "  ICON\t\tDtMail\n  TYPE\t\tCOMMAND\n"
+            "  WINDOW_TYPE\tNO_STDIO\n"
+            "  EXEC_STRING\tdtmodernapp mail\n}\n\n"
+            "ACTION Dtcm\n{\n  LABEL\t\tCalendar\n"
+            "  ICON\t\tDtCM\n  TYPE\t\tCOMMAND\n"
+            "  WINDOW_TYPE\tNO_STDIO\n"
+            "  EXEC_STRING\tdtmodernapp calendar\n}\n\n"
+            "ACTION Dtcalc\n{\n  LABEL\t\tCalculator\n"
+            "  ICON\t\tDtcalc\n  TYPE\t\tCOMMAND\n"
+            "  WINDOW_TYPE\tNO_STDIO\n"
+            "  EXEC_STRING\tdtmodernapp calc\n}\n\n"
+            "ACTION DtPrintManager\n{\n  LABEL\t\tPrinters\n"
+            "  ICON\t\tFpprnt\n  TYPE\t\tCOMMAND\n"
+            "  WINDOW_TYPE\tNO_STDIO\n"
+            "  EXEC_STRING\tdtmodernapp printers\n}\n");
         if (fclose(fp) != 0)
             return False;
         if ((fp = fopen(flag, "w")) == NULL)

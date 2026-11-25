@@ -12,10 +12,20 @@
 ##  get the CDE colors (the "CDE" GTK theme that Settings > Color
 ##  writes); Konsole gets them through dtterminal.  Plain POSIX sh.
 ##
-##  ROLE   Xfce             KDE              CDE fallback (action)
-##  editor mousepad         kate, kwrite     Dtpad
-##  term   xfce4-terminal   konsole          Dtterm
-##  files  thunar           dolphin          DtfileHome (no ARGS) / Dtfile
+##  ROLE     Xfce / others          KDE                   CDE fallback
+##  editor   mousepad               kate, kwrite          Dtpad action
+##  term     xfce4-terminal         konsole               Dtterm action
+##  files    thunar                 dolphin               DtfileHome / Dtfile
+##  mail     thunderbird, evolution, kmail, thunderbird  dtmail
+##           geary, claws-mail
+##  calendar orage, gnome-calendar, korganizer, merkuro  dtcm
+##           evolution, thunderbird
+##  calc     galculator, gnome-calculator, kcalc, kalk  dtcalc
+##           mate-calc, qalculate
+##  printers system-config-printer  KDE's printer page    dtprintinfo
+##
+##  For mail, calendar, calc and printers the CDE program runs itself
+##  (their actions are the ones overridden), with the arguments given.
 #####################################################################
 
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -26,9 +36,14 @@ case $role in
     term)   cde=Dtterm ;;
     files)  cde=Dtfile
             [ $# -eq 0 ] && cde=DtfileHome ;;
-    *)      echo "usage: dtmodernapp editor|term|files [args]" >&2
+    mail|calendar|calc|printers) cde= ;;
+    *)      echo "usage: dtmodernapp editor|term|files|mail|calendar|calc|printers [args]" >&2
             exit 2 ;;
 esac
+DTBIN=`dirname "$0"`
+
+# first installed program of the list
+pick() { for x in "$@"; do have "$x" && { echo "$x"; return; }; done; }
 
 suite=
 if [ -f "$HOME/.dt/modern-apps" ]; then
@@ -45,6 +60,22 @@ case $suite.$role in
                  elif have kwrite; then app=kwrite; fi ;;
     kde.term)    have konsole && app=konsole ;;
     kde.files)   have dolphin && app=dolphin ;;
+    kde.mail)    app=`pick kmail thunderbird evolution geary claws-mail` ;;
+    *.mail)      app=`pick thunderbird evolution geary claws-mail sylpheed kmail` ;;
+    kde.calendar) app=`pick korganizer merkuro-calendar thunderbird gnome-calendar` ;;
+    *.calendar)  app=`pick orage gnome-calendar evolution thunderbird korganizer` ;;
+    kde.calc)    app=`pick kcalc kalk qalculate-qt galculator gnome-calculator` ;;
+    *.calc)      app=`pick galculator gnome-calculator mate-calc qalculate-gtk kcalc` ;;
+    kde.printers) if have kcmshell6; then app=kcmshell6; set -- kcm_printer_manager
+                  elif have system-config-printer; then app=system-config-printer; set --; fi ;;
+    *.printers)  if have system-config-printer; then app=system-config-printer; set --
+                 elif have kcmshell6; then app=kcmshell6; set -- kcm_printer_manager; fi ;;
+esac
+[ -z "$suite" ] && app=
+# calendars inside a mail program
+case $role.$app in
+    calendar.thunderbird) set -- -calendar ;;
+    calendar.evolution)   set -- --component=calendar ;;
 esac
 
 if [ -n "$app" ]; then
@@ -72,4 +103,11 @@ if [ -n "$app" ]; then
     esac
     exec $app "$@"
 fi
+case $role in
+    mail)     exec "$DTBIN/dtmail" "$@" ;;
+    calendar) exec "$DTBIN/dtcm" "$@" ;;
+    calc)     exec "$DTBIN/dtcalc" "$@" ;;
+    printers) [ $# -eq 0 ] && set -- -all
+              exec "$DTBIN/dtprintinfo" "$@" ;;
+esac
 exec dtaction $cde "$@"

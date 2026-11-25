@@ -393,6 +393,14 @@ have something installed:
 | Text Editor (dtpad) | Mousepad | Kate (or KWrite) |
 | Terminal (dtterm) | xfce4-terminal | Konsole |
 | File Manager (dtfile) | Thunar | Dolphin |
+| Mail (dtmail) | Thunderbird, Evolution, Geary, Claws Mail | KMail (or Thunderbird) |
+| Calendar (dtcm) | Orage, GNOME Calendar, Evolution, Thunderbird | KOrganizer, Merkuro |
+| Calculator (dtcalc) | Galculator, GNOME Calculator, MATE's, Qalculate | KCalc, Kalk |
+| Print Manager (dtprintinfo) | system-config-printer | KDE's printer settings |
+
+For mail, calendar and calculator the first one installed is used (the
+"Xfce" column also covers the GNOME and MATE ones). If you chose a set
+before this version, choose it again once so the new buttons follow it.
 
 The Xfce applications use your CDE palette and follow palette changes
 live; Konsole gets the CDE color scheme. When the chosen application is
