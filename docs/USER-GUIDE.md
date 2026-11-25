@@ -175,10 +175,10 @@ at the next login.
 
 ## Search
 
-The magnifier button on the Front Panel, or **Windows+S** (where
-Accessibility was on the panel; that
-is now in the Settings drawer and Settings) opens **Search**, like
-Spotlight or KRunner. Type, then pick a row with Up/Down and Enter:
+The magnifier button on the Front Panel, or **Windows+S**, opens
+**Search**, like Spotlight or KRunner. (The magnifier is where the
+Accessibility button was; Accessibility is now in the Settings drawer
+and in Settings.) Type, then pick a row with Up/Down and Enter:
 
 - **Applications**, by name, what they are ("browser") or keywords.
 - A **calculation**: `2*(3+4)` shows `= 14`; Enter copies the result
