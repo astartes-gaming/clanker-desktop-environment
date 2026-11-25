@@ -540,6 +540,27 @@ Filter(const char *want)
  * starting it (a Front Panel drawer's Install Icon adds it). */
 static Boolean pick = False;
 
+/* A game (Categories=Game), with Settings > Session > Games set to
+ * gamescope (~/.dt/gamescope).  Steam entries run the Steam client,
+ * which dtgamescope leaves alone. */
+static Boolean
+RunInGamescope(const App *a)
+{
+    char path[1100];
+    const char *home = getenv("HOME");
+    int i;
+
+    if (!home || !a->exec)
+        return False;
+    for (i = 0; i < NCATS; i++)
+        if (strcmp(categories[i].xdg, "Game;") == 0)
+            break;
+    if (i == NCATS || !(a->cats & (1u << i)))
+        return False;
+    snprintf(path, sizeof(path), "%s/.dt/gamescope", home);
+    return access(path, F_OK) == 0;
+}
+
 /* Start row "pos" (1-based) and quit. */
 static void
 Launch(int pos)
@@ -575,6 +596,15 @@ Launch(int pos)
                   "-c", a->exec, (char *) NULL);
             execl("/usr/dt/bin/dtterm", "dtterm", "-e", "/bin/sh", "-c",
                   a->exec, (char *) NULL);
+        }
+        if (RunInGamescope(a))
+        {
+            /* Settings > Session > Games: dtgamescope runs it in
+             * gamescope at the monitor's size (or just runs it) */
+            execl(CDE_INSTALLATION_TOP_BIN "/dtgamescope", "dtgamescope",
+                  "/bin/sh", "-c", a->exec, (char *) NULL);
+            execlp("dtgamescope", "dtgamescope", "/bin/sh", "-c", a->exec,
+                   (char *) NULL);
         }
         execl("/bin/sh", "sh", "-c", a->exec, (char *) NULL);
         _exit(127);

@@ -307,6 +307,13 @@ if [ -z "$DT_NO_TOUCHPAD" ] && [ -x "$_dtm_bin/dttouchpad" ]; then
   "$_dtm_bin/dttouchpad" -watch >/dev/null 2>&1 &
 fi
 
+# Monitors: one plugged in while logged out is turned on, or the
+# arrangement remembered for these monitors comes back (dtwm does the
+# same when monitors are plugged in or out later).
+if [ -z "$DT_NO_DISPLAYS" ] && [ -x "$_dtm_bin/dtdisplays" ]; then
+  "$_dtm_bin/dtdisplays" hotplug >/dev/null 2>&1
+fi
+
 # The Windows key on its own opens the application menu (dtappfind);
 # Windows+key shortcuts are dtwm's (sys.dtwmrc).
 if [ -z "$DT_NO_SUPERKEY" ] && [ -x "$_dtm_bin/dtsuperkey" ]; then
