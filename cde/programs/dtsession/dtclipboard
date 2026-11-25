@@ -1,0 +1,69 @@
+#!/bin/sh
+#####################################################################
+##  dtclipboard - clipboard history for the CDE desktop.
+##
+##  dtclipboard start   at login: start a clipboard manager unless one
+##                      already runs (CopyQ, Diodon, Clipman, ClipIt,
+##                      Parcellite, whichever is installed first).  It
+##                      also keeps what you copied when the program you
+##                      copied from is closed.
+##  dtclipboard show    Windows+V: the list of recent copies; pick one
+##                      to paste it.
+##
+##  DT_NO_CLIPBOARD=1 in ~/.dtprofile starts none.
+##
+##  Bourne shell only (no $(...)).
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+have() { type "$1" >/dev/null 2>&1; }
+
+# The clipboard manager of this user that runs, if any.
+running() {
+    ps -u "`id -u`" -o comm= 2>/dev/null | awk '
+        $1 ~ /^(copyq|diodon|xfce4-clipman|clipit|parcellite|gpaste-daemon|klipper|clipmenud|greenclip|cliphist)$/ {
+            print $1; exit }'
+}
+
+start() {
+    [ -z "$DT_NO_CLIPBOARD" ] || return 0
+    [ -n "`running`" ] && return 0
+    for m in copyq diodon xfce4-clipman clipit parcellite; do
+        if have $m; then
+            ($m >/dev/null 2>&1 &)
+            return 0
+        fi
+    done
+}
+
+show() {
+    m=`running`
+    if [ -z "$m" ]; then
+        start
+        sleep 1
+        m=`running`
+    fi
+    case $m in
+    copyq)         exec copyq toggle ;;
+    diodon)        exec diodon ;;      # a running Diodon shows its menu
+    xfce4-clipman) have xfce4-clipman-history && exec xfce4-clipman-history
+                   exec xfce4-popup-clipman ;;
+    clipit)        exec clipit ;;
+    parcellite)    exec parcellite ;;
+    gpaste-daemon) exec gpaste-client ui ;;
+    klipper)       exec qdbus org.kde.klipper /klipper org.kde.klipper.klipper.showKlipperPopupMenu ;;
+    esac
+    if have notify-send; then
+        notify-send -a Clipboard -i edit-paste "Clipboard history" \
+            "Install a clipboard manager (CopyQ or Diodon) to see what you copied before." \
+            >/dev/null 2>&1
+    fi
+    exit 1
+}
+
+case $1 in
+start) start ;;
+show)  show ;;
+*)     echo "usage: dtclipboard start | show" >&2; exit 2 ;;
+esac
+exit 0

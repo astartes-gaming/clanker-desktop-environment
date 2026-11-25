@@ -20,7 +20,8 @@ bin_SCRIPTS = dtsession_res
 
 # Laptop keys and lock-before-sleep (see Xsession.d/0070.dtmodern)
 dist_bin_SCRIPTS = dthwkeys dtmixer dtscreenshot dtsleeplock dtcompositor dtpower dtaltwm dtwayland \
-		   dtxfwmtheme dttaskmgr dtkeyboard dtmodernapp dtxsettings dtterminal
+		   dtxfwmtheme dttaskmgr dtkeyboard dtmodernapp dtxsettings dtterminal \
+		   dtnotify dtclipboard
 
 # freedesktop.org entries for CDE's own applications, so the
 # application menu (dtappfind) files them in the usual categories.

@@ -1,0 +1,204 @@
+#!/bin/sh
+#####################################################################
+##  dtnotify - desktop notifications for the CDE desktop.
+##
+##  dtnotify start      at login: start a notification server unless
+##                      one already runs (dunst in the CDE colors,
+##                      xfce4-notifyd, mate-notification-daemon,
+##                      notification-daemon or lxqt-notificationd)
+##  dtnotify osd volume|mic|brightness PERCENT [muted]
+##                      a short popup with a level bar (dthwkeys,
+##                      after a volume or brightness key)
+##
+##  Applications show their notifications (mail, downloads, chat,
+##  "battery low"...) through it.  With several servers installed,
+##  D-Bus could start any of them, Plasma's included, which only waits
+##  for a Plasma desktop; starting one at login decides.
+##
+##  DT_NOTIFY=command in ~/.dtprofile picks the server; DT_NO_NOTIFY=1
+##  starts none.  dunst uses ~/.config/dunst/dunstrc when you have one,
+##  else a configuration in the CDE palette (~/.dt/notify/dunstrc,
+##  written at each login).
+##
+##  Bourne shell only (no $(...)).
+##  Part of the Clanker Desktop Environment (LGPL-2.0-or-later).
+#####################################################################
+
+have() { type "$1" >/dev/null 2>&1; }
+
+# Is a notification server on the session bus?
+owned() {
+    have dbus-send && [ -n "$DBUS_SESSION_BUS_ADDRESS" ] || return 1
+    dbus-send --session --print-reply --dest=org.freedesktop.DBus \
+        /org/freedesktop/DBus org.freedesktop.DBus.NameHasOwner \
+        string:org.freedesktop.Notifications 2>/dev/null | grep -q 'boolean true'
+}
+
+# The first existing file among the arguments.
+first() { for f in "$@"; do [ -x "$f" ] && { echo "$f"; return 0; }; done; return 1; }
+
+# --- the palette (as dtterminal reads it) ---------------------------
+palette() {
+    short() {
+        echo "$1" | sed -n -e 's/^#\(..\)..\(..\)..\(..\)..$/#\1\2\3/p' -e t \
+                           -e 's/^#\(......\)$/#\1/p'
+    }
+    pal= file=
+    if [ -n "$DISPLAY" ] && have xprop; then
+        pal=`xprop -root _DT_SM_PREFERENCES 2>/dev/null |
+             grep -o 'ColorPalette:\\t[^\\]*' | sed 's/.*\\t//' | head -1`
+    fi
+    for d in $HOME/.dt/palettes /etc/dt/palettes /usr/dt/palettes; do
+        if [ -n "$pal" ] && [ -r "$d/$pal" ]; then file=$d/$pal; break; fi
+    done
+    [ -z "$file" ] && [ -r /usr/dt/palettes/Default.dp ] &&
+        file=/usr/dt/palettes/Default.dp
+    line() { [ -n "$file" ] && short "`sed -n ${1}p "$file"`"; }
+    act=`line 1`; ina=`line 2`
+    : ${act:=#EDA870} ${ina:=#999999}
+    fgfor() {
+        echo "$1" | awk '{
+            h = "0123456789abcdef"; s = tolower(substr($1, 2))
+            for (i = 0; i < 3; i++)
+                c[i] = (index(h, substr(s, 2*i+1, 1)) - 1) * 16 + index(h, substr(s, 2*i+2, 1)) - 1
+            print ((c[0]*299 + c[1]*587 + c[2]*114) / 1000 > 128) ? "#000000" : "#ffffff" }'
+    }
+    shade() {
+        echo "$1 $2" | awk '{
+            h = "0123456789abcdef"; s = tolower(substr($1, 2))
+            for (i = 0; i < 3; i++) {
+                v = (index(h, substr(s, 2*i+1, 1)) - 1) * 16 + index(h, substr(s, 2*i+2, 1)) - 1
+                v = ($2 > 1) ? v + (255 - v) * ($2 - 1) : v * $2
+                if (v > 255) v = 255
+                c[i] = int(v) }
+            printf "#%02x%02x%02x\n", c[0], c[1], c[2] }'
+    }
+    bg=$ina; fg=`fgfor "$ina"`; frame=`shade "$ina" 0.5`
+    hi=$act; hifg=`fgfor "$act"`
+}
+
+dunstrc() {
+    palette
+    mkdir -p "$HOME/.dt/notify" 2>/dev/null || return 1
+    cat > "$HOME/.dt/notify/dunstrc" <<EOF
+# Written by dtnotify at login from the CDE palette; changes are lost.
+# Copy it to ~/.config/dunst/dunstrc to make your own.
+[global]
+    font = Sans 10
+    width = 340
+    height = (0, 200)
+    origin = top-right
+    offset = (12, 12)
+    frame_width = 2
+    frame_color = "$frame"
+    separator_color = frame
+    corner_radius = 0
+    padding = 8
+    horizontal_padding = 10
+    icon_position = left
+    max_icon_size = 40
+    highlight = "$hi"
+    progress_bar_frame_width = 1
+    progress_bar_corner_radius = 0
+    mouse_left_click = do_action, close_current
+    mouse_right_click = close_current
+    show_age_threshold = 60
+    stack_duplicates = true
+
+[urgency_low]
+    background = "$bg"
+    foreground = "$fg"
+    timeout = 6
+
+[urgency_normal]
+    background = "$bg"
+    foreground = "$fg"
+    timeout = 8
+
+[urgency_critical]
+    background = "$hi"
+    foreground = "$hifg"
+    frame_color = "#cd0000"
+    timeout = 0
+EOF
+}
+
+start() {
+    [ -z "$DT_NO_NOTIFY" ] || return 0
+    owned && return 0
+    if [ -n "$DT_NOTIFY" ]; then
+        # shellcheck disable=SC2086
+        ($DT_NOTIFY >/dev/null 2>&1 &)
+        return 0
+    fi
+    xfce=`first /usr/lib/*/xfce4/notifyd/xfce4-notifyd \
+                /usr/lib/xfce4/notifyd/xfce4-notifyd \
+                /usr/libexec/xfce4/notifyd/xfce4-notifyd \
+                /usr/local/libexec/xfce4/notifyd/xfce4-notifyd`
+    mate=`first /usr/libexec/mate-notification-daemon/mate-notification-daemon \
+                /usr/lib/mate-notification-daemon/mate-notification-daemon \
+                /usr/local/libexec/mate-notification-daemon`
+    gnome=`first /usr/lib/notification-daemon/notification-daemon \
+                 /usr/libexec/notification-daemon \
+                 /usr/lib/notification-daemon-1.0/notification-daemon`
+    suite=
+    [ -f "$HOME/.dt/modern-apps" ] &&
+        suite=`head -1 "$HOME/.dt/modern-apps" | sed 's/[^a-z].*//'`
+    # Xfce applications chosen: Xfce's notifications, else dunst first
+    if [ "$suite" != kde ] && [ -f "$HOME/.dt/modern-apps" ] && [ -n "$xfce" ]; then
+        ("$xfce" >/dev/null 2>&1 &); return 0
+    fi
+    if have dunst; then
+        if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/dunst/dunstrc" ]; then
+            (dunst >/dev/null 2>&1 &)
+        elif dunstrc; then
+            (dunst -config "$HOME/.dt/notify/dunstrc" >/dev/null 2>&1 &)
+        else
+            (dunst >/dev/null 2>&1 &)
+        fi
+        return 0
+    fi
+    for d in "$xfce" "$mate" "$gnome"; do
+        [ -n "$d" ] && { ("$d" >/dev/null 2>&1 &); return 0; }
+    done
+    have lxqt-notificationd && (lxqt-notificationd >/dev/null 2>&1 &)
+    return 0
+}
+
+# osd KIND PERCENT [muted]
+osd() {
+    have notify-send || return 0
+    kind=$1 pct=$2 muted=$3
+    case $pct in ''|*[!0-9]*) return 0 ;; esac
+    case $kind in
+    volume)
+        title="Volume"
+        if [ -n "$muted" ] || [ "$pct" -eq 0 ]; then icon=audio-volume-muted
+        elif [ "$pct" -lt 34 ]; then icon=audio-volume-low
+        elif [ "$pct" -lt 67 ]; then icon=audio-volume-medium
+        else icon=audio-volume-high; fi ;;
+    mic)
+        title="Microphone"
+        if [ -n "$muted" ]; then icon=microphone-sensitivity-muted
+        else icon=audio-input-microphone; fi ;;
+    brightness)
+        title="Brightness"; icon=display-brightness ;;
+    *)  return 0 ;;
+    esac
+    body="$pct%"
+    [ -n "$muted" ] && body="Muted"
+    # one popup that updates in place (dunst, xfce4-notifyd, Notify OSD)
+    notify-send -a "$title" -u low -t 1500 -i "$icon" \
+        -h int:value:"$pct" \
+        -h string:x-canonical-private-synchronous:dt-$kind \
+        -h string:x-dunst-stack-tag:dt-$kind \
+        "$title" "$body" >/dev/null 2>&1
+}
+
+case $1 in
+start) start ;;
+osd)   shift; osd "$@" ;;
+*)     echo "usage: dtnotify start | osd volume|mic|brightness PERCENT [muted]" >&2
+       exit 2 ;;
+esac
+exit 0

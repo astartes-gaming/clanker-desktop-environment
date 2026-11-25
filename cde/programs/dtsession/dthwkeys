@@ -140,12 +140,55 @@ brightness-up|brightness-down|volume-up|volume-down|volume-mute|mic-mute) ;;
     exit 2 ;;
 esac
 
+# ---- the level afterwards, for the popup (dtnotify osd) ----------
+
+# "PERCENT" or "PERCENT muted" of the output (or "mic" input)
+volume_level() {
+    if have wpctl && wpctl status >/dev/null 2>&1; then
+        dev=@DEFAULT_AUDIO_SINK@; [ "$1" = mic ] && dev=@DEFAULT_AUDIO_SOURCE@
+        wpctl get-volume $dev 2>/dev/null |
+            awk '{ printf "%d", $2 * 100 + 0.5; if (/MUTED/) printf " muted"; print "" }'
+        return
+    fi
+    if have pactl && pactl info >/dev/null 2>&1; then
+        if [ "$1" = mic ]; then t=source; d=@DEFAULT_SOURCE@; else t=sink; d=@DEFAULT_SINK@; fi
+        v=`pactl get-$t-volume $d 2>/dev/null | grep -o '[0-9]*%' | head -1 | tr -d %`
+        m=`pactl get-$t-mute $d 2>/dev/null | grep -q yes && echo muted`
+        echo "$v $m"
+        return
+    fi
+    if have amixer; then
+        c=Master; [ "$1" = mic ] && c=Capture
+        amixer get $c 2>/dev/null | awk -F'[][]' '/%/ { v = $2; m = ($0 ~ /\[off\]/) ? " muted" : ""; sub(/%/, "", v); print v m; exit }'
+    fi
+}
+
+brightness_level() {
+    if have brightnessctl; then
+        brightnessctl -m 2>/dev/null | head -1 | cut -d, -f4 | tr -d %
+        return
+    fi
+    for d in /sys/class/backlight/*; do
+        [ -r "$d/brightness" ] && [ -r "$d/max_brightness" ] || continue
+        expr `cat $d/brightness` \* 100 / `cat $d/max_brightness`
+        return
+    done
+    if have xbacklight; then xbacklight -get 2>/dev/null | cut -d. -f1; fi
+}
+
+popup() {
+    n=`dirname "$0"`/dtnotify
+    [ -x "$n" ] || n=dtnotify
+    # shellcheck disable=SC2046
+    "$n" osd "$1" $2 >/dev/null 2>&1
+}
+
 case $1 in
-brightness-up)   brightness up ;;
-brightness-down) brightness down ;;
-volume-up)       volume up ;;
-volume-down)     volume down ;;
-volume-mute)     volume mute ;;
-mic-mute)        volume mic ;;
+brightness-up)   brightness up && popup brightness "`brightness_level`" ;;
+brightness-down) brightness down && popup brightness "`brightness_level`" ;;
+volume-up)       volume up && popup volume "`volume_level`" ;;
+volume-down)     volume down && popup volume "`volume_level`" ;;
+volume-mute)     volume mute && popup volume "`volume_level`" ;;
+mic-mute)        volume mic && popup mic "`volume_level mic`" ;;
 esac >/dev/null 2>&1
 exit 0
