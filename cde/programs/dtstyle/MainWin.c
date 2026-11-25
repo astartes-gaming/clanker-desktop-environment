@@ -430,6 +430,24 @@ build_mainWindow(
 
     ProcessComponentList (shell, mainRC);
 
+    /* A grid, as other desktops' settings show their pages: rows of
+     * at most nine equal cells, so the window fits small screens even
+     * with all the pages. */
+    {
+        WidgetList kids;
+        Cardinal   nkids = 0, k, shown = 0;
+        short      rows;
+
+        XtVaGetValues(mainRC, XmNchildren, &kids, XmNnumChildren, &nkids, NULL);
+        for (k = 0; k < nkids; k++)
+            if (XtIsManaged(kids[k]))
+                shown++;
+        rows = (short) ((shown + 8) / 9);
+        if (rows > 1)
+            XtVaSetValues(mainRC, XmNorientation, XmHORIZONTAL,
+                          XmNpacking, XmPACK_COLUMN,
+                          XmNnumColumns, rows, NULL);
+    }
 }
 
 /*+++++++++++++++++++++++++++++++++++++++

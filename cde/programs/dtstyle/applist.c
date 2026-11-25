@@ -611,6 +611,30 @@ UpdateScrollBar(AppList *l)
                   view > l->rowH ? view - l->rowH : l->rowH, NULL);
 }
 
+/* The selected row's text: black or white, whichever reads better on
+ * the selection (the list's text color), as reversing the colors can
+ * give gray on white. */
+static Pixel
+SelText(AppList *l)
+{
+    static Pixel  cachedFor, cached;
+    static int    have;
+    Display      *dpy = XtDisplay(l->da);
+    Colormap      cm;
+    XColor        c;
+
+    if (have && cachedFor == l->fg)
+        return cached;
+    XtVaGetValues(l->da, XmNcolormap, &cm, NULL);
+    c.pixel = l->fg;
+    XQueryColor(dpy, cm, &c);
+    cached = ((c.red >> 8) * 299 + (c.green >> 8) * 587 + (c.blue >> 8) * 114) / 1000 > 140 ?
+             BlackPixelOfScreen(XtScreen(l->da)) : WhitePixelOfScreen(XtScreen(l->da));
+    cachedFor = l->fg;
+    have = 1;
+    return cached;
+}
+
 static void
 Draw(AppList *l)
 {
@@ -651,7 +675,7 @@ Draw(AppList *l)
                       y + (l->rowH - APPLIST_ICON) / 2);
         xs = XmStringCreateLocalized((char *) (label ? label : ""));
         th = XmStringHeight(l->rt, xs);
-        XSetForeground(dpy, l->gc, sel ? l->bg : l->fg);
+        XSetForeground(dpy, l->gc, sel ? SelText(l) : l->fg);
         XSetBackground(dpy, l->gc, sel ? l->fg : l->bg);
         XmStringDraw(dpy, win, l->rt, xs, l->gc, 4 + APPLIST_ICON + 6,
                      y + (l->rowH - th) / 2, w - APPLIST_ICON - 12,

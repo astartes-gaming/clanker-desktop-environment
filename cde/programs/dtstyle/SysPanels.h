@@ -39,11 +39,11 @@
 #define SEARCHP_ICON    "DtSearch"
 #define DISPLAYS_ICON   "DtScrn"
 #define SOUND_ICON      "Dthvol.m"
-#define CONTROLLERS_ICON "DtGamesCards.l"
+#define CONTROLLERS_ICON "DtGamesCards.m"
 #define USERS_ICON      "Dthome.l"
 #define REGION_ICON     "DtI18N"
-#define INPUT_ICON      "DtKeybd"
-#define MEDIA_ICON      "DtSystem.l"
+#define INPUT_ICON      "DtFlag.m"
+#define MEDIA_ICON      "Dtmagtp.m"
 #define BORDERS_ICON    "DtDtwm"
 
 extern void popup_networkBB(Widget shell);
